@@ -18,6 +18,7 @@ namespace BlueComplex.Core.Stage
         public TraitBoard Traits { get; init; }
         public KeyProgress Keys { get; init; }
         public ClueKnowledgeLedger Ledger { get; init; }
+        public CensorshipState Censorship { get; init; }
     }
 
     public static class StageFactory
@@ -40,6 +41,11 @@ namespace BlueComplex.Core.Stage
             var traits = new TraitBoard();
             var indicator = new StabilityIndicator(indicatorSlots);
             var evaluator = new TraitAwareEmotionEvaluator(new EmotionEvaluator(polarityTable), traits);
+
+            var censorship = new CensorshipState(
+                indicator,
+                new[] { 0, indicator.Slots - 1 },
+                indicator.Center);
 
             var activeItems = new ActiveItemBoard();
             var items = new ItemInventory(config.ItemPool, random);
@@ -72,7 +78,8 @@ namespace BlueComplex.Core.Stage
                 Items = items,
                 Traits = traits,
                 Keys = keys,
-                Ledger = ledger
+                Ledger = ledger,
+                Censorship = censorship
             };
         }
     }

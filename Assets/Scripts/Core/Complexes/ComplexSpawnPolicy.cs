@@ -10,7 +10,7 @@ namespace BlueComplex.Core.Complexes
 
     /// <summary>
     /// 중앙에서 벗어난 칸 수별 발현 확률.
-    /// 기본값 1칸 5% / 2칸 15% / 3칸 30% / 4칸 30% / 5칸 10%.
+    /// 기본값 1칸 10% / 2칸 20% / 3칸 30% / 4칸 40% / 5칸 50%. 단조증가 — 극단에 가까울수록 위험해진다.
     /// 스테이지별 가중치는 weight로 조정한다. (가라앉다=낮음, 무제=높음)
     /// </summary>
     public sealed class DistanceBasedSpawnPolicy : IComplexSpawnPolicy
@@ -18,11 +18,11 @@ namespace BlueComplex.Core.Complexes
         private static readonly Dictionary<int, double> DefaultTable = new()
         {
             { 0, 0.00 },
-            { 1, 0.05 },
-            { 2, 0.15 },
+            { 1, 0.10 },
+            { 2, 0.20 },
             { 3, 0.30 },
-            { 4, 0.30 },
-            { 5, 0.10 }
+            { 4, 0.40 },
+            { 5, 0.50 }
         };
 
         private readonly IRandomSource _random;
