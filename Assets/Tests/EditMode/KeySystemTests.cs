@@ -2,10 +2,13 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using BlueComplex.Core.Clues;
 using BlueComplex.Core.Stability;
+using BlueComplex.Core.Stage;
+using BlueComplex.Core.Tags;
+using BlueComplex.Core.Turn;
 
 namespace BlueComplex.Core.Tests
 {
-    /// <summary>D. 키 — 등장 턴, 구역 범위, 획득/실패 판정, 클리어 조건.</summary>
+    /// <summary>D. 키 — 등장 턴, 구역 범위, 획득/실패 판정, 클리어 조건, 스테이지 시작 시 전체 확정.</summary>
     public class KeySystemTests
     {
         [Test]
@@ -32,7 +35,7 @@ namespace BlueComplex.Core.Tests
 
                 for (var i = 0; i < 20; i++)
                 {
-                    var zone = placer.Place(5, System.Array.Empty<ClueInstance>());
+                    var zone = placer.Place(startPosition: 5, turnsUntilKey: 10); // 값은 RandomKeyZonePlacer가 쓰지 않는다.
                     var lastSlot = zone.StartSlot + zone.Width - 1;
 
                     var withinLeft = zone.StartSlot >= 0 && lastSlot <= 2;
@@ -53,7 +56,8 @@ namespace BlueComplex.Core.Tests
             var missed = false;
             keys.ZoneMissed += () => missed = true;
 
-            keys.OpenZone(new KeyZone(0, 2)); // 0,1 구역
+            keys.PrepareZones(new Dictionary<int, KeyZone> { { 3, new KeyZone(0, 2) } }); // 0,1 구역
+            keys.OpenZone(3);
             keys.Judge(indicatorPosition: 1);
 
             Assert.AreEqual(1, keys.Collected);
@@ -69,7 +73,8 @@ namespace BlueComplex.Core.Tests
             var missed = false;
             keys.ZoneMissed += () => missed = true;
 
-            keys.OpenZone(new KeyZone(0, 2)); // 0,1 구역
+            keys.PrepareZones(new Dictionary<int, KeyZone> { { 3, new KeyZone(0, 2) } }); // 0,1 구역
+            keys.OpenZone(3);
             keys.Judge(indicatorPosition: 5);
 
             Assert.AreEqual(0, keys.Collected);
@@ -95,14 +100,54 @@ namespace BlueComplex.Core.Tests
         public void TwoKeysCollected_MarksComplete()
         {
             var keys = new KeyProgress(required: 2, keyTurns: new[] { 3, 5 });
+            keys.PrepareZones(new Dictionary<int, KeyZone>
+            {
+                { 3, new KeyZone(0, 2) },
+                { 5, new KeyZone(7, 2) }
+            });
 
-            keys.OpenZone(new KeyZone(0, 2));
+            keys.OpenZone(3);
             keys.Judge(0);
             Assert.IsFalse(keys.IsComplete, "키 1개로는 아직 완료되지 않아야 한다.");
 
-            keys.OpenZone(new KeyZone(7, 2));
+            keys.OpenZone(5);
             keys.Judge(7);
             Assert.IsTrue(keys.IsComplete, "키 2개를 모으면 완료되어야 한다.");
+        }
+
+        [Test]
+        public void StageStart_PreparesAllKeyZones_ForEveryKeyTurn()
+        {
+            var random = new SystemRandomSource(1);
+            var polarityTable = new DefaultEmotionPolarityTable();
+            var config = PrototypeContent.PrototypeStage(polarityTable);
+            var session = StageFactory.Create(config, random, new ClueKnowledgeLedger(), polarityTable);
+
+            session.Runner.StartStage();
+
+            Assert.AreEqual(config.KeyTurns.Count, session.Keys.Zones.Count,
+                "키 턴 개수만큼 구역이 스테이지 시작 시 미리 결정되어 있어야 한다.");
+            foreach (var turn in config.KeyTurns)
+                Assert.IsTrue(session.Keys.Zones.ContainsKey(turn), $"턴 {turn} 구역이 미리 결정되어 있어야 한다.");
+        }
+
+        [Test]
+        public void KeyZones_DoNotChange_OnceStageHasStarted()
+        {
+            var random = new SystemRandomSource(2);
+            var polarityTable = new DefaultEmotionPolarityTable();
+            var config = PrototypeContent.PrototypeStage(polarityTable);
+            var session = StageFactory.Create(config, random, new ClueKnowledgeLedger(), polarityTable);
+
+            session.Runner.StartStage();
+            var snapshot = new Dictionary<int, KeyZone>(session.Keys.Zones);
+
+            for (var i = 0; i < 5 && session.Runner.Outcome == StageOutcome.InProgress; i++)
+                session.Runner.PlayClue(session.Hand.Cards[0]);
+
+            CollectionAssert.AreEquivalent(snapshot.Keys, session.Keys.Zones.Keys);
+            foreach (var turn in snapshot.Keys)
+                Assert.AreEqual(snapshot[turn], session.Keys.Zones[turn], $"턴 {turn} 구역이 진행 중 바뀌면 안 된다.");
         }
     }
 }

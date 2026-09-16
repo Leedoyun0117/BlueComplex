@@ -101,6 +101,10 @@ namespace BlueComplex.Core.Tests
 
             session.Runner.StartStage();
 
+            log.AppendLine("=== 키 구역 (스테이지 시작 시 확정) ===");
+            foreach (var pair in session.Keys.Zones.OrderBy(p => p.Key))
+                log.AppendLine($"  {pair.Key}턴: {pair.Value.StartSlot}~{pair.Value.StartSlot + pair.Value.Width - 1}");
+
             var guard = 0;
             while (session.Runner.Outcome == StageOutcome.InProgress && guard < 10)
             {

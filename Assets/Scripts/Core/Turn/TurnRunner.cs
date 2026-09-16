@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BlueComplex.Core.Clues;
 using BlueComplex.Core.Complexes;
 using BlueComplex.Core.Items;
@@ -110,6 +111,13 @@ namespace BlueComplex.Core.Turn
         {
             CurrentTurn = 0;
             Outcome = StageOutcome.InProgress;
+
+            // 모든 키 턴의 구역을 스테이지 시작 시점에 한꺼번에 확정한다 — 플레이어는 턴 1부터 전부 볼 수 있다.
+            var zones = new Dictionary<int, KeyZone>();
+            foreach (var turn in _keys.KeyTurns)
+                zones[turn] = _keyPlacer.Place(_indicator.Position, turn - 1);
+            _keys.PrepareZones(zones);
+
             _hand.Refill();
             BeginTurn();
         }
@@ -120,7 +128,7 @@ namespace BlueComplex.Core.Turn
             _items.TryGainRandom(out _);
 
             if (_keys.IsKeyTurn(CurrentTurn))
-                _keys.OpenZone(_keyPlacer.Place(_indicator.Position, _hand.Cards));
+                _keys.OpenZone(CurrentTurn);
 
             TurnBegan?.Invoke(CurrentTurn);
         }
