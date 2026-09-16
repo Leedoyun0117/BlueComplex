@@ -18,7 +18,6 @@ namespace BlueComplex.UI.Debugging
         private readonly StageSession _session;
         private readonly Dictionary<int, KeyZone> _zoneByTurn = new();
         private readonly Dictionary<int, string> _judgeByTurn = new();
-        private int? _censorshipStartTurn;
 
         public StageTurnLogger(StageSession session)
         {
@@ -27,7 +26,6 @@ namespace BlueComplex.UI.Debugging
             _session.Keys.ZoneOpened += OnZoneOpened;
             _session.Keys.KeyCollected += OnKeyCollected;
             _session.Keys.ZoneMissed += OnZoneMissed;
-            _session.Censorship.CensorshipChanged += OnCensorshipChanged;
             _session.Runner.TurnResolved += OnTurnResolved;
         }
 
@@ -36,7 +34,6 @@ namespace BlueComplex.UI.Debugging
             _session.Keys.ZoneOpened -= OnZoneOpened;
             _session.Keys.KeyCollected -= OnKeyCollected;
             _session.Keys.ZoneMissed -= OnZoneMissed;
-            _session.Censorship.CensorshipChanged -= OnCensorshipChanged;
             _session.Runner.TurnResolved -= OnTurnResolved;
         }
 
@@ -44,23 +41,11 @@ namespace BlueComplex.UI.Debugging
         private void OnKeyCollected(int count) => _judgeByTurn[_session.Runner.CurrentTurn] = $"성공(누적 {count})";
         private void OnZoneMissed() => _judgeByTurn[_session.Runner.CurrentTurn] = "실패";
 
-        private void OnCensorshipChanged(bool censored)
-        {
-            if (censored)
-            {
-                _censorshipStartTurn = _session.Runner.CurrentTurn;
-            }
-            else
-            {
-                _censorshipStartTurn = null;
-            }
-        }
-
         private void OnTurnResolved(TurnReport report)
         {
             var log = new StringBuilder();
             var originalTags = report.Clue.CreateOriginalTagSet();
-            var positionBefore = report.IndicatorPosition - report.IndicatorDelta;
+            var heartbeatBefore = report.HeartbeatValue - report.HeartbeatDelta;
 
             log.AppendLine($"[턴 {report.Turn}] 단서: {report.Clue.DisplayName} ({FormatTags(originalTags)})");
 
@@ -84,7 +69,7 @@ namespace BlueComplex.UI.Debugging
             }
 
             log.AppendLine($"  최종: {FormatTags(report.FinalTags)}");
-            log.AppendLine($"  이동: {report.IndicatorDelta}  인디케이터: {positionBefore} → {report.IndicatorPosition}");
+            log.AppendLine($"  이동: {report.HeartbeatDelta}  심박수: {heartbeatBefore} → {report.HeartbeatValue}");
 
             var zoneText = _zoneByTurn.TryGetValue(report.Turn, out var zone)
                 ? $"{zone.StartSlot}~{zone.StartSlot + zone.Width - 1}"
@@ -92,10 +77,8 @@ namespace BlueComplex.UI.Debugging
             var judgeText = _judgeByTurn.TryGetValue(report.Turn, out var judge) ? judge : "-";
             log.AppendLine($"  키 구역: {zoneText}  판정: {judgeText}");
 
-            var censorText = _session.Censorship.IsCensored
-                ? $"진행중 ({report.Turn - _censorshipStartTurn.Value + 1}턴째)"
-                : "해제";
-            log.AppendLine($"  검열: {censorText}");
+            var state = _session.Zone.StateOf(report.HeartbeatValue);
+            log.AppendLine($"  상태: {FormatState(state)}  검열: {FormatCensorship(_session.Censorship.Level)}");
 
             log.AppendLine($"  신규 컴플렉스: {(report.SpawnedComplex != null ? report.SpawnedComplex.Definition.DisplayName : "없음")}");
             log.Append($"  결과: {report.Outcome}");
@@ -105,6 +88,25 @@ namespace BlueComplex.UI.Debugging
             if (report.Outcome != StageOutcome.InProgress)
                 UnityEngine.Debug.Log($"=== 종료: {report.Outcome}, 총 {_session.Runner.CurrentTurn}턴, 획득 키 {_session.Keys.Collected} ===");
         }
+
+        private static string FormatState(HeartbeatState state) => state switch
+        {
+            HeartbeatState.Fatal => "즉시 패배",
+            HeartbeatState.VeryDepressed => "매우 침체",
+            HeartbeatState.Depressed => "침체",
+            HeartbeatState.Stable => "안정",
+            HeartbeatState.Excited => "흥분",
+            HeartbeatState.VeryExcited => "매우 흥분",
+            _ => "-"
+        };
+
+        private static string FormatCensorship(CensorshipLevel level) => level switch
+        {
+            CensorshipLevel.None => "없음",
+            CensorshipLevel.Partial => "일부",
+            CensorshipLevel.Full => "전체",
+            _ => "-"
+        };
 
         private static string FormatTime(TimeTag time) => time switch
         {

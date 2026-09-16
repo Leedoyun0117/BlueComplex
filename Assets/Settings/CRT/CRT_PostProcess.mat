@@ -32,9 +32,10 @@ Material:
     - _Flicker: 0.04
     - _Noise: 0.06
     - _Pastel: 0
-    - _ScanCount: 420
+    - _ScanCount: 100
     - _ScanIntensity: 0.35
     - _ScanSpeed: 0
+    - _ScanThickness: 4
     - _Shake: 0
     - _TintR: 0
     - _Vignette: 0.55

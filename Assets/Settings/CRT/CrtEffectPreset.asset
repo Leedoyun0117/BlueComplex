@@ -15,6 +15,7 @@ MonoBehaviour:
   Neutral:
     ScanIntensity: 0.35
     ScanCount: 420
+    ScanThickness: 1
     ScanSpeed: 0
     Curvature: 0.18
     Vignette: 0.55
@@ -25,10 +26,11 @@ MonoBehaviour:
     Shake: 0
     TintR: 0
     Pastel: 0
-    Brightness: 1
+    Brightness: 0.3
   DepressedMax:
     ScanIntensity: 0.45
     ScanCount: 360
+    ScanThickness: 1
     ScanSpeed: 0.15
     Curvature: 0.24
     Vignette: 1.05
@@ -43,6 +45,7 @@ MonoBehaviour:
   ExcitedMax:
     ScanIntensity: 0.28
     ScanCount: 500
+    ScanThickness: 1
     ScanSpeed: 0.8
     Curvature: 0.2
     Vignette: 0.4

@@ -8,6 +8,7 @@ namespace BlueComplex.UI.Presentation
     {
         public float ScanIntensity;
         public float ScanCount;
+        public float ScanThickness;
         public float ScanSpeed;
         public float Curvature;
         public float Vignette;
@@ -26,6 +27,7 @@ namespace BlueComplex.UI.Presentation
             {
                 ScanIntensity = UnityEngine.Mathf.Lerp(a.ScanIntensity, b.ScanIntensity, t),
                 ScanCount = UnityEngine.Mathf.Lerp(a.ScanCount, b.ScanCount, t),
+                ScanThickness = UnityEngine.Mathf.Lerp(a.ScanThickness, b.ScanThickness, t),
                 ScanSpeed = UnityEngine.Mathf.Lerp(a.ScanSpeed, b.ScanSpeed, t),
                 Curvature = UnityEngine.Mathf.Lerp(a.Curvature, b.Curvature, t),
                 Vignette = UnityEngine.Mathf.Lerp(a.Vignette, b.Vignette, t),
@@ -44,6 +46,7 @@ namespace BlueComplex.UI.Presentation
         {
             ScanIntensity = 0.35f,
             ScanCount = 420f,
+            ScanThickness = 1.0f,
             ScanSpeed = 0f,
             Curvature = 0.18f,
             Vignette = 0.55f,

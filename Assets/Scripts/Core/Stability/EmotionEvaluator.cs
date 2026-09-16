@@ -9,15 +9,23 @@ namespace BlueComplex.Core.Stability
         int Evaluate(TagSet finalTags);
     }
 
-    /// <summary>흥분 태그 +1, 침체 태그 -1. 중복 감정은 개수만큼 누적된다.</summary>
+    /// <summary>흥분 태그 +TagMagnitude, 침체 태그 -TagMagnitude. 중복 감정은 개수만큼 누적된다.</summary>
     public sealed class EmotionEvaluator : IEmotionEvaluator
     {
-        private readonly IEmotionPolarityTable _polarityTable;
+        /// <summary>태그 하나가 심박수에 미치는 영향력. 기본값은 200 스케일 기준 ±10.</summary>
+        public const int DefaultTagMagnitude = 10;
 
-        public EmotionEvaluator(IEmotionPolarityTable polarityTable) => _polarityTable = polarityTable;
+        private readonly IEmotionPolarityTable _polarityTable;
+        private readonly int _tagMagnitude;
+
+        public EmotionEvaluator(IEmotionPolarityTable polarityTable, int tagMagnitude = DefaultTagMagnitude)
+        {
+            _polarityTable = polarityTable;
+            _tagMagnitude = tagMagnitude;
+        }
 
         public int Evaluate(TagSet finalTags) =>
-            finalTags.EnumerateEmotionsFlat().Sum(e => (int)_polarityTable.GetPolarity(e));
+            finalTags.EnumerateEmotionsFlat().Sum(e => (int)_polarityTable.GetPolarity(e)) * _tagMagnitude;
     }
 
     /// <summary>특성(예: 예민)의 감도 배율을 이동량에 곱한다.</summary>

@@ -1,10 +1,12 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using BlueComplex.UI.Bootstrap;
 using BlueComplex.UI.Presentation;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
@@ -71,6 +73,158 @@ namespace BlueComplex.EditorTools
                       "씬이 수정되었습니다 — Ctrl+S로 저장하세요.";
             EditorUtility.DisplayDialog("CRT 셋업 완료", msg, "확인");
             Debug.Log("[CrtSetupTool] " + msg.Replace("\n", " / "));
+        }
+
+        /// <summary>
+        /// 셰이더 컴파일 상태, Renderer Feature 리스트, 실제 사용 중인 파이프라인 에셋을 한 번에 찍어본다.
+        /// "설정은 다 맞는데 화면엔 아무 효과도 안 보인다"를 진단할 때 쓴다.
+        /// </summary>
+        [MenuItem("BlueComplex/CRT/Diagnose")]
+        public static void Diagnose()
+        {
+            var sb = new StringBuilder();
+
+            var shader = Shader.Find(ShaderName);
+            sb.AppendLine(shader == null
+                ? $"셰이더: '{ShaderName}' 를 Shader.Find로 못 찾음 (컴파일 실패 가능성)"
+                : $"셰이더: 찾음 ({shader.name})");
+
+            if (shader != null)
+            {
+                bool hasError = ShaderUtil.ShaderHasError(shader);
+                sb.AppendLine($"셰이더 컴파일 에러: {(hasError ? "**있음**" : "없음")}");
+                if (hasError)
+                {
+                    foreach (var m in ShaderUtil.GetShaderMessages(shader))
+                        sb.AppendLine($"  [{m.severity}] {m.message}  ({m.file}:{m.line})");
+                }
+            }
+
+            var material = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
+            sb.AppendLine(material == null
+                ? $"머티리얼: {MaterialPath} 를 못 찾음"
+                : $"머티리얼: 찾음, shader={(material.shader != null ? material.shader.name : "NULL")}, passCount={material.passCount}");
+
+            foreach (var path in RendererPaths)
+            {
+                var rendererData = AssetDatabase.LoadAssetAtPath<ScriptableRendererData>(path);
+                if (rendererData == null)
+                {
+                    sb.AppendLine($"{path}: 에셋을 못 찾음");
+                    continue;
+                }
+
+                sb.AppendLine($"{path}: rendererFeatures 개수={rendererData.rendererFeatures.Count}");
+                foreach (var feature in rendererData.rendererFeatures)
+                {
+                    if (feature == null)
+                    {
+                        sb.AppendLine("  - NULL 항목 (깨진 참조)");
+                        continue;
+                    }
+
+                    sb.AppendLine($"  - {feature.name} ({feature.GetType().Name}), isActive={feature.isActive}");
+                    if (feature is FullScreenPassRendererFeature fullScreen)
+                    {
+                        sb.AppendLine($"      injectionPoint={fullScreen.injectionPoint}, fetchColorBuffer={fullScreen.fetchColorBuffer}, " +
+                                      $"passIndex={fullScreen.passIndex}, passMaterial={(fullScreen.passMaterial != null ? fullScreen.passMaterial.name : "NULL")}");
+                    }
+                }
+            }
+
+            var currentPipeline = GraphicsSettings.currentRenderPipeline;
+            sb.AppendLine($"GraphicsSettings.currentRenderPipeline = {(currentPipeline != null ? currentPipeline.name : "NULL (SRP 비활성 상태!)")}");
+
+            var qualityOverride = QualitySettings.renderPipeline;
+            sb.AppendLine($"현재 품질 레벨({QualitySettings.names[QualitySettings.GetQualityLevel()]})의 렌더 파이프라인 오버라이드 = " +
+                          $"{(qualityOverride != null ? qualityOverride.name : "없음 (전역 기본값 사용)")}");
+
+            var text = sb.ToString();
+            Debug.Log("[CrtSetupTool] 진단 결과\n" + text);
+            EditorUtility.DisplayDialog("CRT 진단 결과", text, "확인");
+        }
+
+        /// <summary>
+        /// 빈 스카이박스만으로는 왜곡/색수차/비네트가 눈에 안 띄어서, 카메라 앞에 색깔 있는
+        /// 격자무늬 쿼드를 하나 띄워준다. 임시 디버그용 — 정식 아트가 들어오면 지워도 된다.
+        /// </summary>
+        [MenuItem("BlueComplex/CRT/Add Test Pattern")]
+        public static void AddTestPattern()
+        {
+            var existing = GameObject.Find("CRT Test Pattern");
+            if (existing != null)
+            {
+                Selection.activeGameObject = existing;
+                EditorUtility.DisplayDialog("CRT 테스트 패턴", "이미 씬에 있어서 선택만 했습니다.", "확인");
+                return;
+            }
+
+            var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            quad.name = "CRT Test Pattern";
+            var collider = quad.GetComponent<Collider>();
+            if (collider != null) Object.DestroyImmediate(collider);
+
+            var texture = CreateTestPatternTexture();
+            var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Texture");
+            var material = new Material(shader) { name = "CRT_TestPatternMaterial", mainTexture = texture };
+            quad.GetComponent<MeshRenderer>().sharedMaterial = material;
+
+            var mainCamera = Camera.main;
+            if (mainCamera != null)
+            {
+                const float distance = 5f;
+                var t = quad.transform;
+                t.position = mainCamera.transform.position + mainCamera.transform.forward * distance;
+                t.rotation = mainCamera.transform.rotation;
+                var height = 2f * distance * Mathf.Tan(mainCamera.fieldOfView * 0.5f * Mathf.Deg2Rad);
+                t.localScale = new Vector3(height * mainCamera.aspect, height, 1f);
+            }
+
+            Undo.RegisterCreatedObjectUndo(quad, "Add CRT Test Pattern");
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+            Selection.activeGameObject = quad;
+
+            Debug.Log("[CrtSetupTool] CRT Test Pattern 생성 완료. Play 모드로 확인하세요. (씬 저장 필요: Ctrl+S)");
+        }
+
+        private static Texture2D CreateTestPatternTexture()
+        {
+            const int size = 512;
+            const int cell = 32;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point };
+            var pixels = new Color32[size * size];
+
+            var red = new Color32(230, 60, 60, 255);
+            var green = new Color32(60, 220, 90, 255);
+            var blue = new Color32(70, 130, 230, 255);
+            var yellow = new Color32(235, 210, 60, 255);
+            var gridLine = new Color32(20, 20, 20, 255);
+            var white = new Color32(245, 245, 245, 255);
+
+            for (var y = 0; y < size; y++)
+            {
+                var top = y >= size / 2;
+                for (var x = 0; x < size; x++)
+                {
+                    var onGrid = x % cell < 2 || y % cell < 2;
+                    var onBorder = x < 3 || x >= size - 3 || y < 3 || y >= size - 3;
+                    Color32 c;
+                    if (onBorder) c = white;
+                    else if (onGrid) c = gridLine;
+                    else
+                    {
+                        var left = x < size / 2;
+                        c = left
+                            ? (top ? red : blue)
+                            : (top ? green : yellow);
+                    }
+                    pixels[y * size + x] = c;
+                }
+            }
+
+            tex.SetPixels32(pixels);
+            tex.Apply();
+            return tex;
         }
 
         private static Material EnsureMaterial(Shader shader)

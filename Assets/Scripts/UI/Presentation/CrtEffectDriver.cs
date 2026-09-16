@@ -5,7 +5,7 @@ using UnityEngine;
 namespace BlueComplex.UI.Presentation
 {
     /// <summary>
-    /// StabilityIndicator의 움직임을 CRT 포스트프로세스 머티리얼 파라미터에 반영한다.
+    /// Heartbeat의 변화를 CRT 포스트프로세스 머티리얼 파라미터에 반영한다.
     /// 게임 규칙 판정은 하지 않으며, 코어가 발행한 이벤트를 읽어 셰이더 값만 쓴다.
     /// </summary>
     public sealed class CrtEffectDriver : MonoBehaviour
@@ -15,8 +15,17 @@ namespace BlueComplex.UI.Presentation
         [SerializeField] private float _tweenDuration = 0.4f;
         [SerializeField] private Ease _tweenEase = Ease.OutQuad;
 
+        [Header("심박수 정규화 기준")]
+        [Tooltip("정규화 t=0에 대응하는 심박수. 기본값은 시작값 80.")]
+        [SerializeField] private int _normalizationCenter = 80;
+        [Tooltip("정규화 t=-1에 대응하는 심박수 하한. 기본값은 매우 침체 구간의 시작인 10.")]
+        [SerializeField] private int _normalizationLower = 10;
+        [Tooltip("정규화 t=+1에 대응하는 심박수 상한. 기본값은 매우 흥분 구간의 끝인 190.")]
+        [SerializeField] private int _normalizationUpper = 190;
+
         private static readonly int ScanIntensityId = Shader.PropertyToID("_ScanIntensity");
         private static readonly int ScanCountId = Shader.PropertyToID("_ScanCount");
+        private static readonly int ScanThicknessId = Shader.PropertyToID("_ScanThickness");
         private static readonly int ScanSpeedId = Shader.PropertyToID("_ScanSpeed");
         private static readonly int CurvatureId = Shader.PropertyToID("_Curvature");
         private static readonly int VignetteId = Shader.PropertyToID("_Vignette");
@@ -29,7 +38,7 @@ namespace BlueComplex.UI.Presentation
         private static readonly int PastelId = Shader.PropertyToID("_Pastel");
         private static readonly int BrightnessId = Shader.PropertyToID("_Brightness");
 
-        private StabilityIndicator _indicator;
+        private Heartbeat _heartbeat;
         private CrtParams _current;
         private Tween _tween;
 
@@ -39,40 +48,43 @@ namespace BlueComplex.UI.Presentation
             ApplyToMaterial(_current);
         }
 
-        /// <summary>스테이지 세션이 만들어진 뒤, 구독할 인디케이터를 외부에서 넘겨준다.</summary>
-        public void Bind(StabilityIndicator indicator)
+        /// <summary>스테이지 세션이 만들어진 뒤, 구독할 심박수를 외부에서 넘겨준다.</summary>
+        public void Bind(Heartbeat heartbeat)
         {
-            if (_indicator != null) _indicator.Moved -= OnIndicatorMoved;
-            _indicator = indicator;
-            if (_indicator != null)
+            if (_heartbeat != null) _heartbeat.Changed -= OnHeartbeatChanged;
+            _heartbeat = heartbeat;
+            if (_heartbeat != null)
             {
-                _indicator.Moved += OnIndicatorMoved;
-                OnIndicatorMoved(_indicator.Position, _indicator.Position);
+                _heartbeat.Changed += OnHeartbeatChanged;
+                OnHeartbeatChanged(_heartbeat.Value, _heartbeat.Value);
             }
         }
 
         private void OnDisable()
         {
-            if (_indicator != null) _indicator.Moved -= OnIndicatorMoved;
+            if (_heartbeat != null) _heartbeat.Changed -= OnHeartbeatChanged;
             _tween?.Kill();
         }
 
-        private void OnIndicatorMoved(int from, int to)
+        private void OnHeartbeatChanged(int from, int to)
         {
-            if (_preset == null || _crtMaterial == null || _indicator == null) return;
+            if (_preset == null || _crtMaterial == null || _heartbeat == null) return;
 
             var target = _preset.Evaluate(NormalizedT(to));
             TweenTo(target);
         }
 
-        private float NormalizedT(int position)
+        /// <summary>
+        /// 80을 중앙(0)으로 두고 하한 10 / 상한 190을 각각 -1 / +1로 매핑한다.
+        /// 안정 구간이 중앙 기준 비대칭(-9/+20)이므로 양방향을 따로 계산한다.
+        /// </summary>
+        private float NormalizedT(int value)
         {
-            var center = _indicator.Center;
-            if (position == center) return 0f;
+            if (value == _normalizationCenter) return 0f;
 
-            return position < center
-                ? (position - center) / (float)center
-                : (position - center) / (float)(_indicator.Slots - 1 - center);
+            return value < _normalizationCenter
+                ? (value - _normalizationCenter) / (float)(_normalizationCenter - _normalizationLower)
+                : (value - _normalizationCenter) / (float)(_normalizationUpper - _normalizationCenter);
         }
 
         private void TweenTo(CrtParams target)
@@ -92,6 +104,7 @@ namespace BlueComplex.UI.Presentation
 
             _crtMaterial.SetFloat(ScanIntensityId, p.ScanIntensity);
             _crtMaterial.SetFloat(ScanCountId, p.ScanCount);
+            _crtMaterial.SetFloat(ScanThicknessId, p.ScanThickness);
             _crtMaterial.SetFloat(ScanSpeedId, p.ScanSpeed);
             _crtMaterial.SetFloat(CurvatureId, p.Curvature);
             _crtMaterial.SetFloat(VignetteId, p.Vignette);

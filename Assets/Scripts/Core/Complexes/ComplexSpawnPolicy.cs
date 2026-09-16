@@ -1,46 +1,36 @@
 using System.Collections.Generic;
 using BlueComplex.Core.Clues;
+using BlueComplex.Core.Stability;
 
 namespace BlueComplex.Core.Complexes
 {
     public interface IComplexSpawnPolicy
     {
-        bool ShouldSpawn(int distanceFromCenter);
+        bool ShouldSpawn(int heartbeatValue);
     }
 
     /// <summary>
-    /// 중앙에서 벗어난 칸 수별 발현 확률.
-    /// 기본값 1칸 10% / 2칸 20% / 3칸 30% / 4칸 40% / 5칸 50%. 단조증가 — 극단에 가까울수록 위험해진다.
-    /// 스테이지별 가중치는 weight로 조정한다. (가라앉다=낮음, 무제=높음)
+    /// 심박수 구간별 발현 확률. 안정 구간은 0%, 벗어날수록(침체/흥분 → 매우 침체/매우 흥분) 위험해진다.
+    /// 구간별 확률표는 <see cref="HeartbeatZone"/>이 가지고 있으며, 스테이지별 가중치는 weight로 조정한다.
+    /// (가라앉다=낮음, 무제=높음)
     /// </summary>
-    public sealed class DistanceBasedSpawnPolicy : IComplexSpawnPolicy
+    public sealed class ZoneBasedSpawnPolicy : IComplexSpawnPolicy
     {
-        private static readonly Dictionary<int, double> DefaultTable = new()
-        {
-            { 0, 0.00 },
-            { 1, 0.10 },
-            { 2, 0.20 },
-            { 3, 0.30 },
-            { 4, 0.40 },
-            { 5, 0.50 }
-        };
-
         private readonly IRandomSource _random;
-        private readonly IReadOnlyDictionary<int, double> _table;
+        private readonly HeartbeatZone _zone;
         private readonly double _weight;
 
-        public DistanceBasedSpawnPolicy(IRandomSource random,
-                                        double weight = 1.0,
-                                        IReadOnlyDictionary<int, double> table = null)
+        public ZoneBasedSpawnPolicy(IRandomSource random, HeartbeatZone zone = null, double weight = 1.0)
         {
             _random = random;
+            _zone = zone ?? new HeartbeatZone();
             _weight = weight;
-            _table = table ?? DefaultTable;
         }
 
-        public bool ShouldSpawn(int distanceFromCenter)
+        public bool ShouldSpawn(int heartbeatValue)
         {
-            if (!_table.TryGetValue(distanceFromCenter, out var chance)) return false;
+            var chance = _zone.ComplexSpawnChanceOf(heartbeatValue);
+            if (chance <= 0) return false;
             return _random.NextDouble() < chance * _weight;
         }
     }

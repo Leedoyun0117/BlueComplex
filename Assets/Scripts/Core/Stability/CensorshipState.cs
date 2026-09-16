@@ -1,46 +1,35 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace BlueComplex.Core.Stability
 {
     /// <summary>
-    /// 인디케이터가 극단에 닿으면 진입하고, 정확히 해제 위치로 돌아와야만 풀리는 상태.
-    /// 진입/해제 조건이 비대칭이므로(그 사이 값에서는 직전 상태를 유지) 상태를 별도로 기억해야 한다.
-    /// 코어는 이 bool 상태만 관리한다 — 무엇을 가릴지는 UI(표시 계층)의 책임이다.
+    /// 현재 심박수 구간의 검열 수준을 노출한다. 상태 기억 없이 구간에 완전히 종속되므로,
+    /// 구간을 벗어나는 즉시(다음 Heartbeat.Changed) 수준이 바뀐다.
     /// </summary>
     public sealed class CensorshipState
     {
-        private readonly HashSet<int> _triggerPositions;
-        private readonly int _releasePosition;
+        private readonly HeartbeatZone _zone;
 
-        public bool IsCensored { get; private set; }
+        public CensorshipLevel Level { get; private set; }
 
-        public event Action<bool> CensorshipChanged;
+        public event Action<CensorshipLevel> LevelChanged;
 
-        public CensorshipState(StabilityIndicator indicator,
-                               IEnumerable<int> triggerPositions,
-                               int releasePosition)
+        public CensorshipState(Heartbeat heartbeat, HeartbeatZone zone)
         {
-            if (indicator == null) throw new ArgumentNullException(nameof(indicator));
-            _triggerPositions = triggerPositions.ToHashSet();
-            _releasePosition = releasePosition;
+            if (heartbeat == null) throw new ArgumentNullException(nameof(heartbeat));
+            _zone = zone ?? throw new ArgumentNullException(nameof(zone));
 
-            indicator.Moved += OnIndicatorMoved;
+            Level = _zone.CensorshipOf(heartbeat.Value);
+            heartbeat.Changed += OnHeartbeatChanged;
         }
 
-        private void OnIndicatorMoved(int from, int to)
-        {
-            if (_triggerPositions.Contains(to)) SetCensored(true);
-            else if (to == _releasePosition) SetCensored(false);
-            // 그 외 위치에서는 직전 상태를 그대로 유지한다.
-        }
+        private void OnHeartbeatChanged(int from, int to) => SetLevel(_zone.CensorshipOf(to));
 
-        private void SetCensored(bool value)
+        private void SetLevel(CensorshipLevel level)
         {
-            if (IsCensored == value) return;
-            IsCensored = value;
-            CensorshipChanged?.Invoke(value);
+            if (Level == level) return;
+            Level = level;
+            LevelChanged?.Invoke(level);
         }
     }
 }

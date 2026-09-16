@@ -17,6 +17,7 @@ namespace BlueComplex.UI.Presentation
         {
             ScanIntensity = 0.45f,
             ScanCount = 360f,
+            ScanThickness = 1.0f,
             ScanSpeed = 0.15f,
             Curvature = 0.24f,
             Vignette = 1.05f,
@@ -35,6 +36,7 @@ namespace BlueComplex.UI.Presentation
         {
             ScanIntensity = 0.28f,
             ScanCount = 500f,
+            ScanThickness = 1.0f,
             ScanSpeed = 0.8f,
             Curvature = 0.20f,
             Vignette = 0.40f,

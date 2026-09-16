@@ -17,15 +17,15 @@ namespace BlueComplex.Core.Tests
     {
         private sealed class NeverSpawnPolicy : IComplexSpawnPolicy
         {
-            public bool ShouldSpawn(int distanceFromCenter) => false;
+            public bool ShouldSpawn(int heartbeatValue) => false;
         }
 
-        /// <summary>구역 폭이 전체 칸을 덮어, 인디케이터 위치와 무관하게 항상 키를 획득시키는 테스트용 배치자.</summary>
+        /// <summary>구역 폭이 전체 범위를 덮어, 심박수 값과 무관하게 항상 키를 획득시키는 테스트용 배치자.</summary>
         private sealed class AlwaysHitPlacer : IKeyZonePlacer
         {
-            private readonly int _slots;
-            public AlwaysHitPlacer(int slots) => _slots = slots;
-            public KeyZone Place(int startPosition, int turnsUntilKey) => new(0, _slots);
+            private readonly int _width;
+            public AlwaysHitPlacer(int width) => _width = width;
+            public KeyZone Place(int startPosition, int turnsUntilKey) => new(0, _width);
         }
 
         private static ClueDefinition NeutralClue(string id) =>
@@ -44,7 +44,8 @@ namespace BlueComplex.Core.Tests
             var resolver = new ComplexResolver(complexBoard);
             var spawner = new ComplexSpawner(Array.Empty<ComplexDefinition>(), random);
 
-            var indicator = new StabilityIndicator(10);
+            var heartbeat = new Heartbeat();
+            var zone = new HeartbeatZone();
             var evaluator = new EmotionEvaluator(new DefaultEmotionPolarityTable());
 
             var items = new ItemInventory(Array.Empty<ItemDefinition>(), random);
@@ -54,7 +55,7 @@ namespace BlueComplex.Core.Tests
             var ledger = new ClueKnowledgeLedger();
 
             var runner = new TurnRunner(hand, complexBoard, resolver, spawner, new NeverSpawnPolicy(),
-                indicator, evaluator, items, activeItems, traits, keys, placer, ledger, totalTurns);
+                heartbeat, zone, evaluator, items, activeItems, traits, keys, placer, ledger, totalTurns);
             return (runner, hand);
         }
 
@@ -63,7 +64,7 @@ namespace BlueComplex.Core.Tests
         {
             // keyTurns 를 비워 두면 구역이 한 번도 열리지 않으므로 키를 모을 수 없다.
             var keys = new KeyProgress(required: 2, keyTurns: Array.Empty<int>());
-            var (runner, hand) = BuildRunner(totalTurns: 10, keys, new AlwaysHitPlacer(10));
+            var (runner, hand) = BuildRunner(totalTurns: 10, keys, new AlwaysHitPlacer(201));
 
             runner.StartStage();
 
@@ -79,7 +80,7 @@ namespace BlueComplex.Core.Tests
         public void TwoKeysCollectedBeforeLastTurn_ResultsInImmediateCleared()
         {
             var keys = new KeyProgress(required: 2, keyTurns: new[] { 1, 2 });
-            var (runner, hand) = BuildRunner(totalTurns: 10, keys, new AlwaysHitPlacer(10));
+            var (runner, hand) = BuildRunner(totalTurns: 10, keys, new AlwaysHitPlacer(201));
 
             runner.StartStage();
 
@@ -99,7 +100,7 @@ namespace BlueComplex.Core.Tests
         public void StageEndedEvent_FiresExactlyOnce_WithFinalOutcome()
         {
             var keys = new KeyProgress(required: 2, keyTurns: new[] { 1, 2 });
-            var (runner, hand) = BuildRunner(totalTurns: 10, keys, new AlwaysHitPlacer(10));
+            var (runner, hand) = BuildRunner(totalTurns: 10, keys, new AlwaysHitPlacer(201));
 
             var endedOutcomes = new List<StageOutcome>();
             runner.StageEnded += o => endedOutcomes.Add(o);

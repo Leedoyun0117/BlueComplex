@@ -13,7 +13,8 @@ namespace BlueComplex.Core.Stage
         public TurnRunner Runner { get; init; }
         public ClueHand Hand { get; init; }
         public ComplexBoard Complexes { get; init; }
-        public StabilityIndicator Indicator { get; init; }
+        public Heartbeat Heartbeat { get; init; }
+        public HeartbeatZone Zone { get; init; }
         public ItemInventory Items { get; init; }
         public TraitBoard Traits { get; init; }
         public KeyProgress Keys { get; init; }
@@ -27,7 +28,7 @@ namespace BlueComplex.Core.Stage
                                           IRandomSource random,
                                           ClueKnowledgeLedger ledger,
                                           IEmotionPolarityTable polarityTable = null,
-                                          int indicatorSlots = 10)
+                                          int heartbeatStartValue = Heartbeat.DefaultStartValue)
         {
             polarityTable ??= new DefaultEmotionPolarityTable();
 
@@ -39,27 +40,26 @@ namespace BlueComplex.Core.Stage
                 complexBoard.TryAttach(new ComplexInstance(config.StartingComplex, priority: 0));
 
             var traits = new TraitBoard();
-            var indicator = new StabilityIndicator(indicatorSlots);
+            var heartbeat = new Heartbeat(heartbeatStartValue);
+            var zone = new HeartbeatZone();
             var evaluator = new TraitAwareEmotionEvaluator(new EmotionEvaluator(polarityTable), traits);
 
-            var censorship = new CensorshipState(
-                indicator,
-                new[] { 0, indicator.Slots - 1 },
-                indicator.Center);
+            var censorship = new CensorshipState(heartbeat, zone);
 
             var activeItems = new ActiveItemBoard();
             var items = new ItemInventory(config.ItemPool, random);
 
             var keys = new KeyProgress(config.RequiredKeys, config.KeyTurns);
-            var keyPlacer = new ReachabilityKeyZonePlacer(random, new KeyZoneLayout(indicatorSlots));
+            var keyPlacer = new ReachabilityKeyZonePlacer(random, new KeyZoneLayout());
 
             var runner = new TurnRunner(
                 hand,
                 complexBoard,
                 new ComplexResolver(complexBoard),
                 new ComplexSpawner(config.ComplexPool, random),
-                new DistanceBasedSpawnPolicy(random, config.ComplexWeight),
-                indicator,
+                new ZoneBasedSpawnPolicy(random, zone, config.ComplexWeight),
+                heartbeat,
+                zone,
                 evaluator,
                 items,
                 activeItems,
@@ -74,7 +74,8 @@ namespace BlueComplex.Core.Stage
                 Runner = runner,
                 Hand = hand,
                 Complexes = complexBoard,
-                Indicator = indicator,
+                Heartbeat = heartbeat,
+                Zone = zone,
                 Items = items,
                 Traits = traits,
                 Keys = keys,
