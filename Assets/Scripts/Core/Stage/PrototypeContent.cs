@@ -50,7 +50,38 @@ namespace BlueComplex.Core.Stage
                 "몇 주 전, 일본으로 떠나는 비행기 티켓. 여행 날짜가 쓰여있다.",
                 TimeTag.Past,
                 new[] { PersonTag.Family },
-                new[] { EmotionTag.Sadness, EmotionTag.Happiness })
+                new[] { EmotionTag.Sadness, EmotionTag.Happiness }),
+
+            // 흥분 단서 5종. 이름/스토리는 기획 확정 전 placeholder — 임의로 지어내지 말 것.
+            new ClueDefinition("clue_new_1", "(미정 단서 1)",
+                "(스토리 미정 — 기획 확정 후 채워짐)",
+                TimeTag.Past,
+                new[] { PersonTag.Other },
+                new[] { EmotionTag.Anger }),
+
+            new ClueDefinition("clue_new_2", "(미정 단서 2)",
+                "(스토리 미정 — 기획 확정 후 채워짐)",
+                TimeTag.Present,
+                new[] { PersonTag.Friend },
+                new[] { EmotionTag.Happiness }),
+
+            new ClueDefinition("clue_new_3", "(미정 단서 3)",
+                "(스토리 미정 — 기획 확정 후 채워짐)",
+                TimeTag.Past,
+                new[] { PersonTag.Family },
+                new[] { EmotionTag.Love }),
+
+            new ClueDefinition("clue_new_4", "(미정 단서 4)",
+                "(스토리 미정 — 기획 확정 후 채워짐)",
+                TimeTag.Future,
+                new[] { PersonTag.Friend },
+                new[] { EmotionTag.Happiness }),
+
+            new ClueDefinition("clue_new_5", "(미정 단서 5)",
+                "(스토리 미정 — 기획 확정 후 채워짐)",
+                TimeTag.Past,
+                new[] { PersonTag.Other },
+                new[] { EmotionTag.Happiness })
         };
 
         public static ComplexDefinition AntiPast(IEmotionPolarityTable _) => new(

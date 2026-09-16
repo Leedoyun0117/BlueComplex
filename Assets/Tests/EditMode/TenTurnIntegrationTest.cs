@@ -14,7 +14,7 @@ namespace BlueComplex.Core.Tests
     /// <summary>
     /// 10턴 통합 실행 — 시드 고정, 매 턴 손패의 첫 카드를 내는 단순 전략으로
     /// 프로토타입 스테이지를 끝까지 자동 진행한다. 예외 없이 완주하는 것이 1차 목표이며,
-    /// 로그는 밸런스를 눈으로 확인하기 위한 참고 자료다.
+    /// 로그는 밸런스(특히 검열 지속 턴 수)를 눈으로 확인하기 위한 참고 자료다.
     /// </summary>
     public class TenTurnIntegrationTest
     {
@@ -60,10 +60,12 @@ namespace BlueComplex.Core.Tests
         private static string FormatTags(TagSet tags) =>
             $"{FormatTime(tags.Time)}/{FormatPersons(tags.Persons)}/{FormatEmotions(tags.Emotions)}";
 
-        [Test]
-        public void PrototypeStage_RunsToCompletion_Over10Turns_WithFixedSeed()
+        [TestCase(20260916)]
+        [TestCase(1)]
+        [TestCase(12345)]
+        [TestCase(777)]
+        public void PrototypeStage_RunsToCompletion_Over10Turns_WithFixedSeed(int seed)
         {
-            const int seed = 20260916;
             var random = new SystemRandomSource(seed);
             var polarityTable = new DefaultEmotionPolarityTable();
             var config = PrototypeContent.PrototypeStage(polarityTable);
@@ -71,13 +73,28 @@ namespace BlueComplex.Core.Tests
 
             var session = StageFactory.Create(config, random, ledger, polarityTable);
 
-            // OpenZone/Judge는 TurnRunner 내부에서만 호출되고 TurnReport에 직접 노출되지 않으므로,
-            // 로그 출력을 위해 KeyProgress 이벤트로 턴별 구역/판정을 따로 수집한다.
+            // OpenZone/Judge, CensorshipChanged 는 TurnRunner 내부에서만 호출되고 TurnReport에
+            // 직접 노출되지 않으므로, 로그 출력을 위해 이벤트로 턴별 상태를 따로 수집한다.
             var zoneByTurn = new Dictionary<int, KeyZone>();
             var judgeByTurn = new Dictionary<int, string>();
             session.Keys.ZoneOpened += zone => zoneByTurn[session.Runner.CurrentTurn] = zone;
             session.Keys.KeyCollected += count => judgeByTurn[session.Runner.CurrentTurn] = $"성공(누적 {count})";
             session.Keys.ZoneMissed += () => judgeByTurn[session.Runner.CurrentTurn] = "실패";
+
+            int? censorshipStartTurn = null;
+            var censorshipStreaks = new List<int>();
+            session.Censorship.CensorshipChanged += censored =>
+            {
+                if (censored)
+                {
+                    censorshipStartTurn = session.Runner.CurrentTurn;
+                }
+                else if (censorshipStartTurn.HasValue)
+                {
+                    censorshipStreaks.Add(session.Runner.CurrentTurn - censorshipStartTurn.Value);
+                    censorshipStartTurn = null;
+                }
+            };
 
             var log = new StringBuilder();
             log.AppendLine($"=== 10턴 통합 실행 (seed={seed}) ===");
@@ -128,11 +145,25 @@ namespace BlueComplex.Core.Tests
                 var judgeText = judgeByTurn.TryGetValue(report.Turn, out var judge) ? judge : "-";
                 log.AppendLine($"  키 구역: {zoneText}  판정: {judgeText}");
 
+                var censorText = session.Censorship.IsCensored
+                    ? $"진행중 ({report.Turn - censorshipStartTurn.Value + 1}턴째)"
+                    : "해제";
+                log.AppendLine($"  검열: {censorText}");
+
                 log.AppendLine($"  신규 컴플렉스: {(report.SpawnedComplex != null ? report.SpawnedComplex.Definition.DisplayName : "없음")}");
                 log.AppendLine($"  결과: {report.Outcome}");
             }
 
-            log.AppendLine($"=== 종료: {session.Runner.Outcome}, 총 {session.Runner.CurrentTurn}턴, 획득 키 {session.Keys.Collected}/{config.RequiredKeys} ===");
+            // 스테이지가 검열 상태인 채로 끝난 경우, 마지막 구간도 집계에 포함한다.
+            if (censorshipStartTurn.HasValue)
+                censorshipStreaks.Add(session.Runner.CurrentTurn - censorshipStartTurn.Value + 1);
+
+            var streakSummary = censorshipStreaks.Count == 0
+                ? "없음"
+                : string.Join(", ", censorshipStreaks.Select(n => $"{n}턴")) + $" (합계 {censorshipStreaks.Sum()}턴)";
+
+            log.AppendLine($"=== 종료: {session.Runner.Outcome}, 총 {session.Runner.CurrentTurn}턴, " +
+                            $"획득 키 {session.Keys.Collected}/{config.RequiredKeys}, 검열 지속 구간: {streakSummary} ===");
 
             Debug.Log(log.ToString());
 
