@@ -5,7 +5,7 @@ using BlueComplex.Core.Clues;
 
 namespace BlueComplex.Core.Stability
 {
-    /// <summary>인디케이터 위에 나타나는 키 구역. 2칸을 차지한다.</summary>
+    /// <summary>심박수 축 위에 나타나는 키 구역. 폭(Width)만큼의 심박수 구간을 차지한다.</summary>
     public readonly struct KeyZone
     {
         public int StartSlot { get; }
@@ -23,6 +23,15 @@ namespace BlueComplex.Core.Stability
     /// <summary>키 구역의 물리적 규격. 배치 정책은 이 규격 안에서 offset만 고른다.</summary>
     public sealed class KeyZoneLayout
     {
+        /// <summary>심박수 범위(0~200)의 전체 칸 수.</summary>
+        public const int DefaultSlots = Heartbeat.MaxValue - Heartbeat.MinValue + 1;
+
+        /// <summary>10칸 기준 양끝 3칸을 200 스케일로 환산한 값(3 × 20).</summary>
+        public const int DefaultEdgeWidth = 60;
+
+        /// <summary>10칸 기준 키 2칸을 200 스케일로 환산한 값(2 × 20).</summary>
+        public const int DefaultKeyWidth = 40;
+
         public int Slots { get; }
         public int EdgeWidth { get; }
         public int KeyWidth { get; }
@@ -30,7 +39,7 @@ namespace BlueComplex.Core.Stability
         /// <summary>한쪽 끝 구역 안에서 키 시작 칸의 후보 개수.</summary>
         public int OffsetCount => EdgeWidth - KeyWidth + 1;
 
-        public KeyZoneLayout(int slots = 10, int edgeWidth = 3, int keyWidth = 2)
+        public KeyZoneLayout(int slots = DefaultSlots, int edgeWidth = DefaultEdgeWidth, int keyWidth = DefaultKeyWidth)
         {
             Slots = slots;
             EdgeWidth = edgeWidth;
@@ -73,18 +82,23 @@ namespace BlueComplex.Core.Stability
     }
 
     /// <summary>
-    /// 인디케이터가 남은 턴 안에 실제로 도달할 수 있는 범위 안에서만 키 구역을 고른다.
+    /// 심박수가 남은 턴 안에 실제로 도달할 수 있는 범위 안에서만 키 구역을 고른다.
     /// 도달 범위와 겹치는 후보가 여럿이면 무작위로, 하나도 없으면 가장 가까운 후보를 고른다.
-    /// 한 턴 최대 이동폭(maxMovePerTurn)은 감정 조합 최대 개수(3)에서 온 설계 상수이므로
-    /// 하드코딩하지 않고 생성자 주입으로 받는다.
+    /// 한 턴 최대 이동폭(maxMovePerTurn)은 감정 조합 최대 개수(3) × 태그 하나의 영향력(EmotionEvaluator.DefaultTagMagnitude)에서
+    /// 온 설계 상수이므로 하드코딩하지 않고 생성자 주입으로 받는다.
     /// </summary>
     public sealed class ReachabilityKeyZonePlacer : IKeyZonePlacer
     {
+        /// <summary>감정 조합 최대 개수(3) × 태그 하나의 영향력 = 한 턴 최대 이동폭.</summary>
+        public const int DefaultMaxMovePerTurn = 3 * EmotionEvaluator.DefaultTagMagnitude;
+
         private readonly IRandomSource _random;
         private readonly KeyZoneLayout _layout;
         private readonly int _maxMovePerTurn;
 
-        public ReachabilityKeyZonePlacer(IRandomSource random, KeyZoneLayout layout = null, int maxMovePerTurn = 3)
+        public int MaxMovePerTurn => _maxMovePerTurn;
+
+        public ReachabilityKeyZonePlacer(IRandomSource random, KeyZoneLayout layout = null, int maxMovePerTurn = DefaultMaxMovePerTurn)
         {
             _random = random;
             _layout = layout ?? new KeyZoneLayout();

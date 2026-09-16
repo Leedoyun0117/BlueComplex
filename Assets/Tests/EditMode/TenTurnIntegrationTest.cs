@@ -60,6 +60,25 @@ namespace BlueComplex.Core.Tests
         private static string FormatTags(TagSet tags) =>
             $"{FormatTime(tags.Time)}/{FormatPersons(tags.Persons)}/{FormatEmotions(tags.Emotions)}";
 
+        private static string FormatState(HeartbeatState state) => state switch
+        {
+            HeartbeatState.Fatal => "즉시 패배",
+            HeartbeatState.VeryDepressed => "매우 침체",
+            HeartbeatState.Depressed => "침체",
+            HeartbeatState.Stable => "안정",
+            HeartbeatState.Excited => "흥분",
+            HeartbeatState.VeryExcited => "매우 흥분",
+            _ => "-"
+        };
+
+        private static string FormatCensorship(CensorshipLevel level) => level switch
+        {
+            CensorshipLevel.None => "없음",
+            CensorshipLevel.Partial => "일부",
+            CensorshipLevel.Full => "전체",
+            _ => "-"
+        };
+
         [TestCase(20260916)]
         [TestCase(1)]
         [TestCase(12345)]
@@ -73,28 +92,13 @@ namespace BlueComplex.Core.Tests
 
             var session = StageFactory.Create(config, random, ledger, polarityTable);
 
-            // OpenZone/Judge, CensorshipChanged 는 TurnRunner 내부에서만 호출되고 TurnReport에
-            // 직접 노출되지 않으므로, 로그 출력을 위해 이벤트로 턴별 상태를 따로 수집한다.
+            // OpenZone/Judge 는 TurnRunner 내부에서만 호출되고 TurnReport에 직접 노출되지 않으므로,
+            // 로그 출력을 위해 이벤트로 턴별 상태를 따로 수집한다.
             var zoneByTurn = new Dictionary<int, KeyZone>();
             var judgeByTurn = new Dictionary<int, string>();
             session.Keys.ZoneOpened += zone => zoneByTurn[session.Runner.CurrentTurn] = zone;
             session.Keys.KeyCollected += count => judgeByTurn[session.Runner.CurrentTurn] = $"성공(누적 {count})";
             session.Keys.ZoneMissed += () => judgeByTurn[session.Runner.CurrentTurn] = "실패";
-
-            int? censorshipStartTurn = null;
-            var censorshipStreaks = new List<int>();
-            session.Censorship.CensorshipChanged += censored =>
-            {
-                if (censored)
-                {
-                    censorshipStartTurn = session.Runner.CurrentTurn;
-                }
-                else if (censorshipStartTurn.HasValue)
-                {
-                    censorshipStreaks.Add(session.Runner.CurrentTurn - censorshipStartTurn.Value);
-                    censorshipStartTurn = null;
-                }
-            };
 
             var log = new StringBuilder();
             log.AppendLine($"=== 10턴 통합 실행 (seed={seed}) ===");
@@ -113,7 +117,7 @@ namespace BlueComplex.Core.Tests
 
                 var card = session.Hand.Cards[0];
                 var originalTags = card.Definition.CreateOriginalTagSet();
-                var positionBefore = session.Indicator.Position;
+                var heartbeatBefore = session.Heartbeat.Value;
 
                 TurnReport report = null;
                 Assert.DoesNotThrow(() => report = session.Runner.PlayClue(card),
@@ -141,7 +145,7 @@ namespace BlueComplex.Core.Tests
                 }
 
                 log.AppendLine($"  최종: {FormatTags(report.FinalTags)}");
-                log.AppendLine($"  이동: {report.IndicatorDelta}  인디케이터: {positionBefore} → {report.IndicatorPosition}");
+                log.AppendLine($"  이동: {report.HeartbeatDelta}  심박수: {heartbeatBefore} → {report.HeartbeatValue}");
 
                 var zoneText = zoneByTurn.TryGetValue(report.Turn, out var zone)
                     ? $"{zone.StartSlot}~{zone.StartSlot + zone.Width - 1}"
@@ -149,25 +153,15 @@ namespace BlueComplex.Core.Tests
                 var judgeText = judgeByTurn.TryGetValue(report.Turn, out var judge) ? judge : "-";
                 log.AppendLine($"  키 구역: {zoneText}  판정: {judgeText}");
 
-                var censorText = session.Censorship.IsCensored
-                    ? $"진행중 ({report.Turn - censorshipStartTurn.Value + 1}턴째)"
-                    : "해제";
-                log.AppendLine($"  검열: {censorText}");
+                var state = session.Zone.StateOf(report.HeartbeatValue);
+                log.AppendLine($"  상태: {FormatState(state)}  검열: {FormatCensorship(session.Censorship.Level)}");
 
                 log.AppendLine($"  신규 컴플렉스: {(report.SpawnedComplex != null ? report.SpawnedComplex.Definition.DisplayName : "없음")}");
                 log.AppendLine($"  결과: {report.Outcome}");
             }
 
-            // 스테이지가 검열 상태인 채로 끝난 경우, 마지막 구간도 집계에 포함한다.
-            if (censorshipStartTurn.HasValue)
-                censorshipStreaks.Add(session.Runner.CurrentTurn - censorshipStartTurn.Value + 1);
-
-            var streakSummary = censorshipStreaks.Count == 0
-                ? "없음"
-                : string.Join(", ", censorshipStreaks.Select(n => $"{n}턴")) + $" (합계 {censorshipStreaks.Sum()}턴)";
-
             log.AppendLine($"=== 종료: {session.Runner.Outcome}, 총 {session.Runner.CurrentTurn}턴, " +
-                            $"획득 키 {session.Keys.Collected}/{config.RequiredKeys}, 검열 지속 구간: {streakSummary} ===");
+                            $"획득 키 {session.Keys.Collected}/{config.RequiredKeys} ===");
 
             Debug.Log(log.ToString());
 

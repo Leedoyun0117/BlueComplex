@@ -23,8 +23,8 @@ namespace BlueComplex.Core.Turn
         public ClueDefinition Clue { get; }
         public InterpretationResult Interpretation { get; }
         public TagSet FinalTags { get; }
-        public int IndicatorDelta { get; }
-        public int IndicatorPosition { get; }
+        public int HeartbeatDelta { get; }
+        public int HeartbeatValue { get; }
         public ComplexInstance SpawnedComplex { get; }
         public StageOutcome Outcome { get; }
 
@@ -32,8 +32,8 @@ namespace BlueComplex.Core.Turn
                           ClueDefinition clue,
                           InterpretationResult interpretation,
                           TagSet finalTags,
-                          int indicatorDelta,
-                          int indicatorPosition,
+                          int heartbeatDelta,
+                          int heartbeatValue,
                           ComplexInstance spawnedComplex,
                           StageOutcome outcome)
         {
@@ -41,8 +41,8 @@ namespace BlueComplex.Core.Turn
             Clue = clue;
             Interpretation = interpretation;
             FinalTags = finalTags;
-            IndicatorDelta = indicatorDelta;
-            IndicatorPosition = indicatorPosition;
+            HeartbeatDelta = heartbeatDelta;
+            HeartbeatValue = heartbeatValue;
             SpawnedComplex = spawnedComplex;
             Outcome = outcome;
         }
@@ -59,7 +59,8 @@ namespace BlueComplex.Core.Turn
         private readonly ComplexResolver _resolver;
         private readonly ComplexSpawner _spawner;
         private readonly IComplexSpawnPolicy _spawnPolicy;
-        private readonly StabilityIndicator _indicator;
+        private readonly Heartbeat _heartbeat;
+        private readonly HeartbeatZone _zone;
         private readonly IEmotionEvaluator _evaluator;
         private readonly ItemInventory _items;
         private readonly ActiveItemBoard _activeItems;
@@ -81,7 +82,8 @@ namespace BlueComplex.Core.Turn
                           ComplexResolver resolver,
                           ComplexSpawner spawner,
                           IComplexSpawnPolicy spawnPolicy,
-                          StabilityIndicator indicator,
+                          Heartbeat heartbeat,
+                          HeartbeatZone zone,
                           IEmotionEvaluator evaluator,
                           ItemInventory items,
                           ActiveItemBoard activeItems,
@@ -96,7 +98,8 @@ namespace BlueComplex.Core.Turn
             _resolver = resolver;
             _spawner = spawner;
             _spawnPolicy = spawnPolicy;
-            _indicator = indicator;
+            _heartbeat = heartbeat;
+            _zone = zone;
             _evaluator = evaluator;
             _items = items;
             _activeItems = activeItems;
@@ -115,7 +118,7 @@ namespace BlueComplex.Core.Turn
             // 모든 키 턴의 구역을 스테이지 시작 시점에 한꺼번에 확정한다 — 플레이어는 턴 1부터 전부 볼 수 있다.
             var zones = new Dictionary<int, KeyZone>();
             foreach (var turn in _keys.KeyTurns)
-                zones[turn] = _keyPlacer.Place(_indicator.Position, turn - 1);
+                zones[turn] = _keyPlacer.Place(_heartbeat.Value, turn - 1);
             _keys.PrepareZones(zones);
 
             _hand.Refill();
@@ -149,9 +152,9 @@ namespace BlueComplex.Core.Turn
             _ledger.RecordInterpretation(card.Definition.Id, interpretation);
 
             var delta = _evaluator.Evaluate(finalTags);
-            _indicator.Move(delta);
+            _heartbeat.Change(delta);
 
-            _keys.Judge(_indicator.Position);
+            _keys.Judge(_heartbeat.Value);
             _hand.Use(card);
 
             _complexBoard.TickDurations();
@@ -159,14 +162,14 @@ namespace BlueComplex.Core.Turn
             _activeItems.TickDurations();
 
             ComplexInstance spawned = null;
-            if (_spawnPolicy.ShouldSpawn(_indicator.DistanceFromCenter))
+            if (_spawnPolicy.ShouldSpawn(_heartbeat.Value))
                 _spawner.TrySpawn(_complexBoard, out spawned);
 
             _hand.Refill();
             Outcome = JudgeOutcome();
 
             var report = new TurnReport(CurrentTurn, card.Definition, interpretation, finalTags,
-                delta, _indicator.Position, spawned, Outcome);
+                delta, _heartbeat.Value, spawned, Outcome);
             TurnResolved?.Invoke(report);
 
             if (Outcome == StageOutcome.InProgress) BeginTurn();
@@ -178,6 +181,8 @@ namespace BlueComplex.Core.Turn
         private StageOutcome JudgeOutcome()
         {
             if (_keys.IsComplete) return StageOutcome.Cleared;
+            // Fatal 구간(즉시 패배)은 턴이 남아 있어도 10턴 소진보다 우선해 즉시 종료된다.
+            if (_zone.IsFatal(_heartbeat.Value)) return StageOutcome.Failed;
             if (CurrentTurn >= _totalTurns) return StageOutcome.Failed;
             return StageOutcome.InProgress;
         }

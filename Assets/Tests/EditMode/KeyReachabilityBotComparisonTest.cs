@@ -53,8 +53,8 @@ namespace BlueComplex.Core.Tests
         /// </summary>
         private static ClueInstance ChooseHeuristicCard(StageSession session)
         {
-            var indicator = session.Indicator;
-            var currentPosition = indicator.Position;
+            var heartbeat = session.Heartbeat;
+            var currentPosition = heartbeat.Value;
 
             KeyZone? target = null;
             foreach (var turn in session.Keys.Zones.Keys.OrderBy(t => t))
@@ -63,7 +63,7 @@ namespace BlueComplex.Core.Tests
                 target = session.Keys.Zones[turn];
                 break;
             }
-            var targetZone = target ?? new KeyZone(indicator.Center, 1); // 남은 키 턴이 없으면 중앙을 목표로 안정 지향.
+            var targetZone = target ?? new KeyZone(heartbeat.StartValue, 1); // 남은 키 턴이 없으면 시작값(안정)을 목표로.
 
             var previewResolver = new ComplexResolver(session.Complexes);
             var evaluator = new TraitAwareEmotionEvaluator(
@@ -80,7 +80,7 @@ namespace BlueComplex.Core.Tests
             {
                 var interpretation = previewResolver.Resolve(card.Definition.CreateOriginalTagSet());
                 var delta = evaluator.Evaluate(interpretation.Final);
-                var predicted = Math.Clamp(currentPosition + delta, 0, indicator.Slots - 1);
+                var predicted = Math.Clamp(currentPosition + delta, Heartbeat.MinValue, Heartbeat.MaxValue);
                 var distance = DistanceToZone(predicted, targetZone);
                 var absDelta = Math.Abs(delta);
 
@@ -128,14 +128,14 @@ namespace BlueComplex.Core.Tests
                     $"[{label} seed={seed}] 턴 {session.Runner.CurrentTurn} 시작 시 손패가 비어 있으면 안 된다.");
 
                 var card = chooseCard(session);
-                var before = session.Indicator.Position;
+                var before = session.Heartbeat.Value;
 
                 TurnReport report = null;
                 Assert.DoesNotThrow(() => report = session.Runner.PlayClue(card),
                     $"[{label} seed={seed}] 턴 {session.Runner.CurrentTurn} 진행 중 예외 없이 처리되어야 한다.");
 
                 log.AppendLine($"  [턴 {report.Turn}] {card.Definition.DisplayName} " +
-                                $"이동:{report.IndicatorDelta} ({before}→{report.IndicatorPosition}) 결과:{report.Outcome}");
+                                $"이동:{report.HeartbeatDelta} ({before}→{report.HeartbeatValue}) 결과:{report.Outcome}");
             }
 
             log.AppendLine($"  => {session.Runner.Outcome}, 키 {session.Keys.Collected}/{config.RequiredKeys} " +

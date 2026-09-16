@@ -4,6 +4,7 @@ Shader "BlueComplex/CRT/PostProcess"
     {
         _ScanIntensity ("Scanline Intensity", Range(0, 1)) = 0.35
         _ScanCount ("Scanline Count", Range(100, 900)) = 420
+        _ScanThickness ("Scanline Thickness", Range(0.2, 4)) = 1.0
         _ScanSpeed ("Scanline Speed", Range(0, 2)) = 0
         _Curvature ("Barrel Curvature", Range(0, 0.6)) = 0.18
         _Vignette ("Vignette", Range(0, 1.5)) = 0.55
@@ -31,15 +32,22 @@ Shader "BlueComplex/CRT/PostProcess"
             #pragma vertex Vert
             #pragma fragment Frag
 
-            // Blit.hlsl calls TEXTURE2D_X() but doesn't include the header that defines it itself,
-            // so TextureXR.hlsl has to be pulled in first (see com.unity.render-pipelines.core's CoreCopy.shader).
+            // Blit.hlsl references TEXTURE2D_X()/UnpackNormalOctQuadEncode()/_Time etc. from headers it doesn't
+            // include itself, so pull them in first (same order as com.unity.render-pipelines.core's CoreCopy.shader).
+            // UnityInput.hlsl has to come before Blit.hlsl: Blit.hlsl pulls in UnityInstancing.hlsl, which
+            // #defines unity_StereoEyeIndex as a plain "0" outside of stereo builds, and UnityInput.hlsl
+            // declares an actual "int unity_StereoEyeIndex;" variable — if that #define is already active,
+            // the declaration expands to "int 0;" and fails to parse.
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Packing.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/UnityInput.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/TextureXR.hlsl"
             #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
                 float _ScanIntensity;
                 float _ScanCount;
+                float _ScanThickness;
                 float _ScanSpeed;
                 float _Curvature;
                 float _Vignette;
@@ -112,9 +120,10 @@ Shader "BlueComplex/CRT/PostProcess"
                 }
                 col += acc / 25.0 * _Bloom * 5.5;
 
-                // 스캔라인
+                // 스캔라인 (두께: sin파를 지수로 눌러서 어두운 대역의 폭을 넓힘)
                 float sl = sin((c.y + time * _ScanSpeed * 0.05) * _ScanCount * 3.14159);
-                col *= 1.0 - _ScanIntensity * (0.5 + 0.5 * sl);
+                float scanWave = pow(saturate(0.5 + 0.5 * sl), 1.0 / max(_ScanThickness, 0.05));
+                col *= 1.0 - _ScanIntensity * scanWave;
 
                 // 섀도우 마스크
                 float m = fmod(input.positionCS.x, 3.0);

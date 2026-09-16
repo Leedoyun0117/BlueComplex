@@ -43,7 +43,7 @@ namespace BlueComplex.UI.Bootstrap
             _logger = new StageTurnLogger(Session);
 
             if (_crtEffectDriver != null)
-                _crtEffectDriver.Bind(Session.Indicator);
+                _crtEffectDriver.Bind(Session.Heartbeat);
 
             Session.Runner.StartStage();
         }

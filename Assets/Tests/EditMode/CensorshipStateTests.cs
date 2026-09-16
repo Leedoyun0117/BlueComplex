@@ -4,89 +4,105 @@ using BlueComplex.Core.Stability;
 
 namespace BlueComplex.Core.Tests
 {
-    /// <summary>극단 패널티 — 단서 검열 상태. 진입(극단)과 해제(정확히 중앙) 조건이 비대칭임을 검증한다.</summary>
+    /// <summary>
+    /// 검열 수준 — 심박수 구간에 완전히 종속된다(상태 기억 없음). 구간을 벗어나는 즉시 수준이 바뀐다.
+    /// </summary>
     public class CensorshipStateTests
     {
-        private static (StabilityIndicator Indicator, CensorshipState State) Build()
+        private static (Heartbeat Heartbeat, CensorshipState State) Build()
         {
-            var indicator = new StabilityIndicator(10); // 0~9, 중앙 5
-            var state = new CensorshipState(indicator, new[] { 0, 9 }, releasePosition: 5);
-            return (indicator, state);
+            var heartbeat = new Heartbeat(); // 시작 80(안정)
+            var state = new CensorshipState(heartbeat, new HeartbeatZone());
+            return (heartbeat, state);
         }
 
         [Test]
-        public void ReachingLowerExtreme_EntersCensorship()
+        public void AtStart_StableZone_LevelIsNone()
         {
-            var (indicator, state) = Build();
-            Assert.IsFalse(state.IsCensored);
+            var (_, state) = Build();
 
-            indicator.Move(-5); // 5 -> 0
-
-            Assert.IsTrue(state.IsCensored);
+            Assert.AreEqual(CensorshipLevel.None, state.Level);
         }
 
         [Test]
-        public void ReachingUpperExtreme_EntersCensorship()
+        public void MovingIntoDepressed_SetsPartial()
         {
-            var (indicator, state) = Build();
+            var (heartbeat, state) = Build();
 
-            indicator.Move(4); // 5 -> 9
+            heartbeat.Change(-25); // 80 -> 55, 침체(40~70)
 
-            Assert.IsTrue(state.IsCensored);
+            Assert.AreEqual(CensorshipLevel.Partial, state.Level);
         }
 
         [Test]
-        public void MovingToMiddleValue_KeepsCensorshipUnchanged()
+        public void MovingIntoVeryDepressed_SetsFull()
         {
-            var (indicator, state) = Build();
-            indicator.Move(-5); // -> 0, 검열 진입
-            Assert.IsTrue(state.IsCensored);
+            var (heartbeat, state) = Build();
 
-            indicator.Move(3); // 0 -> 3, 극단도 중앙도 아님
+            heartbeat.Change(-60); // 80 -> 20, 매우 침체(10~39)
 
-            Assert.IsTrue(state.IsCensored, "1~4 구간에서는 직전 상태가 유지되어야 한다.");
+            Assert.AreEqual(CensorshipLevel.Full, state.Level);
         }
 
         [Test]
-        public void ReturningExactlyToCenter_ReleasesCensorship()
+        public void MovingIntoExcited_SetsPartial()
         {
-            var (indicator, state) = Build();
-            indicator.Move(-5); // -> 0
-            Assert.IsTrue(state.IsCensored);
+            var (heartbeat, state) = Build();
 
-            indicator.Move(5); // 0 -> 5
+            heartbeat.Change(25); // 80 -> 105, 흥분(101~150)
 
-            Assert.IsFalse(state.IsCensored);
+            Assert.AreEqual(CensorshipLevel.Partial, state.Level);
         }
 
         [Test]
-        public void AfterRelease_ReturningToExtreme_ReEntersCensorship()
+        public void MovingIntoVeryExcited_SetsFull()
         {
-            var (indicator, state) = Build();
-            indicator.Move(-5); // -> 0, 진입
-            indicator.Move(5);  // -> 5, 해제
-            Assert.IsFalse(state.IsCensored);
+            var (heartbeat, state) = Build();
 
-            indicator.Move(-5); // -> 0, 재진입
+            heartbeat.Change(75); // 80 -> 155, 매우 흥분(151~190)
 
-            Assert.IsTrue(state.IsCensored);
+            Assert.AreEqual(CensorshipLevel.Full, state.Level);
         }
 
         [Test]
-        public void CensorshipChanged_FiresOnlyOnActualStateTransitions()
+        public void LeavingZone_ReleasesImmediately_WithoutReturningToCenter()
         {
-            var (indicator, state) = Build();
-            var changes = new List<bool>();
-            state.CensorshipChanged += changes.Add;
+            var (heartbeat, state) = Build();
+            heartbeat.Change(-60); // 80 -> 20, 매우 침체 → Full
+            Assert.AreEqual(CensorshipLevel.Full, state.Level);
 
-            indicator.Move(-5); // 5 -> 0   : 진입 (변화)
-            indicator.Move(2);  // 0 -> 2   : 유지 (변화 없음)
-            indicator.Move(-2); // 2 -> 0   : 이미 검열 중, 다시 0 (변화 없음)
-            indicator.Move(5);  // 0 -> 5   : 해제 (변화)
-            indicator.Move(-5); // 5 -> 0   : 재진입 (변화)
+            heartbeat.Change(30); // 20 -> 50, 침체(40~70) — 중앙으로 돌아오지 않아도 구간만 바뀌면 즉시 바뀐다.
 
-            CollectionAssert.AreEqual(new[] { true, false, true }, changes,
-                "실제로 상태가 바뀔 때만, 그리고 그 순서대로 이벤트가 발생해야 한다.");
+            Assert.AreEqual(CensorshipLevel.Partial, state.Level, "중앙 복귀 없이도 구간을 벗어나면 즉시 수준이 바뀌어야 한다.");
+        }
+
+        [Test]
+        public void ReturningToStable_ReleasesToNone()
+        {
+            var (heartbeat, state) = Build();
+            heartbeat.Change(-60); // 80 -> 20, Full
+            heartbeat.Change(51);  // 20 -> 71, 안정 진입
+
+            Assert.AreEqual(CensorshipLevel.None, state.Level);
+        }
+
+        [Test]
+        public void LevelChanged_FiresOnlyOnActualTransitions()
+        {
+            var (heartbeat, state) = Build();
+            var changes = new List<CensorshipLevel>();
+            state.LevelChanged += changes.Add;
+
+            heartbeat.Change(-25); // 80 -> 55  Partial(변화)
+            heartbeat.Change(-5);  // 55 -> 50  Partial 유지(변화 없음)
+            heartbeat.Change(-15); // 50 -> 35  Full(변화)
+            heartbeat.Change(15);  // 35 -> 50  Partial(변화)
+            heartbeat.Change(21);  // 50 -> 71  None(변화)
+
+            CollectionAssert.AreEqual(
+                new[] { CensorshipLevel.Partial, CensorshipLevel.Full, CensorshipLevel.Partial, CensorshipLevel.None },
+                changes,
+                "실제로 수준이 바뀔 때만, 그리고 그 순서대로 이벤트가 발생해야 한다.");
         }
     }
 }
