@@ -25,7 +25,7 @@ namespace BlueComplex.Core.Tests
         {
             private readonly int _slots;
             public AlwaysHitPlacer(int slots) => _slots = slots;
-            public KeyZone Place(int indicatorPosition, IReadOnlyList<ClueInstance> hand) => new(0, _slots);
+            public KeyZone Place(int startPosition, int turnsUntilKey) => new(0, _slots);
         }
 
         private static ClueDefinition NeutralClue(string id) =>

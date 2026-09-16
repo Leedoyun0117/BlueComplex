@@ -42,13 +42,17 @@ namespace BlueComplex.Core.Stability
         public KeyZone RightZone(int offset) => new(Slots - EdgeWidth + offset, KeyWidth);
     }
 
-    /// <summary>키 구역을 어디에 열지 결정하는 정책. 보정판 구현을 교체할 수 있도록 인터페이스로 분리했다.</summary>
+    /// <summary>
+    /// 키 구역을 어디에 열지 결정하는 정책.
+    /// startPosition은 인디케이터의 스테이지 시작 위치, turnsUntilKey는 그 키 턴 전까지 확보되는 이동 턴 수다.
+    /// (테스트/비교용으로 남겨둔 <see cref="RandomKeyZonePlacer"/>는 이 값을 쓰지 않는다.)
+    /// </summary>
     public interface IKeyZonePlacer
     {
-        KeyZone Place(int indicatorPosition, IReadOnlyList<ClueInstance> hand);
+        KeyZone Place(int startPosition, int turnsUntilKey);
     }
 
-    /// <summary>기본 정책. 좌우와 구역 내 offset을 모두 무작위로 고른다.</summary>
+    /// <summary>기본(구) 정책. 좌우와 구역 내 offset을 모두 무작위로 고른다 — 도달 가능 여부는 고려하지 않는다.</summary>
     public sealed class RandomKeyZonePlacer : IKeyZonePlacer
     {
         private readonly IRandomSource _random;
@@ -60,7 +64,7 @@ namespace BlueComplex.Core.Stability
             _layout = layout ?? new KeyZoneLayout();
         }
 
-        public KeyZone Place(int indicatorPosition, IReadOnlyList<ClueInstance> hand)
+        public KeyZone Place(int startPosition, int turnsUntilKey)
         {
             var useLeft = _random.Range(0, 2) == 0;
             var offset = _random.Range(0, _layout.OffsetCount);
@@ -68,14 +72,80 @@ namespace BlueComplex.Core.Stability
         }
     }
 
+    /// <summary>
+    /// 인디케이터가 남은 턴 안에 실제로 도달할 수 있는 범위 안에서만 키 구역을 고른다.
+    /// 도달 범위와 겹치는 후보가 여럿이면 무작위로, 하나도 없으면 가장 가까운 후보를 고른다.
+    /// 한 턴 최대 이동폭(maxMovePerTurn)은 감정 조합 최대 개수(3)에서 온 설계 상수이므로
+    /// 하드코딩하지 않고 생성자 주입으로 받는다.
+    /// </summary>
+    public sealed class ReachabilityKeyZonePlacer : IKeyZonePlacer
+    {
+        private readonly IRandomSource _random;
+        private readonly KeyZoneLayout _layout;
+        private readonly int _maxMovePerTurn;
+
+        public ReachabilityKeyZonePlacer(IRandomSource random, KeyZoneLayout layout = null, int maxMovePerTurn = 3)
+        {
+            _random = random;
+            _layout = layout ?? new KeyZoneLayout();
+            _maxMovePerTurn = maxMovePerTurn;
+        }
+
+        public KeyZone Place(int startPosition, int turnsUntilKey)
+        {
+            var reach = Math.Max(0, turnsUntilKey) * _maxMovePerTurn;
+            var reachLow = startPosition - reach;
+            var reachHigh = startPosition + reach;
+
+            var candidates = AllCandidates().ToList();
+            var overlapping = candidates.Where(z => Overlaps(z, reachLow, reachHigh)).ToList();
+
+            if (overlapping.Count > 0)
+                return overlapping[_random.Range(0, overlapping.Count)];
+
+            // 겹치는 후보가 하나도 없으면 가장 가까운 후보를 고른다.
+            return candidates.OrderBy(z => DistanceToRange(z, reachLow, reachHigh)).First();
+        }
+
+        private IEnumerable<KeyZone> AllCandidates()
+        {
+            for (var offset = 0; offset < _layout.OffsetCount; offset++)
+            {
+                yield return _layout.LeftZone(offset);
+                yield return _layout.RightZone(offset);
+            }
+        }
+
+        private static bool Overlaps(KeyZone zone, int low, int high)
+        {
+            var lastSlot = zone.StartSlot + zone.Width - 1;
+            return zone.StartSlot <= high && lastSlot >= low;
+        }
+
+        private static int DistanceToRange(KeyZone zone, int low, int high)
+        {
+            var lastSlot = zone.StartSlot + zone.Width - 1;
+            if (lastSlot < low) return low - lastSlot;
+            if (zone.StartSlot > high) return zone.StartSlot - high;
+            return 0;
+        }
+    }
+
     /// <summary>키 획득 진행 상황. 목표 개수를 채우면 스테이지 클리어.</summary>
     public sealed class KeyProgress
     {
         private readonly HashSet<int> _keyTurns;
+        private readonly Dictionary<int, KeyZone> _zonesByTurn = new();
 
         public int Required { get; }
         public int Collected { get; private set; }
         public KeyZone? ActiveZone { get; private set; }
+
+        /// <summary>구역이 열리는 턴 목록. 스테이지 시작 시 이 턴 전부의 구역을 한꺼번에 확정한다.</summary>
+        public IReadOnlyCollection<int> KeyTurns => _keyTurns;
+
+        /// <summary>턴별로 확정된 키 구역. UI가 턴 1부터 전체를 미리 보여주는 데 쓴다.</summary>
+        public IReadOnlyDictionary<int, KeyZone> Zones => _zonesByTurn;
 
         public bool IsComplete => Collected >= Required;
 
@@ -91,8 +161,16 @@ namespace BlueComplex.Core.Stability
 
         public bool IsKeyTurn(int turn) => _keyTurns.Contains(turn);
 
-        public void OpenZone(KeyZone zone)
+        /// <summary>스테이지 시작 시 모든 키 턴의 구역을 한꺼번에 확정한다. 이후에는 바뀌지 않는다.</summary>
+        public void PrepareZones(IReadOnlyDictionary<int, KeyZone> zones)
         {
+            foreach (var pair in zones) _zonesByTurn[pair.Key] = pair.Value;
+        }
+
+        /// <summary>미리 확정된 구역을 이번 턴의 활성 구역으로 연다.</summary>
+        public void OpenZone(int turn)
+        {
+            var zone = _zonesByTurn[turn];
             ActiveZone = zone;
             ZoneOpened?.Invoke(zone);
         }

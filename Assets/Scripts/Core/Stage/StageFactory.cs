@@ -51,7 +51,7 @@ namespace BlueComplex.Core.Stage
             var items = new ItemInventory(config.ItemPool, random);
 
             var keys = new KeyProgress(config.RequiredKeys, config.KeyTurns);
-            var keyPlacer = new RandomKeyZonePlacer(random, new KeyZoneLayout(indicatorSlots));
+            var keyPlacer = new ReachabilityKeyZonePlacer(random, new KeyZoneLayout(indicatorSlots));
 
             var runner = new TurnRunner(
                 hand,
