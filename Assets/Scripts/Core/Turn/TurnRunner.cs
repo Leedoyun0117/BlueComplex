@@ -71,6 +71,7 @@ namespace BlueComplex.Core.Turn
         private readonly int _totalTurns;
 
         public int CurrentTurn { get; private set; }
+        public int TotalTurns => _totalTurns;
         public StageOutcome Outcome { get; private set; } = StageOutcome.InProgress;
 
         public event Action<int> TurnBegan;

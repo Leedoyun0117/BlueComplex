@@ -53,32 +53,32 @@ namespace BlueComplex.Core.Stage
                 new[] { EmotionTag.Sadness, EmotionTag.Happiness }),
 
             // 흥분 단서 5종. 이름/스토리는 기획 확정 전 placeholder — 임의로 지어내지 말 것.
-            new ClueDefinition("clue_new_1", "(미정 단서 1)",
-                "(스토리 미정 — 기획 확정 후 채워짐)",
+            new ClueDefinition("clue_new_1", "찢어진 성적표",
+                "반으로 찢긴 뒤 다시 맞춰놓은 성적표. 이름 칸만 온전하게 남아있다.",
                 TimeTag.Past,
                 new[] { PersonTag.Other },
                 new[] { EmotionTag.Anger }),
 
-            new ClueDefinition("clue_new_2", "(미정 단서 2)",
-                "(스토리 미정 — 기획 확정 후 채워짐)",
+            new ClueDefinition("clue_new_2", "교환 일기",
+                "두 사람의 필체가 번갈아 적힌 공책. 마지막 장은 아직 비어있다.",
                 TimeTag.Present,
                 new[] { PersonTag.Friend },
                 new[] { EmotionTag.Happiness }),
 
-            new ClueDefinition("clue_new_3", "(미정 단서 3)",
-                "(스토리 미정 — 기획 확정 후 채워짐)",
+            new ClueDefinition("clue_new_3", "빛바랜 가족사진",
+                "세 사람이 나란히 선 사진. 유키의 손을 양쪽에서 잡고 있다.",
                 TimeTag.Past,
                 new[] { PersonTag.Family },
                 new[] { EmotionTag.Love }),
 
-            new ClueDefinition("clue_new_4", "(미정 단서 4)",
-                "(스토리 미정 — 기획 확정 후 채워짐)",
+            new ClueDefinition("clue_new_4", "놀이공원 티켓 두 장",
+                "아직 쓰지 않은 티켓 두 장. 날짜는 다음 달로 찍혀있다.",
                 TimeTag.Future,
                 new[] { PersonTag.Friend },
                 new[] { EmotionTag.Happiness }),
 
-            new ClueDefinition("clue_new_5", "(미정 단서 5)",
-                "(스토리 미정 — 기획 확정 후 채워짐)",
+            new ClueDefinition("clue_new_5", "이웃집에서 받은 쿠키 상자",
+                "손글씨 쪽지가 붙은 빈 상자. 이름은 적혀있지 않다.",
                 TimeTag.Past,
                 new[] { PersonTag.Other },
                 new[] { EmotionTag.Happiness })

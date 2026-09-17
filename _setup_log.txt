@@ -1,0 +1,23 @@
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Built from '6000.3/respin/6000.3.6f1-732c1ec89f18' branch; Version is '6000.3.6f1 (bbb010bdb8a3) revision 12300304'; Using compiler version '194234433'; Build Type 'Release'
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-이도윤" at "2026-09-17T09:15:07.4253265Z"
+OS: 'Windows 11  (10.0.26200) Education' Language: 'ko' Physical Memory: 24299 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+System  architecture: x64
+Process architecture: x64
+Date: 2026-09-17T09:15:07Z
+
+COMMAND LINE ARGUMENTS:
+C:\Program Files\Unity\Hub\Editor\6000.3.6f1\Editor\Unity.exe
+-batchmode
+-nographics
+-projectPath
+C:/Dev/BlueComplex
+-executeMethod
+BlueComplex.EditorTools.Stage1UISetupTool.SetupAll
+-quit
+-logFile
+C:/Dev/BlueComplex/_setup_log.txt
+Successfully changed project path to: C:/Dev/BlueComplex
+C:/Dev/BlueComplex
+Exiting without the bug reporter. Application will terminate with return code 1
