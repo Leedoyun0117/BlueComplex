@@ -16,6 +16,12 @@ Shader "BlueComplex/CRT/PostProcess"
         _TintR ("Depressed Red Tint", Range(0, 1)) = 0
         _Pastel ("Excited Pastel Shift", Range(0, 1)) = 0
         _Brightness ("Brightness", Range(0.3, 1.6)) = 1.0
+
+        // UI 합성용. 별도 패스(UIComposite)로 CRT 앞에 체이닝했더니 같은 injectionPoint라도
+        // 두 FullScreenPassRendererFeature를 연달아 돌리는 과정에서 두 번째(CRT) 패스의 좌표계가
+        // 깨져 화면 전체가 배럴 클리핑으로 새까맣게 나오는 문제가 있었다 — 그래서 한 패스로 합쳤다.
+        // RT_UI를 에디터에서 이 슬롯에 직접 할당한다(전역 텍스처 아님).
+        _UITex ("UI Texture", 2D) = "black" {}
     }
 
     SubShader
@@ -43,6 +49,9 @@ Shader "BlueComplex/CRT/PostProcess"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/UnityInput.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/TextureXR.hlsl"
             #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
+
+            TEXTURE2D(_UITex);
+            SAMPLER(sampler_UITex);
 
             CBUFFER_START(UnityPerMaterial)
                 float _ScanIntensity;
@@ -73,12 +82,23 @@ Shader "BlueComplex/CRT/PostProcess"
                 return c + cc * d * _Curvature * 1.4;
             }
 
+            // 3D 씬(_BlitTexture) 위에 UI(_UITex)를 알파 오버 합성한 값을 돌려준다. Sample3()의
+            // 색수차 오프셋 샘플링과 블룸 누적이 이 함수를 통해서만 _BlitTexture를 읽도록 해서,
+            // 이하의 모든 CRT 로직(스캔라인/새도우마스크/파스텔/틴트/노이즈/비네트/밝기)은
+            // 손대지 않은 원래 그대로 유지한다 — 입력만 "씬"에서 "씬+UI 합성 결과"로 바뀐다.
+            float3 SampleComposited(float2 uv)
+            {
+                float3 scene = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv).rgb;
+                float4 ui = SAMPLE_TEXTURE2D(_UITex, sampler_UITex, uv);
+                return lerp(scene, ui.rgb, ui.a);
+            }
+
             float3 Sample3(float2 c)
             {
                 float2 off = (c - 0.5) * _Aberration;
-                float r = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, c + off).r;
-                float g = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, c).g;
-                float b = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, c - off).b;
+                float r = SampleComposited(c + off).r;
+                float g = SampleComposited(c).g;
+                float b = SampleComposited(c - off).b;
                 return float3(r, g, b);
             }
 
@@ -114,7 +134,7 @@ Shader "BlueComplex/CRT/PostProcess"
                     [unroll]
                     for (int j = -2; j <= 2; j++)
                     {
-                        float3 s = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, c + float2(i * px, j * py)).rgb;
+                        float3 s = SampleComposited(c + float2(i * px, j * py));
                         acc += max(s - 0.45, 0.0);
                     }
                 }

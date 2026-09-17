@@ -1,3 +1,4 @@
+using System;
 using BlueComplex.Core.Clues;
 using BlueComplex.Core.Stage;
 using BlueComplex.Core.Tags;
@@ -29,23 +30,21 @@ namespace BlueComplex.UI.Bootstrap
         [SerializeField] private int _seed = 20260916;
 
         public StageSession Session { get; private set; }
+        public int CurrentSeed { get; private set; }
 
+        /// <summary>새 StageSession이 만들어질 때마다(최초 시작 포함) 알린다. Ledger는 세션 간에 계속 유지된다.</summary>
+        public event Action<StageSession> SessionStarted;
+
+        private ClueKnowledgeLedger _ledger;
+        private IEmotionPolarityTable _polarityTable;
         private StageTurnLogger _logger;
 
         private void Start()
         {
-            var polarityTable = new DefaultEmotionPolarityTable();
-            var config = PrototypeContent.PrototypeStage(polarityTable);
-            var random = new SystemRandomSource(_seed);
-            var ledger = new ClueKnowledgeLedger();
+            _polarityTable = new DefaultEmotionPolarityTable();
+            _ledger = new ClueKnowledgeLedger();
 
-            Session = StageFactory.Create(config, random, ledger, polarityTable);
-            _logger = new StageTurnLogger(Session);
-
-            if (_crtEffectDriver != null)
-                _crtEffectDriver.Bind(Session.Heartbeat);
-
-            Session.Runner.StartStage();
+            BeginNewSession(_seed);
         }
 
         private void OnDestroy()
@@ -77,6 +76,31 @@ namespace BlueComplex.UI.Bootstrap
             }
 
             Session.Runner.PlayClue(Session.Hand.Cards[index]);
+        }
+
+        /// <summary>같은 시드로 스테이지를 재시작한다. 해금 지식(Ledger)은 그대로 유지된다.</summary>
+        public void RestartWithSameSeed() => BeginNewSession(CurrentSeed);
+
+        /// <summary>새 무작위 시드로 스테이지를 재시작한다. 해금 지식(Ledger)은 그대로 유지된다.</summary>
+        public void RestartWithNewSeed() => BeginNewSession(Environment.TickCount);
+
+        private void BeginNewSession(int seed)
+        {
+            _logger?.Dispose();
+
+            CurrentSeed = seed;
+            var config = PrototypeContent.PrototypeStage(_polarityTable);
+            var random = new SystemRandomSource(seed);
+
+            Session = StageFactory.Create(config, random, _ledger, _polarityTable);
+            _logger = new StageTurnLogger(Session);
+
+            if (_crtEffectDriver != null)
+                _crtEffectDriver.Bind(Session.Heartbeat);
+
+            // StartStage()가 첫 TurnBegan을 곧바로 쏘아 올리므로, 구독자는 그 전에 새 세션을 받아야 한다.
+            SessionStarted?.Invoke(Session);
+            Session.Runner.StartStage();
         }
     }
 }
