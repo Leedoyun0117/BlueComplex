@@ -111,7 +111,8 @@ namespace BlueComplex.UI.Presentation
                 .ToList();
 
             var tagSequence = _memoryBubble.PlayRemainingTags(labels);
-            _heartRate.PlayTurnResult(report.HeartbeatValue);
+            _heartRate.PlayTurnResult(report);
+            _memoryBubble.SetPersistentSummary(TurnSummaryFormatter.BuildFinalEmotionSummary(report));
 
             yield return tagSequence.WaitForCompletion(true);
         }

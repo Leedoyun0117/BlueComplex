@@ -10,9 +10,13 @@ namespace BlueComplex.UI.Layout
 
         public RectTransform Root => (RectTransform)transform;
 
-        public void SetValue(int bpm)
+        public void SetValue(int bpm) => SetValue(bpm, Color.white);
+
+        public void SetValue(int bpm, Color color)
         {
-            if (_label != null) _label.text = bpm.ToString();
+            if (_label == null) return;
+            _label.text = bpm.ToString();
+            _label.color = color;
         }
     }
 }

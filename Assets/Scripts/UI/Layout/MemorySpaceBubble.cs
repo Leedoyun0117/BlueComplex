@@ -21,6 +21,7 @@ namespace BlueComplex.UI.Layout
 
         [SerializeField] private Image _bubbleBackground;
         [SerializeField] private TMP_FontAsset _font;
+        [SerializeField] private TMP_Text _summaryText;
 
         public RectTransform Root => (RectTransform)transform;
         public Image BubbleBackground => _bubbleBackground;
@@ -61,6 +62,14 @@ namespace BlueComplex.UI.Layout
             }
 
             return sequence;
+        }
+
+        /// <summary>마지막 턴의 최종 감정을 고정 표시한다. PlayRemainingTags의 상승/소멸 연출과는
+        /// 별개로 존재해서, 연출이 끝난 뒤에도 계속 보인다. 다음 턴 결과가 나오면 이 호출로 갱신된다.
+        /// 호출 시점(연출과 같은 프레임에 갱신할지 등)은 Presenter가 쥔다 — 여기선 표시만 한다.</summary>
+        public void SetPersistentSummary(string text)
+        {
+            if (_summaryText != null) _summaryText.text = text;
         }
 
         private TMP_Text CreateTagLabel(string text, float offsetX)
