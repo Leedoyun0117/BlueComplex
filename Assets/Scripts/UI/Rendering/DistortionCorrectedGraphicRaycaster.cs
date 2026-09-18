@@ -20,6 +20,9 @@ namespace BlueComplex.UI.Rendering
 
         [SerializeField] private Material _crtMaterial;
 
+        /// <summary>런타임에 조립되는 캔버스(예: 검증용 디버그 하네스)용. 일반적으로는 인스펙터에서 직접 물린다.</summary>
+        public void SetCrtMaterial(Material material) => _crtMaterial = material;
+
         public override void Raycast(PointerEventData eventData, List<RaycastResult> resultAppendList)
         {
             var curvature = _crtMaterial != null ? _crtMaterial.GetFloat(CurvatureId) : 0f;
@@ -30,7 +33,7 @@ namespace BlueComplex.UI.Rendering
             }
 
             var original = eventData.position;
-            eventData.position = ApplyBarrel(original, curvature);
+            eventData.position = DistortionMath.ApplyBarrel(original, curvature, Screen.width, Screen.height);
             try
             {
                 base.Raycast(eventData, resultAppendList);
@@ -41,18 +44,7 @@ namespace BlueComplex.UI.Rendering
             }
         }
 
-        /// <summary>CrtEffect.shader의 Barrel()과 동일한 공식. 화면 픽셀 좌표 기준으로 계산한다.</summary>
-        private static Vector2 ApplyBarrel(Vector2 screenPos, float curvature)
-        {
-            var width = Mathf.Max(Screen.width, 1);
-            var height = Mathf.Max(Screen.height, 1);
-
-            var uv = new Vector2(screenPos.x / width, screenPos.y / height);
-            var cc = uv - new Vector2(0.5f, 0.5f);
-            var d = Vector2.Dot(cc, cc);
-            var corrected = uv + cc * d * curvature * 1.4f;
-
-            return new Vector2(corrected.x * width, corrected.y * height);
-        }
+        /// <summary>현재 _Curvature 값. 드래그 중인 요소가 같은 보정을 적용하려 할 때 쓴다.</summary>
+        public float CurrentCurvature => _crtMaterial != null ? _crtMaterial.GetFloat(CurvatureId) : 0f;
     }
 }

@@ -26,7 +26,7 @@ MonoBehaviour:
     Shake: 0
     TintR: 0
     Pastel: 0
-    Brightness: 0.3
+    Brightness: 1
   DepressedMax:
     ScanIntensity: 0.45
     ScanCount: 360
