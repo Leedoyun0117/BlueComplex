@@ -62,9 +62,22 @@ namespace BlueComplex.Core.Stability
 
         private readonly IReadOnlyList<Definition> _boundaries;
 
+        /// <summary>Fatal이 아닌 구간들 중 가장 작은 Min. 키 구역 등 생존 가능 범위가 필요한 곳에서 쓴다.</summary>
+        public int SurvivableMin { get; }
+
+        /// <summary>Fatal이 아닌 구간들 중 가장 큰 Max.</summary>
+        public int SurvivableMax { get; }
+
         public HeartbeatZone(IReadOnlyList<Definition> boundaries = null)
         {
             _boundaries = boundaries ?? DefaultBoundaries;
+
+            var survivable = _boundaries.Where(b => b.State != HeartbeatState.Fatal).ToList();
+            if (survivable.Count == 0)
+                throw new ArgumentException("Fatal이 아닌 구간이 최소 하나는 있어야 합니다.", nameof(boundaries));
+
+            SurvivableMin = survivable.Min(b => b.Min);
+            SurvivableMax = survivable.Max(b => b.Max);
         }
 
         public Definition Resolve(int heartbeatValue)

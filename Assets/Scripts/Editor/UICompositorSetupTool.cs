@@ -1,3 +1,5 @@
+using BlueComplex.UI.Bootstrap;
+using BlueComplex.UI.Presentation;
 using BlueComplex.UI.Rendering;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -329,6 +331,39 @@ namespace BlueComplex.EditorTools
 
             var canvas = instance.GetComponent<Canvas>();
             if (canvas != null) canvas.worldCamera = uiCamera;
+
+            WireBootstrapperReferences(instance);
+        }
+
+        /// <summary>
+        /// 2단계 컨트롤러(SessionBoundView 파생) + MemorySpaceDropZone은 씬의 StageBootstrapper를
+        /// 참조해야 하는데, 프리팹 자체는 씬 오브젝트를 참조할 수 없어서 여기서(인스턴스화 이후)
+        /// 채워 넣는다. 둘 다 필드 이름이 "_bootstrapper"로 같아서 SerializedObject로 동일하게 쓴다.
+        /// </summary>
+        private static void WireBootstrapperReferences(GameObject mainHudInstance)
+        {
+            var bootstrapper = Object.FindFirstObjectByType<StageBootstrapper>();
+            if (bootstrapper == null)
+            {
+                Debug.LogWarning("[UICompositorSetupTool] 씬에서 StageBootstrapper를 찾지 못해 " +
+                                  "SessionBoundView/MemorySpaceDropZone의 _bootstrapper를 못 채웠습니다.");
+                return;
+            }
+
+            foreach (var view in mainHudInstance.GetComponentsInChildren<SessionBoundView>(true))
+                SetBootstrapperField(view, bootstrapper);
+
+            var dropZone = mainHudInstance.GetComponentInChildren<MemorySpaceDropZone>(true);
+            if (dropZone != null) SetBootstrapperField(dropZone, bootstrapper);
+        }
+
+        private static void SetBootstrapperField(Component component, StageBootstrapper bootstrapper)
+        {
+            var so = new SerializedObject(component);
+            var prop = so.FindProperty("_bootstrapper");
+            if (prop == null) return;
+            prop.objectReferenceValue = bootstrapper;
+            so.ApplyModifiedProperties();
         }
 
         private static void ExcludeUiLayerFromMainCamera(int uiLayer)

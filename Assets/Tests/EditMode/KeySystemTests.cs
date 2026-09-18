@@ -26,7 +26,7 @@ namespace BlueComplex.Core.Tests
         [Test]
         public void RandomKeyZonePlacer_AlwaysLandsInLeftOrRightEdge_AcrossManySeeds()
         {
-            var layout = new KeyZoneLayout(slots: 10, edgeWidth: 3, keyWidth: 2);
+            var layout = new KeyZoneLayout(min: 0, max: 9, edgeWidth: 3, keyWidth: 2);
 
             for (var seed = 0; seed < 200; seed++)
             {
@@ -148,6 +148,38 @@ namespace BlueComplex.Core.Tests
             CollectionAssert.AreEquivalent(snapshot.Keys, session.Keys.Zones.Keys);
             foreach (var turn in snapshot.Keys)
                 Assert.AreEqual(snapshot[turn], session.Keys.Zones[turn], $"턴 {turn} 구역이 진행 중 바뀌면 안 된다.");
+        }
+
+        [Test]
+        public void StageStart_KeyZones_AlwaysWithinSurvivableRange_AcrossManySeeds()
+        {
+            var heartbeatZone = new HeartbeatZone();
+            var polarityTable = new DefaultEmotionPolarityTable();
+
+            for (var seed = 0; seed < 100; seed++)
+            {
+                var random = new SystemRandomSource(seed);
+                var config = PrototypeContent.PrototypeStage(polarityTable);
+                var session = StageFactory.Create(config, random, new ClueKnowledgeLedger(), polarityTable);
+
+                session.Runner.StartStage();
+
+                foreach (var pair in session.Keys.Zones)
+                {
+                    var turn = pair.Key;
+                    var zone = pair.Value;
+                    var lastSlot = zone.StartSlot + zone.Width - 1;
+
+                    Assert.GreaterOrEqual(zone.StartSlot, heartbeatZone.SurvivableMin,
+                        $"seed={seed} 턴={turn}: 구역 시작 {zone.StartSlot} 이 생존 구간({heartbeatZone.SurvivableMin}) 아래다.");
+                    Assert.LessOrEqual(lastSlot, heartbeatZone.SurvivableMax,
+                        $"seed={seed} 턴={turn}: 구역 끝 {lastSlot} 이 생존 구간({heartbeatZone.SurvivableMax})을 넘었다.");
+
+                    for (var pos = zone.StartSlot; pos <= lastSlot; pos++)
+                        Assert.IsFalse(heartbeatZone.IsFatal(pos),
+                            $"seed={seed} 턴={turn}: 구역 [{zone.StartSlot},{lastSlot}] 이 Fatal 위치 {pos} 를 포함한다.");
+                }
+            }
         }
     }
 }

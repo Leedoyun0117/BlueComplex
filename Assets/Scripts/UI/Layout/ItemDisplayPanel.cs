@@ -1,16 +1,16 @@
+using BlueComplex.UI.Presentation;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace BlueComplex.UI.Layout
 {
-    /// <summary>아이템 슬롯 2개. 2단계에서 슬롯별 아이콘/개수를 채운다.</summary>
+    /// <summary>아이템 슬롯 2개. 표시만 한다 — 판정 없음, 코어 이벤트도 직접 구독하지 않는다.</summary>
     public sealed class ItemDisplayPanel : MonoBehaviour
     {
-        [SerializeField] private Image[] _slots;
+        [SerializeField] private ItemSlotView[] _slots;
 
         public RectTransform Root => (RectTransform)transform;
         public int SlotCount => _slots?.Length ?? 0;
 
-        public Image GetSlot(int index) => _slots[index];
+        public ItemSlotView GetSlot(int index) => _slots[index];
     }
 }
