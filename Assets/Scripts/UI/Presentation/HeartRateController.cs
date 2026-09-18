@@ -1,4 +1,5 @@
 using BlueComplex.Core.Stage;
+using BlueComplex.Core.Turn;
 using BlueComplex.UI.Layout;
 using UnityEngine;
 
@@ -31,14 +32,21 @@ namespace BlueComplex.UI.Presentation
             _bar.SetKeyZones(Session.Keys.Zones);
             _bar.MoveMarker(Session.Heartbeat.Value, animate: false);
             _bar.SetActiveTurn(Session.Runner.CurrentTurn);
-            _bpm.SetValue(Session.Heartbeat.Value);
+            _bpm.SetValue(Session.Heartbeat.Value, HeartbeatVisuals.TextColor(Session.Zone.StateOf(Session.Heartbeat.Value)));
         }
 
-        /// <summary>턴 결과의 심박수 이동을 애니메이션으로 반영한다 — 호출 시점은 Presenter가 쥔다.</summary>
-        public void PlayTurnResult(int newValue)
+        /// <summary>턴 결과의 심박수 이동 + 해당 턴이 키 턴이었다면 그 구역의 성공/실패를 반영한다 —
+        /// 호출 시점은 Presenter가 쥔다. 성공/실패는 KeyProgress 이벤트를 구독하는 대신, 이미 공개된
+        /// Session.Keys.Zones(구역 범위)와 report.HeartbeatValue(판정에 쓰인 값 그대로)를 견주어
+        /// KeyProgress.Judge와 같은 조건을 여기서 다시 계산한다 — 코어를 건드리지 않고, 턴 해석
+        /// 경로에서 발동하는 KeyCollected/ZoneMissed를 직접 구독하지 않기 위함(연출 순서는 Presenter 소유).</summary>
+        public void PlayTurnResult(TurnReport report)
         {
-            _bar.MoveMarker(newValue, animate: true);
-            _bpm.SetValue(newValue);
+            _bar.MoveMarker(report.HeartbeatValue, animate: true);
+            _bpm.SetValue(report.HeartbeatValue, HeartbeatVisuals.TextColor(Session.Zone.StateOf(report.HeartbeatValue)));
+
+            if (Session.Keys.Zones.TryGetValue(report.Turn, out var zone))
+                _bar.RecordKeyZoneResult(report.Turn, zone.Contains(report.HeartbeatValue));
         }
 
         private void OnTurnBegan(int turn)

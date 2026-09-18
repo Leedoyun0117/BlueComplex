@@ -18,6 +18,7 @@ namespace BlueComplex.UI.Presentation
         [SerializeField] private DialogueText _dialogue;
         [SerializeField] private ClueCardTray _clueTray;
         [SerializeField] private HeartRateController _heartRate;
+        [SerializeField] private MemorySpaceBubble _memoryBubble;
 
         /// <summary>즉시 끝나므로 연출 재생 중인 프레임이 없다 — 입력을 잠글 이유가 없다.</summary>
         public bool IsPresenting => false;
@@ -27,8 +28,9 @@ namespace BlueComplex.UI.Presentation
             // HeartRateController는 더 이상 Heartbeat.Changed를 직접 구독하지 않는다(연출 순서를
             // Presenter가 쥐도록 바뀜) — 그래서 이 필드가 없으면 심박수 바가 세션 시작 후로 영영
             // 안 움직인다. 이미 구워진 프리팹에 새로 추가된 필드라 인스펙터에 안 물려 있을 수
-            // 있으니 같은 MainHud 아래에서 찾는다.
+            // 있으니 같은 MainHud 아래에서 찾는다. _memoryBubble(최종 감정 고정 표시)도 같은 이유로 셀프힐한다.
             if (_heartRate == null) _heartRate = transform.root.GetComponentInChildren<HeartRateController>(true);
+            if (_memoryBubble == null) _memoryBubble = transform.root.GetComponentInChildren<MemorySpaceBubble>(true);
             base.Awake();
         }
 
@@ -44,7 +46,8 @@ namespace BlueComplex.UI.Presentation
         {
             _complexList.Refresh(Session.Complexes.InPriorityOrder().ToList());
             _dialogue.PlayTyped(TurnSummaryFormatter.Build(report));
-            _heartRate?.PlayTurnResult(report.HeartbeatValue);
+            _heartRate?.PlayTurnResult(report);
+            _memoryBubble?.SetPersistentSummary(TurnSummaryFormatter.BuildFinalEmotionSummary(report));
             _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger, Session.Censorship.Level);
         }
     }
