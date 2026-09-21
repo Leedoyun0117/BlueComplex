@@ -1,3 +1,4 @@
+using BlueComplex.UI.Motion;
 using BlueComplex.UI.Presentation;
 using BlueComplex.UI.Rendering;
 using DG.Tweening;
@@ -8,93 +9,232 @@ using UnityEngine.UI;
 namespace BlueComplex.UI.Layout
 {
     /// <summary>
-    /// 컴플렉스 인터페이스(엑스레이 판넬). 평소엔 구석에 접혀 보이지 않다가 펼쳐지며 안쪽의
-    /// 컴플렉스 목록(ComplexListView, 4개 Row — 최대 4중첩과 맞춘 슬롯 수)을 드러낸다.
-    /// 펼침은 0.3초 내외로 짧게 잡는다 —
-    /// 단서를 집는 순간 발동하는데 느리면 드래그하는 동안 뇌가 아직 안 보이는 상태가 된다.
+    /// 컴플렉스 인터페이스의 엑스레이 판넬 — 화면 왼쪽 위 구석에 관절 팔에 매달려 <b>접혀</b> 있다가, 작동하면 팔이 펴지며 판넬이 나와 뇌(<see cref="BrainView"/>)를 드러낸다.
+    /// 컴플렉스 반응이 끝나면 다시 접혀 들어간다. 접힌 상태에서도 작은 판넬과 "엑스레이" 손잡이가 보인다 — 그걸 끌 수 있다.
     ///
     /// 작동 조건 두 가지(UI 디자인 가이드):
-    /// 1. 판넬 자체를 드래그해서 유키 위에 놓기 — 이 컴포넌트가 직접 IBeginDrag/IDrag/IEndDrag를
-    ///    구현한다. 실제 Open() 트리거는 PortraitView.OnDrop("Yuki Portrait" 인스턴스만)이 쥔다.
+    /// 1. 판넬을 마우스로 끌어 유키 위에 놓기 — 이 컴포넌트가 IBeginDrag/IDrag/IEndDrag를 직접 구현한다(판넬·손잡이를 잡으면 이벤트가 이 루트까지 올라온다).
+    ///    끄는 동안 관절 팔이 판넬을 따라 늘어나고, 실제 Open() 트리거는 PortraitView.OnDrop("Yuki Portrait" 인스턴스만)이 쥔다. 놓은 곳이 유키가 아니면 제자리(접힘)로 돌아간다.
     /// 2. 단서를 집어 드래그 시작 — ClueCardTray의 각 카드 ClueCardDragHandler.DragStarted를 구독한다.
     ///
     /// 반응이 끝나면 Close() — 턴 연출이 재생되는 동안은 CinematicTurnResultPresenter가 접는 시점을 쥔다.
-    /// 다만 단서를 집었다가 기억 공간에 안 놓고 놓아버린 경우나 연출이 없는 Presenter(Immediate)에서는
-    /// 아무도 Close()를 부르지 않으므로, 드래그가 끝났는데 연출이 재생 중이 아니면 이 컴포넌트가 스스로 접는다.
+    /// 다만 단서를 집었다가 기억 공간에 안 놓고 놓아버린 경우나 연출이 없는 Presenter(Immediate)에서는 아무도 Close()를 부르지 않으므로,
+    /// 드래그가 끝났는데 연출이 재생 중이 아니면 이 컴포넌트가 스스로 접는다. 유키에게 직접 끌어다 놓아 연 판넬은 판넬의 "접기" 버튼으로 접는다.
+    ///
+    /// 루트는 접힌 위치부터 펼친 위치까지를 덮는 투명한 컨테이너다(그래픽 없음 — 빈 곳은 클릭을 막지 않는다). 모든 위치는 컨테이너 기준
+    /// <see cref="ReferenceSize"/> 픽셀로 설계하고 실제 크기 비율로 환산한다. 시간 값은 UiMotionSettings(인스펙터)에서 온다.
     /// </summary>
     public sealed class ComplexXrayPanel : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
-        private const float RevealDuration = 0.3f;
+        /// <summary>컨테이너를 1080p 기준으로 환산한 크기(참조 픽셀). 위치·길이 상수는 전부 이 좌표계(왼쪽 위 원점, y 아래로 +)다.</summary>
+        private static readonly Vector2 ReferenceSize = new(422f, 529f);
 
-        /// <summary>접힌 판넬은 화면에 안 보인다 — 관절 팔 아트가 생기면 이 값을 올려 접힌 기기를 드러낸다.
-        /// (그 전까지는 투명한 채로 드래그 손잡이 역할만 한다.)</summary>
-        private const float FoldedAlpha = 0f;
+        private static readonly Vector2 TabletSize = new(346f, 400f);
+        /// <summary>접힌 위치는 왼쪽 위 "STAGE 01" 표기(컨테이너 위 끝에서 위쪽 0.085 이내)보다 확실히 아래에 둔다 — 접힌 판넬 윗변이 컨테이너 y 39(캔버스 131)라 표기 밑 끝(83)과 48px 떨어진다.</summary>
+        private static readonly Vector2 ShoulderPoint = new(52f, 90f);
+        private const float ArmLength = 220f;
 
-        /// <summary>접힌 상태의 구석 박스(화면 비율 앵커). 목업에서 관절 팔이 접혀 있는 유키 왼쪽 위 구석이다.
-        /// 펼친 상태는 Awake 시점의 원래 앵커를 그대로 기억해서 쓴다 — MainHud의 배치가 바뀌어도 여기 하드코딩할 필요가 없다.</summary>
-        private static readonly Vector2 FoldedAnchorMin = new(0.03f, 0.62f);
-        private static readonly Vector2 FoldedAnchorMax = new(0.09f, 0.72f);
+        /// <summary>접힌 손목(어깨 바로 옆 — 두 선분이 포개진다)과 펼친 손목(판넬 왼쪽 가장자리 중앙).</summary>
+        private static readonly Vector2 FoldedWrist = new(33f, 91f);
+        private static readonly Vector2 OpenWrist = new(50f, 296f);
 
+        private const float FoldedScale = 0.26f;
+        private const float OpenScale = 1f;
+        private const float DragScale = 0.7f;
+        private static readonly Vector2 HandleTagSize = new(184f, 32f);
+
+        /// <summary>손목과 판넬 왼쪽 가장자리 사이의 경첩 간격.</summary>
+        private const float HingeGap = 6f;
+
+        [SerializeField] private RectTransform _tablet;
+        [SerializeField] private RectTransform _basePlate;
+        [SerializeField] private RectTransform _handleTag;
+        [SerializeField] private Image _frame;
+        [SerializeField] private Image _glass;
+        [SerializeField] private XrayArm _arm;
+        [SerializeField] private CanvasGroup _contentGroup;
+        [SerializeField] private CanvasGroup _handleGroup;
+        [SerializeField] private Button _foldButton;
+        [SerializeField] private BrainView _brain;
         [SerializeField] private ClueCardTray _clueTray;
 
         private RectTransform _rect;
-        private CanvasGroup _canvasGroup;
-        private RectTransform _canvasRect;
+        private CanvasGroup _tabletGroup;
         private DistortionCorrectedGraphicRaycaster _raycaster;
 
-        private Vector2 _openAnchorMin;
-        private Vector2 _openAnchorMax;
+        private float _fold;
+        private float _dragBlend;
+        private Vector2 _dragCenter;
+        private Vector2 _dragGrabOffset;
+        private bool _dragging;
 
-        private Transform _originalParent;
-        private int _originalSiblingIndex;
-        private Vector2 _originalAnchoredPosition;
-
-        private Tween _revealTween;
+        private Tween _foldTween;
+        private Tween _dragTween;
         private ITurnResultPresenter _presenter;
 
         public RectTransform Root => _rect;
         public bool IsOpen { get; private set; }
 
+        /// <summary>0 = 접힘, 1 = 펼침(트윈 중에는 그 사이, 펼칠 때 살짝 넘칠 수 있다).</summary>
+        public float Fold => _fold;
+
+        public bool IsDragging => _dragging;
+
         private void Awake()
         {
             _rect = (RectTransform)transform;
-            _openAnchorMin = _rect.anchorMin;
-            _openAnchorMax = _rect.anchorMax;
 
-            // BuildComplexXrayPanel(UiLayoutSetupTool.cs)은 CanvasGroup을 만들지 않고, Background
-            // Image도 raycastTarget=false로 굽는다. 이미 디스크에 있는 ComplexXrayPanel.prefab은
-            // EnsureElementPrefab의 short-circuit 때문에 그 메서드를 고쳐도 재생성되지 않으므로,
-            // 여기서 런타임에 직접 확보/보정해야 프리팹을 다시 굽지 않아도 동작한다.
-            _canvasGroup = GetComponent<CanvasGroup>();
-            if (_canvasGroup == null) _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+            if (_tablet == null) _tablet = (RectTransform)transform.Find("Tablet");
+            if (_arm == null) _arm = GetComponentInChildren<XrayArm>(true);
+            if (_brain == null) _brain = GetComponentInChildren<BrainView>(true);
 
-            // "Background"는 이 GameObject 자체가 아니라 자식이다(BuildComplexXrayPanel 참고) —
-            // 자식의 raycastTarget이 true면 Unity가 히트 시 부모 체인에서 IBeginDragHandler를
-            // 찾아 이 컴포넌트까지 이벤트를 올려준다.
-            var background = transform.Find("Background")?.GetComponent<Image>();
-            if (background != null) background.raycastTarget = true;
+            // 참조가 끊겼으면(프리팹의 스크립트 GUID가 어긋난 경우 등) 판넬이 프리팹 기본 자세(크게 펼쳐진 뇌)로 화면을 덮는다 — 그 전에 큰 소리로 알리고 뇌 내용만이라도 숨긴다.
+            if (_contentGroup != null) _contentGroup.alpha = 0f;
+            if (_tablet == null || _arm == null || _brain == null)
+                Debug.LogError("[ComplexXrayPanel] 프리팹 참조가 끊겼다(Tablet/XrayArm/BrainView) — ComplexXrayPanel.prefab의 스크립트 GUID를 확인하고 " +
+                               "BlueComplex/UI/Apply Layout Cleanup을 다시 돌려라.", this);
+
+            // 둥근 모서리 스프라이트는 프리팹에 굽지 않고 런타임에 입힌다(RuntimeUi.RoundedRect).
+            foreach (var image in new[] { _frame, _glass })
+            {
+                if (image == null) continue;
+                image.sprite = RuntimeUi.RoundedRect;
+                image.type = Image.Type.Sliced;
+            }
+
+            _tabletGroup = _tablet.GetComponent<CanvasGroup>();
+            if (_tabletGroup == null) _tabletGroup = _tablet.gameObject.AddComponent<CanvasGroup>();
 
             var canvas = GetComponentInParent<Canvas>().rootCanvas;
-            _canvasRect = (RectTransform)canvas.transform;
             _raycaster = canvas.GetComponent<DistortionCorrectedGraphicRaycaster>();
 
-            SnapClosed();
+            if (_foldButton != null) _foldButton.onClick.AddListener(OnFoldButton);
 
-            // _clueTray가 인스펙터에 안 물려 있을 수 있다(위와 같은 이유) — 먼저 같은 루트
-            // 아래에서 찾고, 혹시 계층이 다르면(수동 편집된 씬 등) 씬 전체에서 한 번 더 찾는다.
+            // _clueTray가 인스펙터에 안 물려 있을 수 있다 — 먼저 같은 루트 아래에서 찾고, 계층이 다르면 씬 전체에서 한 번 더 찾는다.
             if (_clueTray == null) _clueTray = transform.root.GetComponentInChildren<ClueCardTray>(true);
             if (_clueTray == null) _clueTray = FindFirstObjectByType<ClueCardTray>(FindObjectsInactive.Include);
             if (_clueTray == null)
                 Debug.LogWarning("[ComplexXrayPanel] ClueCardTray를 못 찾았다 — 단서를 집어도 판넬이 안 열린다.", this);
 
             SubscribeToClueDrag();
+            ApplyPose();
         }
 
         private void OnDestroy()
         {
-            _revealTween?.Kill();
+            DOTween.Kill(this);
             UnsubscribeFromClueDrag();
+            if (_foldButton != null) _foldButton.onClick.RemoveListener(OnFoldButton);
         }
+
+        private void OnRectTransformDimensionsChange()
+        {
+            if (_rect != null && _tablet != null && _arm != null) ApplyPose();
+        }
+
+        // -----------------------------------------------------------------
+        // 접힘 / 펼침
+        // -----------------------------------------------------------------
+
+        /// <summary>펼침을 시작하고 그 트윈을 돌려준다 — 이미 열려 있으면 아무것도 안 하고 null.
+        /// 호출자(CinematicTurnResultPresenter)가 <c>yield return Open().WaitForCompletion(true)</c>로 펼침이 끝날 때까지 기다릴 수 있다.</summary>
+        public Tween Open()
+        {
+            if (IsOpen) return null;
+            IsOpen = true;
+
+            // 턴 연출 밖에서 그냥 열릴 때만 코어 상태로 뇌를 채운다 — 연출 중에는 Presenter가 자기 타이밍에 Refresh한다(결과를 앞질러 보여 주지 않게).
+            if (!IsTurnPresenting && _brain != null) _brain.SyncFromSession();
+
+            _foldTween?.Kill();
+            _foldTween = DOTween.To(() => _fold, v =>
+                {
+                    _fold = v;
+                    ApplyPose();
+                }, 1f, UiMotion.Settings.xrayUnfold)
+                .SetEase(Ease.OutBack, 1.1f).SetUpdate(true).SetTarget(this);
+            return _foldTween;
+        }
+
+        /// <summary>접힘을 시작하고 그 트윈을 돌려준다. 이미 접혀 있으면 null.</summary>
+        public Tween Close()
+        {
+            if (!IsOpen) return null;
+            IsOpen = false;
+
+            _foldTween?.Kill();
+            _foldTween = DOTween.To(() => _fold, v =>
+                {
+                    _fold = v;
+                    ApplyPose();
+                }, 0f, UiMotion.Settings.xrayFold)
+                .SetEase(Ease.InOutCubic).SetUpdate(true).SetTarget(this);
+            return _foldTween;
+        }
+
+        private void OnFoldButton()
+        {
+            if (!IsTurnPresenting) Close();
+        }
+
+        /// <summary>팔과 판넬의 자세를 <see cref="_fold"/>(와 끄는 중이면 드래그 위치)로 계산해 놓는다.</summary>
+        private void ApplyPose()
+        {
+            if (_tablet == null || _arm == null) return;
+
+            var unit = _rect.rect.width / ReferenceSize.x;
+            if (unit <= 0f) return;
+
+            var wrist = Vector2.LerpUnclamped(FoldedWrist, OpenWrist, _fold);
+            var scale = Mathf.LerpUnclamped(FoldedScale, OpenScale, _fold);
+
+            if (_dragBlend > 0f)
+            {
+                var dragScale = Mathf.Lerp(scale, DragScale, _dragBlend);
+                var dragWrist = _dragCenter - new Vector2(TabletSize.x * 0.5f * DragScale + HingeGap, 0f);
+                wrist = Vector2.Lerp(wrist, dragWrist, _dragBlend);
+                scale = dragScale;
+            }
+
+            // 손목이 닿는 거리를 넘으면 팔이 뻗을 수 있는 데까지만 간다 — 판넬은 손목에 매달려 있으니 같이 멈춘다.
+            wrist = _arm.Solve(ShoulderPoint, wrist, ArmLength, unit);
+
+            // 어깨 받침대와 손잡이 안내표는 접힌 위치에 고정이다(컨테이너 크기에 맞춰 환산만 한다).
+            if (_basePlate != null)
+            {
+                _basePlate.anchoredPosition = new Vector2(ShoulderPoint.x, -ShoulderPoint.y) * unit;
+                _basePlate.sizeDelta = new Vector2(70f, 56f) * unit;
+            }
+
+            if (_handleTag != null)
+            {
+                // 안내표는 화면 왼쪽 가장자리에 잘리지 않게 폭의 절반 + 여백 이상으로 놓는다.
+                var folded = FoldedWrist + new Vector2(TabletSize.x * 0.5f * FoldedScale + HingeGap, TabletSize.y * 0.5f * FoldedScale + 24f);
+                folded.x = Mathf.Max(folded.x, HandleTagSize.x * 0.5f + 8f);
+                _handleTag.anchoredPosition = new Vector2(folded.x, -folded.y) * unit;
+                _handleTag.sizeDelta = HandleTagSize * unit;
+            }
+
+            var center = wrist + new Vector2(TabletSize.x * 0.5f * scale + HingeGap, 0f);
+            _tablet.sizeDelta = TabletSize * unit;
+            _tablet.anchoredPosition = new Vector2(center.x, -center.y) * unit;
+            _tablet.localScale = Vector3.one * scale;
+
+            // 뇌 내용은 펼쳐질수록 또렷하고(접힌 작은 판넬 위에선 읽을 수 없다), 손잡이 안내는 접혔을 때만 보인다.
+            var openness = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.3f, 0.9f, Mathf.Max(_fold, _dragBlend)));
+            if (_contentGroup != null)
+            {
+                _contentGroup.alpha = openness;
+                // 접힌 동안 뇌는 완전히 숨고 입력도 안 받는다 — 접힌 판넬에서는 손잡이(판넬 틀·안내표)만 드래그를 받는다.
+                _contentGroup.blocksRaycasts = openness > 0.5f;
+            }
+
+            if (_handleGroup != null) _handleGroup.alpha = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.05f, 0.45f, Mathf.Max(_fold, _dragBlend)));
+        }
+
+        // -----------------------------------------------------------------
+        // 조건 2: 단서를 집어 드래그 시작
+        // -----------------------------------------------------------------
 
         private void SubscribeToClueDrag() => ForEachCardDragHandler(h =>
         {
@@ -108,9 +248,8 @@ namespace BlueComplex.UI.Layout
             h.DragEnded -= OnClueDragEnded;
         });
 
-        // DragStarted는 Action(반환값 없음)인데 Open()은 이제 Tween을 돌려주므로 메서드 그룹을
-        // 바로 못 물린다 — 반환값을 버리는 얇은 래퍼.
-        // 연출이 재생 중일 때 집은 단서는 어차피 못 낸다(MemorySpaceDropZone) — 그때 펼치면 접어줄 시점이 없다.
+        // DragStarted는 Action(반환값 없음)인데 Open()은 Tween을 돌려주므로 메서드 그룹을 바로 못 물린다 — 반환값을 버리는 얇은 래퍼.
+        // 연출이 재생 중일 때 집은 단서는 어차피 못 낸다(MemorySpaceDropZone) — 그때 펼치면 접어 줄 시점이 없다.
         private void OnClueDragStarted()
         {
             if (!IsTurnPresenting) Open();
@@ -149,91 +288,84 @@ namespace BlueComplex.UI.Layout
                 Debug.LogWarning("[ComplexXrayPanel] ClueCardTray는 찾았지만 카드에 ClueCardDragHandler가 하나도 없다.", this);
         }
 
-        /// <summary>펼침을 시작하고 그 트윈을 돌려준다 — 이미 열려 있으면 아무것도 안 하고 null.
-        /// 호출자(3단계 CinematicTurnResultPresenter)가 <c>yield return Open().WaitForCompletion(true)</c>
-        /// 로 펼침이 끝날 때까지 기다릴 수 있다.</summary>
-        public Tween Open()
-        {
-            if (IsOpen) return null;
-            IsOpen = true;
-
-            _revealTween?.Kill();
-            _revealTween = DOTween.Sequence()
-                .Append(_rect.DOAnchorMin(_openAnchorMin, RevealDuration).SetEase(Ease.OutBack))
-                .Join(_rect.DOAnchorMax(_openAnchorMax, RevealDuration).SetEase(Ease.OutBack))
-                .Join(_canvasGroup.DOFade(1f, RevealDuration));
-            return _revealTween;
-        }
-
-        /// <summary>접힘을 시작하고 그 트윈을 돌려준다. 이미 접혀 있으면 null.</summary>
-        public Tween Close()
-        {
-            if (!IsOpen) return null;
-            IsOpen = false;
-
-            _revealTween?.Kill();
-            _revealTween = DOTween.Sequence()
-                .Append(_rect.DOAnchorMin(FoldedAnchorMin, RevealDuration).SetEase(Ease.InQuad))
-                .Join(_rect.DOAnchorMax(FoldedAnchorMax, RevealDuration).SetEase(Ease.InQuad))
-                .Join(_canvasGroup.DOFade(FoldedAlpha, RevealDuration));
-            return _revealTween;
-        }
-
-        private void SnapClosed()
-        {
-            // localScale만 줄이던 이전 버전에서 접힌 상태의 드래그/클릭 판정 영역이 원래 앵커
-            // 크기(화면 상당 부분)로 남는다는 리포트가 있었다 — 앵커 자체(=RectTransform의 실제
-            // 폭/높이)를 구석의 작은 박스로 바꾸면 시각 크기와 판정 영역이 항상 같은 값에서
-            // 나오므로 둘이 어긋날 여지가 없다.
-            _rect.anchorMin = FoldedAnchorMin;
-            _rect.anchorMax = FoldedAnchorMax;
-            _canvasGroup.alpha = FoldedAlpha;
-            IsOpen = false;
-        }
-
         // -----------------------------------------------------------------
-        // 조건 1: 판넬 자체를 드래그해서 유키 위에 놓기 (ClueCardDragHandler와 같은 좌표 보정 패턴)
+        // 조건 1: 판넬을 끌어 유키 위에 놓기 (ClueCardDragHandler와 같은 좌표 보정 패턴)
         // -----------------------------------------------------------------
 
         public void OnBeginDrag(PointerEventData eventData)
         {
-            _originalParent = transform.parent;
-            _originalSiblingIndex = transform.GetSiblingIndex();
-            _originalAnchoredPosition = _rect.anchoredPosition;
+            if (!TryGetContainerPoint(eventData, out var point))
+            {
+                eventData.pointerDrag = null;
+                return;
+            }
 
-            transform.SetParent(_canvasRect, worldPositionStays: true);
-            transform.SetAsLastSibling();
+            _dragging = true;
+            _dragTween?.Kill();
+
+            // 잡은 자리를 유지한 채 끈다 — 판넬이 커서 밑으로 튀지 않는다.
+            var unit = _rect.rect.width / ReferenceSize.x;
+            var current = new Vector2(_tablet.anchoredPosition.x, -_tablet.anchoredPosition.y) / unit;
+            _dragGrabOffset = current - point;
+            _dragCenter = ClampToScreen(current);
 
             // 끌고 있는 판넬이 커서 밑을 가리면 유키(PortraitView)가 드롭을 못 받는다 — 놓을 때까지 히트테스트에서 뺀다.
-            _canvasGroup.blocksRaycasts = false;
+            _tabletGroup.blocksRaycasts = false;
 
-            MoveTo(eventData);
+            _dragTween = DOTween.To(() => _dragBlend, v =>
+                {
+                    _dragBlend = v;
+                    ApplyPose();
+                }, 1f, UiMotion.Settings.xrayReturn * 0.6f)
+                .SetEase(Ease.OutQuad).SetUpdate(true).SetTarget(this);
+
+            UiSoundHooks.Play(UiSoundCue.Paper);
         }
 
-        public void OnDrag(PointerEventData eventData) => MoveTo(eventData);
+        public void OnDrag(PointerEventData eventData)
+        {
+            if (!_dragging || !TryGetContainerPoint(eventData, out var point)) return;
+
+            _dragCenter = ClampToScreen(point + _dragGrabOffset);
+            ApplyPose();
+        }
 
         public void OnEndDrag(PointerEventData eventData)
         {
-            // 드롭이 유키 위에서 성공했으면 PortraitView.OnDrop이 이미 Open()을 불렀다 — 위치만
-            // 원래 자리(구석 폴드 위치)로 되돌린다. 실패해도 마찬가지로 제자리 복귀.
-            _canvasGroup.blocksRaycasts = true;
-            transform.SetParent(_originalParent, worldPositionStays: true);
-            transform.SetSiblingIndex(_originalSiblingIndex);
-            _rect.anchoredPosition = _originalAnchoredPosition;
+            // 드롭이 유키 위에서 성공했으면 PortraitView.OnDrop이 이미 Open()을 불렀다 — 펼친 자리로, 아니면 접힌 자리로 돌아간다(팔이 다시 접힌다).
+            _dragging = false;
+            _tabletGroup.blocksRaycasts = true;
+
+            _dragTween?.Kill();
+            _dragTween = DOTween.To(() => _dragBlend, v =>
+                {
+                    _dragBlend = v;
+                    ApplyPose();
+                }, 0f, UiMotion.Settings.xrayReturn)
+                .SetEase(Ease.OutCubic).SetUpdate(true).SetTarget(this);
         }
 
-        private void MoveTo(PointerEventData eventData)
+        /// <summary>끄는 판넬이 화면 왼쪽/위 밖으로 나가지 않게 가둔다(컨테이너가 화면 왼쪽 가장자리에 붙어 있어 왼쪽 여유가 없다).</summary>
+        private static Vector2 ClampToScreen(Vector2 center) => new(
+            Mathf.Max(center.x, TabletSize.x * 0.5f * DragScale + HingeGap + 10f),
+            Mathf.Max(center.y, TabletSize.y * 0.5f * DragScale - 60f));
+
+        /// <summary>포인터 위치를 컨테이너 참조 픽셀 좌표(왼쪽 위 원점, y 아래로 +)로 바꾼다. CRT 배럴 왜곡 보정을 적용한다.</summary>
+        private bool TryGetContainerPoint(PointerEventData eventData, out Vector2 point)
         {
             var curvature = _raycaster != null ? _raycaster.CurrentCurvature : 0f;
             var screenPos = curvature == 0f
                 ? eventData.position
                 : DistortionMath.ApplyBarrel(eventData.position, curvature, Screen.width, Screen.height);
 
-            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                    _canvasRect, screenPos, eventData.pressEventCamera, out var localPoint))
-            {
-                _rect.localPosition = localPoint;
-            }
+            point = default;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(_rect, screenPos, eventData.pressEventCamera, out var local))
+                return false;
+
+            var rect = _rect.rect;
+            var unit = rect.width / ReferenceSize.x;
+            point = new Vector2(local.x - rect.xMin, rect.yMax - local.y) / unit;
+            return true;
         }
     }
 }

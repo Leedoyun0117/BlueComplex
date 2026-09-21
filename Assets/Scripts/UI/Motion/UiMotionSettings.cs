@@ -65,6 +65,24 @@ namespace BlueComplex.UI.Motion
         [Tooltip("우하단 ▼가 한 번 어두워지는 시간(왕복은 두 배).")]
         public float dialogueNextBlink = 0.9f;
 
+        [Header("엑스레이 판넬 (컴플렉스 인터페이스)")]
+        [Tooltip("관절 팔이 펴지며 판넬이 나오는 시간. 단서를 집는 순간 발동하므로 너무 길면 드래그하는 동안 뇌가 안 보인다.")]
+        public float xrayUnfold = 0.55f;
+        [Tooltip("컴플렉스 반응이 끝나 판넬이 접혀 들어가는 시간.")]
+        public float xrayFold = 0.45f;
+        [Tooltip("판넬을 끌다 놓았을 때 제자리(접힘/펼침)로 돌아가는 시간.")]
+        public float xrayReturn = 0.3f;
+        [Tooltip("컴플렉스 발동 시 뇌의 해당 부분이 빛나는 시간(올라갔다 내려오는 전체).")]
+        public float brainGlow = 0.4f;
+
+        [Header("기억 공간 결과 태그")]
+        [Tooltip("결과 태그 칩이 풍선 안에 하나씩 나타나는 시간.")]
+        public float tagPop = 0.3f;
+        [Tooltip("칩이 다 나타난 뒤 가만히 읽히는 최소 시간(그 뒤 상승·페이드).")]
+        public float tagHold = 0.8f;
+        [Tooltip("태그가 위로 올라가며 서서히 사라지는 시간. 심박수 모니터 전환과 같이 시작한다.")]
+        public float tagRise = 1.0f;
+
         [Header("아이템 패널")]
         [Tooltip("사용한 카드가 구겨져 사라지는 시간.")]
         public float itemUse = 0.5f;

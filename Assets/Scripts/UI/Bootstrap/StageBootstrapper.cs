@@ -112,8 +112,28 @@ namespace BlueComplex.UI.Bootstrap
                 _lampLightDriver.Bind(Session.Heartbeat);
 
             // StartStage()가 첫 TurnBegan을 곧바로 쏘아 올리므로, 구독자는 그 전에 새 세션을 받아야 한다.
-            SessionStarted?.Invoke(Session);
+            RaiseSessionStarted();
             Session.Runner.StartStage();
+        }
+
+        /// <summary>구독자마다 따로 부른다 — 뷰 하나의 초기화가 예외로 죽어도(참조가 끊긴 프리팹 등) 뒤의 뷰들이 초기화를 못 받아 화면이 통째로 비는 일이 없게 한다.
+        /// 예외는 삼키지 않고 콘솔에 그대로 남긴다.</summary>
+        private void RaiseSessionStarted()
+        {
+            var handlers = SessionStarted;
+            if (handlers == null) return;
+
+            foreach (var handler in handlers.GetInvocationList())
+            {
+                try
+                {
+                    ((Action<StageSession>)handler)(Session);
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogException(exception);
+                }
+            }
         }
     }
 }
