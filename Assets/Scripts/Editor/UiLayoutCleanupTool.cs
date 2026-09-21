@@ -64,14 +64,13 @@ namespace BlueComplex.EditorTools
         private static readonly Color EndOverlay = new Color32(6, 8, 14, 140);
         private static readonly Color FoldTabColor = new Color32(74, 133, 222, 255);
         private static readonly Color StickyGlow = new Color32(255, 150, 60, 215);
-        private static readonly Color FatalEnd = new Color32(150, 44, 44, 230);
-        private static readonly Color StripTrack = new Color(0f, 0f, 0f, 0.42f);
         private static readonly Color LightLabel = new Color32(226, 230, 240, 255);
 
         [MenuItem("BlueComplex/UI/Apply Layout Cleanup")]
         public static void Apply()
         {
             var font = TmpKoreanFontSetupTool.EnsureKoreanFontAsset();
+            UiMotionSettingsTool.Ensure();
 
             EditElement("HeartRateIndicatorPanel", root => CleanHeartMonitor(root, font));
             EditElement("BpmDisplay", root => CleanBpmDisplay(root, font));
@@ -100,9 +99,9 @@ namespace BlueComplex.EditorTools
         // ---------------------------------------------------------------
 
         /// <summary>
-        /// 색 구간 막대를 걷어내고 심전도 모니터로 바꾼다: 모니터 몸체 + 왼쪽 화면(심전도 파형, "목표 N~M" 글자, 아래 얇은 0~200 눈금 띠) + 오른쪽 화면 바탕.
+        /// 색 구간 막대·0~200 눈금 띠를 걷어내고 심전도 모니터로 바꾼다: 모니터 몸체 + 왼쪽 화면(심전도 파형 + 목표 띠, "목표 N~M" 글자) + 오른쪽 화면 바탕.
+        /// 왼쪽 화면 전체가 파형 그래픽이다 — 세로축은 심박수 눈금(HeartbeatMonitorScale)이라 목표 띠도 별도 오브젝트 없이 그 그래픽 안에서 같은 눈금으로 그려진다.
         /// 오른쪽 화면의 글자(BPM 숫자·"BPM"·상태 배지)는 BPM Display 프리팹이 그 위에 얹는다.
-        /// 목표 구간을 어떻게 넣을지 목업에 없어서 이렇게 정했다 — 왼쪽 화면 안에서 파형 위에 글자, 아래에 무채색 눈금 띠(목표 구역만 노랑, 즉사 양 끝만 붉게)와 현재 값 마커.
         /// </summary>
         private static void CleanHeartMonitor(GameObject root, TMP_FontAsset font)
         {
@@ -117,35 +116,22 @@ namespace BlueComplex.EditorTools
 
             var screen = EnsureImage(root.transform, "EcgScreen", MockupStyle.MonitorScreen, EcgScreenInMonitor.min, EcgScreenInMonitor.max);
 
+            // 예전 0~200 눈금 띠(구역 탭·즉사 끝·마커 포함)는 목표 띠가 파형과 같은 화면 안으로 들어오면서 필요 없어졌다.
+            Remove(screen.transform, "TargetStrip");
+
             var waveRect = Ensure(screen.transform, "EcgWave");
-            SetRect(waveRect, new Vector2(0f, 0.14f), new Vector2(1f, 0.78f), Vector2.zero, Vector2.zero);
+            SetRect(waveRect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var wave = GetOrAdd<EcgWaveGraphic>(waveRect.gameObject);
             wave.color = MockupStyle.Cyan;
             wave.raycastTarget = false;
 
-            var targetLabel = EnsureText(screen.transform, "TargetLabel", string.Empty, font, 18f, MockupStyle.Cyan,
-                TextAlignmentOptions.MidlineLeft, new Vector2(0.03f, 0.78f), new Vector2(0.62f, 1f), Vector2.zero, Vector2.zero);
-
-            var strip = EnsureImage(screen.transform, "TargetStrip", StripTrack, new Vector2(0.03f, 0.04f), new Vector2(0.97f, 0.13f));
-            EnsureImage(strip.transform, "FatalLow", FatalEnd, Vector2.zero, new Vector2(0.05f, 1f));
-            EnsureImage(strip.transform, "FatalHigh", FatalEnd, new Vector2(0.95f, 0f), Vector2.one);
-
-            var zone = EnsureImage(strip.transform, "TargetZone", new Color32(255, 210, 70, 255), new Vector2(0.4f, 0f), new Vector2(0.5f, 1f));
-            zone.gameObject.SetActive(false);
-
-            var marker = Ensure(strip.transform, "Marker");
-            SetRect(marker, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(-1.5f, -3f), new Vector2(1.5f, 3f));
-            var markerImage = GetOrAdd<Image>(marker.gameObject);
-            markerImage.color = Color.white;
-            markerImage.raycastTarget = false;
+            var targetLabel = EnsureText(screen.transform, "TargetLabel", string.Empty, font, 16f, MockupStyle.Cyan,
+                TextAlignmentOptions.TopLeft, new Vector2(0.02f, 0.72f), new Vector2(0.55f, 1f), Vector2.zero, Vector2.zero);
+            targetLabel.transform.SetAsLastSibling();
 
             EnsureImage(root.transform, "ScreenRight", MockupStyle.MonitorScreen, BpmScreenInMonitor.min, BpmScreenInMonitor.max);
 
             var view = root.GetComponent<HeartRateBarView>();
-            SetRef(view, "_barArea", strip.rectTransform);
-            SetRef(view, "_marker", marker);
-            SetRefs(view, "_keyZoneOverlays", new Object[] { zone.rectTransform });
-            SetRefs(view, "_keyZoneImages", new Object[] { zone });
             SetRefs(view, "_keyZoneLabels", new Object[] { targetLabel });
             SetRef(view, "_ecg", wave);
         }
@@ -482,6 +468,8 @@ namespace BlueComplex.EditorTools
             // 요소 프리팹에서 지운 오브젝트(행의 설명 글자, 예전 구간 막대 등)에 걸려 있던 오버라이드를 먼저 걷어낸다 — 남아 있으면 그 인스턴스에 새 오버라이드가 안 남는다.
             RemoveStaleOverrides(root);
 
+            UseCinematicPresenter(hud);
+
             // 컴플렉스 상시 표시는 엑스레이 판넬 바로 뒤에 쌓는다 — 공유 툴팁(MainHud 자식)이 그 위에 그려져야 한다.
             EnsureInstance(hud, "Complex Status", statusPrefab, afterSibling: "Complex X-ray Panel");
 
@@ -558,6 +546,22 @@ namespace BlueComplex.EditorTools
             label.raycastTarget = false;
 
             SetRef(GetOrAdd<T>(rect.gameObject), "_label", label);
+        }
+
+        /// <summary>턴 결과를 즉시 반영하던 2단계 Presenter를 3단계 연출 Presenter로 갈아끼운다 — 컴플렉스 발광·이벤트 대사·태그 상승·심박수 이동·아이템 카드 끼우기가 전부 이 Presenter가 잡는 순서로 돈다.
+        /// 필드 참조는 Presenter가 같은 HUD 아래에서 스스로 찾는다(CinematicTurnResultPresenter.ResolveReferences). 이미 갈아끼워져 있으면 아무것도 안 한다(멱등).</summary>
+        private static void UseCinematicPresenter(Transform hud)
+        {
+            var holder = hud.Find("Turn Result Presenter");
+            if (holder == null)
+            {
+                Debug.LogWarning("[UiLayoutCleanupTool] MainHud에서 'Turn Result Presenter'를 찾지 못했다 — 연출 Presenter를 못 붙였다.");
+                return;
+            }
+
+            var immediate = holder.GetComponent<ImmediateTurnResultPresenter>();
+            if (immediate != null) Object.DestroyImmediate(immediate);
+            GetOrAdd<CinematicTurnResultPresenter>(holder.gameObject);
         }
 
         private static void SetTooltip(Component target, TooltipPopup tooltip) => SetRef(target, "_tooltip", tooltip);

@@ -277,6 +277,10 @@ namespace BlueComplex.Core.Stage
             };
         }
 
+        /// <summary>구간 확률에 곱해지는 컴플렉스 발현 배율. 기획자 피드백으로 1.0에서 12.5% 올렸다 — 침체/흥분 30% → 33.75%, 매우 침체/흥분 50% → 56.25%, 안정 0% 유지.
+        /// 스테이지 설정(<see cref="StageConfig.ComplexWeight"/>)의 값이라 스테이지마다 다르게 줄 수 있다.</summary>
+        public const double PrototypeComplexWeight = 1.125;
+
         /// <summary>12턴 = 3쿼터 × 4턴 / 쿼터마다 키 판정 1회(쿼터 마지막 턴 종료 시점) / 키 2개 필요 / 키 폭 36.</summary>
         public static StageConfig PrototypeStage(IEmotionPolarityTable polarityTable) => new(
             "stage_1",
@@ -284,7 +288,7 @@ namespace BlueComplex.Core.Stage
             quarterCount: 3,
             turnsPerQuarter: 4,
             requiredKeys: 2,
-            complexWeight: 1.0,
+            complexWeight: PrototypeComplexWeight,
             clues: Clues(),
             complexPool: Complexes(polarityTable),
             startingComplex: AntiPast(polarityTable),

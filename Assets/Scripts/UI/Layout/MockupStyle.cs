@@ -47,8 +47,8 @@ namespace BlueComplex.UI.Layout
             if (shadow) AddShadow(go);
         }
 
-        /// <summary>테두리 없이 그림자만(포스트잇). 이미 붙어 있으면 값만 다시 맞춘다(멱등).</summary>
-        public static void AddShadow(GameObject go)
+        /// <summary>테두리 없이 그림자만(포스트잇). 이미 붙어 있으면 값만 다시 맞춘다(멱등). 연출이 그림자 거리를 움직일 수 있게 컴포넌트를 돌려준다.</summary>
+        public static Shadow AddShadow(GameObject go)
         {
             // Outline도 Shadow를 상속하므로 정확히 Shadow 타입만 골라야 한다.
             Shadow shadowEffect = null;
@@ -63,6 +63,7 @@ namespace BlueComplex.UI.Layout
             shadowEffect.effectColor = Shadow;
             shadowEffect.effectDistance = ShadowOffset;
             shadowEffect.useGraphicAlpha = false;
+            return shadowEffect;
         }
     }
 }

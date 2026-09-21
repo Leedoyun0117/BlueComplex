@@ -12,8 +12,8 @@ namespace BlueComplex.UI.Presentation
 {
     /// <summary>
     /// 3단계 연출 버전 ITurnResultPresenter. Present() 순서:
-    /// 엑스레이 판넬 Open() → 컴플렉스 순차 발광 → 대사 타이핑 →
-    /// (남은 감정 태그 상승/소멸 + 심박수 이동을 동시에) → 판넬 Close() → 손패 갱신.
+    /// 엑스레이 판넬 Open() → 컴플렉스 순차 발광(발동할 때마다 대사창에 짧은 이벤트 대사) → 대사 타이핑 →
+    /// (남은 감정 태그 상승/소멸 + 심박수 이동을 동시에) → 판넬 Close() → 손패 갱신 → (모든 연출이 끝나면) 아이템 칸 갱신.
     ///
     /// TurnRunner.PlayClue는 TurnResolved를 동기(synchronous)로 쏘고 그 직후 바로 다음 턴을
     /// 시작한다 — 연출은 여러 프레임에 걸쳐야 하므로 Present()는 코루틴을 발사만 하고 즉시
@@ -32,6 +32,10 @@ namespace BlueComplex.UI.Presentation
         [SerializeField] private ComplexStatusController _complexStatus;
         [SerializeField] private TraitStatusView _traitStatus;
         [SerializeField] private ClockController _clock;
+        [SerializeField] private ItemController _items;
+
+        /// <summary>컴플렉스 이벤트 대사가 다 나온 뒤 다음 컴플렉스로 넘어가기 전의 짧은 쉼(초).</summary>
+        [SerializeField] private float _eventLinePause = 0.25f;
 
         public bool IsPresenting { get; private set; }
 
@@ -56,6 +60,7 @@ namespace BlueComplex.UI.Presentation
             // 상시 표시가 없는 씬에서도 연출은 그대로 돈다.
             if (_complexStatus == null) _complexStatus = root.GetComponentInChildren<ComplexStatusController>(true);
             if (_traitStatus == null) _traitStatus = root.GetComponentInChildren<TraitStatusView>(true);
+            if (_items == null) _items = root.GetComponentInChildren<ItemController>(true);
             // 벽시계는 HUD가 아니라 3D 배경 리그에 있어 root 아래에서 못 찾는다. 없어도 연출은 그대로 돈다.
             if (_clock == null) _clock = FindFirstObjectByType<ClockController>(FindObjectsInactive.Include);
 
@@ -101,6 +106,9 @@ namespace BlueComplex.UI.Presentation
             _traitStatus?.Refresh();
             _memoryBubble.SetEngaged(false);
             IsPresenting = false;
+
+            // 이 턴들의 연출이 모두 끝난 뒤에야 새 아이템 카드가 빈 칸에 끼워진다(획득은 턴 해석 도중에 일어난다).
+            if (_items != null) _items.FlushPending();
         }
 
         /// <summary>단서 없이 시간만 흐른 턴 — 컴플렉스/태그 연출 없이 결과(대사, 심박수, 키 판정)만 보여준다.</summary>
@@ -132,10 +140,9 @@ namespace BlueComplex.UI.Presentation
             if (openTween != null) yield return openTween.WaitForCompletion(true);
 
             // TickDurations/스폰이 Resolve 이후에 일어나므로, 발광 전에 먼저 행 배치를 최신 보드
-            // 상태로 맞춰야 한다(ComplexListView.PlaySequence 문서 참고).
+            // 상태로 맞춰야 한다(ComplexListView.PlayGlow 문서 참고).
             _complexList.Refresh(Session.Complexes.InPriorityOrder().ToList());
-            var glowSequence = _complexList.PlaySequence(report.Interpretation);
-            yield return glowSequence.WaitForCompletion(true);
+            yield return PlayComplexReactions(report);
 
             yield return PlayDialogue(TurnSummaryFormatter.Build(report));
 
@@ -147,20 +154,34 @@ namespace BlueComplex.UI.Presentation
             _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger, Session.Censorship.Level);
         }
 
-        private IEnumerator PlayDialogue(string line)
+        /// <summary>발동한 컴플렉스를 우선순위 순서(InterpretationResult.Steps 순서)대로 한 번에 하나씩 빛내고, 그때마다 대사창에 짧은 이벤트 대사를 띄운다.
+        /// 대사가 다 나와야(클릭으로 건너뛰어도 된다) 다음 컴플렉스로 넘어간다 — 발광과 대사가 서로 끊기지 않는다.</summary>
+        private IEnumerator PlayComplexReactions(TurnReport report)
+        {
+            foreach (var step in report.Interpretation.Steps)
+            {
+                // 같은 턴에 만료돼 이미 행이 없는 컴플렉스는 조용히 건너뛴다.
+                if (!step.Triggered || !_complexList.PlayGlow(step.Complex)) continue;
+
+                yield return PlayDialogue(TurnSummaryFormatter.BuildComplexEventLine(step.Complex), isEvent: true);
+                yield return new WaitForSeconds(_eventLinePause);
+            }
+        }
+
+        private IEnumerator PlayDialogue(string line, bool isEvent = false)
         {
             var done = false;
             void OnComplete() => done = true;
 
             _dialogue.TypingComplete += OnComplete;
-            _dialogue.PlayTyped(line);
+            _dialogue.PlayTyped(line, isEvent);
             yield return new WaitUntil(() => done);
             _dialogue.TypingComplete -= OnComplete;
         }
 
         /// <summary>UI 가이드 원문: "태그가 위로 올라가며 사라지며, 그와 동시에 인디케이터가 움직인다."
         /// 두 연출을 같은 프레임에 시작하고, 더 긴 쪽(태그 상승)이 끝날 때까지 기다린다 — 심박수
-        /// 마커 이동(0.25초, HeartRateBarView.MoveMarker)이 태그 상승(0.9초)보다 항상 짧다.</summary>
+        /// 파형·숫자의 심박수 전환 시간(UiMotionSettings.heartTransition, 기본 0.9초)을 태그 상승과 맞춰 두었다.</summary>
         private IEnumerator PlayTagsAndHeartbeatTogether(TurnReport report)
         {
             var labels = report.FinalTags.EnumerateEmotionsFlat()

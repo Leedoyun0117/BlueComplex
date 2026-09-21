@@ -1,47 +1,46 @@
 using BlueComplex.Core.Stability;
 using BlueComplex.UI.Layout;
-using DG.Tweening;
+using BlueComplex.UI.Motion;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace BlueComplex.UI.Presentation
 {
     /// <summary>
-    /// 심박수 모니터의 왼쪽 화면: 심전도 파형(<see cref="EcgWaveGraphic"/>, BPM에 맞춰 흐른다) + 화면 아래 얇은 0~200 눈금 띠.
-    /// 띠 위에 현재 값 마커를 그리고, 지금 진행 중인 쿼터의 목표 구역 하나만 강조한다(모니터 안 "목표 N~M" 문구 포함). 표시만 한다 — 판정 없음.
-    /// 예전의 색 구간 막대는 없앴다 — 띠는 무채색이고 즉사 구간(양 끝)만 붉게 표시한다.
+    /// 심박수 모니터의 왼쪽 화면(<see cref="EcgWaveGraphic"/>)을 다룬다: 흐르는 심전도 파형 + 현재 쿼터의 목표 심박수 띠.
+    /// 세로축이 심박수 눈금이라 목표 띠와 파형 봉우리가 같은 높이 함수(<see cref="HeartbeatMonitorScale"/>)를 쓴다 —
+    /// 이 뷰는 목표 구역의 하한·상한 BPM과 현재 BPM을 그래픽에 넘기기만 하고, 높이 계산은 그래픽 한 곳에서만 일어난다.
+    /// 예전의 색 구간 막대·0~200 눈금 띠·현재 값 마커는 없어졌다. 표시만 한다 — 판정 없음.
     ///
-    /// UI 기획서는 쿼터별 목표 심박수를 숫자로만 보여주지만(쿼터 HUD의 전체 스테이지 오버레이), 플레이어가
-    /// "지금 심박수가 목표에 가까운가"를 판단하려면 현재 값 옆에 목표 구간이 있어야 해서 현재 쿼터 것만 바에 남겼다.
-    /// 나머지 쿼터의 구역은 바에 그리지 않는다 — 여러 개를 그리면 구간이 겹쳐 탭이 포개지고 미래 쿼터 정보가 바를 어지럽힌다.
-    ///
-    /// 구역 슬롯 배열은 프리팹에 이미 구워진 필드를 그대로 쓴다(구 프리팹은 슬롯 4개) — 첫 슬롯 하나만 쓰고
-    /// 나머지는 숨긴다. 재생성한 프리팹은 슬롯이 하나다.
+    /// 목표 띠는 지금 진행 중인 쿼터의 것 하나만 그린다(미래 쿼터의 구역까지 그리면 띠가 겹쳐 파형과 비교하기 어렵다 — 전체 목표는 쿼터 HUD의 오버레이에 있다).
+    /// 키 턴(쿼터 마지막 턴)에는 띠가 강조되며 맥동하고, 키 판정 결과가 오면 성공(초록)/실패(붉음)로 번쩍인다.
     /// </summary>
     public sealed class HeartRateBarView : MonoBehaviour
     {
-        [SerializeField] private RectTransform _barArea;
-        [SerializeField] private RectTransform _marker;
-        [SerializeField] private RectTransform[] _keyZoneOverlays;
-        [SerializeField] private Image[] _keyZoneImages;
         [SerializeField] private TMP_Text[] _keyZoneLabels;
         [SerializeField] private EcgWaveGraphic _ecg;
 
         private static readonly Color CurrentColor = new Color32(255, 210, 70, 255);
         private static readonly Color SuccessColor = new Color32(90, 230, 130, 255);
-        private static readonly Color FailColor = new Color32(150, 60, 60, 160);
+        private static readonly Color FailColor = new Color32(214, 84, 84, 255);
 
         private int _shownQuarter;
         private KeyZone? _shownZone;
+        private bool _keyTurn;
         private bool? _result;
-        private Tween _pulseTween;
 
-        private bool HasBand => _keyZoneOverlays != null && _keyZoneOverlays.Length > 0 && _keyZoneImages != null &&
-                                _keyZoneImages.Length > 0;
+        private TMP_Text Label => _keyZoneLabels != null && _keyZoneLabels.Length > 0 ? _keyZoneLabels[0] : null;
+
+        public EcgWaveGraphic Ecg => _ecg;
+
+        /// <summary>세션이 시작될 때 코어의 구간표에서 모니터 눈금(생존 구간의 위쪽 끝)을 가져온다.</summary>
+        public void BindScale(HeartbeatZone zone)
+        {
+            if (_ecg != null) _ecg.Scale = HeartbeatMonitorScale.FromZone(zone);
+        }
 
         /// <summary>바에 그릴 목표 구역을 정한다(null이면 감춘다). 같은 쿼터·같은 구역이면 이미 기록된 성공/실패 표시를 그대로 둔다 —
-        /// 매 턴 다시 불러도 결과 색이 지워지지 않는다.</summary>
+        /// 매 턴 다시 불러도 결과 색이 지워지지 않는다. 쿼터가 바뀌면 띠가 새 자리로 부드럽게 옮겨 간다.</summary>
         public void SetTargetZone(int quarter, KeyZone? zone)
         {
             if (quarter == _shownQuarter && Equals(zone, _shownZone)) return;
@@ -49,7 +48,17 @@ namespace BlueComplex.UI.Presentation
             _shownQuarter = quarter;
             _shownZone = zone;
             _result = null;
-            Refresh();
+            _keyTurn = false;
+            Refresh(animate: true);
+        }
+
+        /// <summary>지금 턴이 쿼터의 마지막 턴(키 판정 턴)인지. true면 띠를 강조한다.</summary>
+        public void SetKeyTurn(bool keyTurn)
+        {
+            if (_keyTurn == keyTurn) return;
+
+            _keyTurn = keyTurn;
+            ApplyEmphasis();
         }
 
         /// <summary>세션이 새로 시작될 때 표시를 처음으로 되돌린다.</summary>
@@ -58,7 +67,8 @@ namespace BlueComplex.UI.Presentation
             _shownQuarter = 0;
             _shownZone = null;
             _result = null;
-            Refresh();
+            _keyTurn = false;
+            Refresh(animate: false);
         }
 
         /// <summary>쿼터 마지막 턴 종료 시점의 키 판정 결과를 기록한다. 지금 바에 그려진 쿼터의 결과일 때만 반영한다.
@@ -68,94 +78,48 @@ namespace BlueComplex.UI.Presentation
             if (quarter != _shownQuarter || _shownZone == null) return;
 
             _result = success;
-            Refresh();
-            PlayResultPop();
+            Refresh(animate: false);
+            if (_ecg != null) _ecg.FlashBand(UiMotion.Settings.bandResultFlash);
         }
 
-        /// <summary>심전도 파형의 속도(BPM)와 선 색을 정한다. snap이면 속도도 바로 그 값으로.</summary>
-        public void SetPulse(int bpm, Color color, bool snap)
+        /// <summary>파형의 높이·속도(BPM)와 선 색을 정한다. snap이면 바로, 아니면 <c>heartTransition</c> 동안 부드럽게 — 턴 결과 연출의 심박수 이동과 같은 타이밍이다.</summary>
+        public void SetPulse(int bpm, Color color, bool irregular, bool snap)
         {
-            if (_ecg != null) _ecg.SetPulse(bpm, color, snap);
+            if (_ecg != null) _ecg.SetPulse(bpm, color, irregular, snap, UiMotion.Settings.heartTransition);
         }
 
-        public void MoveMarker(int value, bool animate)
+        private void Refresh(bool animate)
         {
-            var t = Mathf.Clamp01(value / (float)Heartbeat.MaxValue);
-            var targetX = t * _barArea.rect.width;
-
-            if (animate)
-                _marker.DOAnchorPosX(targetX, 0.25f).SetEase(Ease.OutQuad);
-            else
-                _marker.anchoredPosition = new Vector2(targetX, _marker.anchoredPosition.y);
-        }
-
-        private void Refresh()
-        {
-            if (!HasBand) return;
-
-            _pulseTween?.Kill();
-
-            // 첫 슬롯만 쓴다. 구 프리팹에 남은 나머지 슬롯은 숨긴다.
-            for (var slot = 1; slot < _keyZoneOverlays.Length; slot++)
-                _keyZoneOverlays[slot].gameObject.SetActive(false);
-
-            var overlay = _keyZoneOverlays[0];
-            overlay.localScale = Vector3.one;
-
-            var label = _keyZoneLabels != null && _keyZoneLabels.Length > 0 ? _keyZoneLabels[0] : null;
+            var label = Label;
 
             if (_shownZone is not { } zone)
             {
-                overlay.gameObject.SetActive(false);
-                // 라벨은 구역 탭의 자식이 아니라 모니터 화면에 따로 붙어 있어서 탭이 꺼져도 남는다.
+                if (_ecg != null) _ecg.HideBand();
+                // 라벨은 모니터 화면에 따로 붙어 있어서 띠가 꺼져도 남는다.
                 if (label != null) label.text = string.Empty;
                 return;
             }
 
-            // 행(KeyZoneRow) 밖으로 나가는 구역이 없도록 0~1로 가둔다.
-            var min = Mathf.Clamp01(zone.StartSlot / (float)Heartbeat.MaxValue);
-            var max = Mathf.Max(Mathf.Clamp01((zone.StartSlot + zone.Width) / (float)Heartbeat.MaxValue), min);
+            // 목표 심박수는 구역의 양 끝 값 그대로 — 쿼터 오버레이의 문구와 같다. 띠 경계도 이 두 값을 그대로 쓴다.
+            var lo = zone.StartSlot;
+            var hi = zone.StartSlot + zone.Width - 1;
+            var tint = _result switch { true => SuccessColor, false => FailColor, _ => CurrentColor };
 
-            overlay.gameObject.SetActive(true);
-            overlay.anchorMin = new Vector2(min, 0f);
-            overlay.anchorMax = new Vector2(max, 1f);
-            overlay.offsetMin = Vector2.zero;
-            overlay.offsetMax = Vector2.zero;
+            if (_ecg != null) _ecg.ShowBand(lo, hi, tint, animate, UiMotion.Settings.bandMove);
 
-            var image = _keyZoneImages[0];
-
-            // 목표 심박수는 구역의 양 끝 값 그대로 — 오버레이에 쓰는 문구와 같다. 라벨은 어두운 화면 위 글자라 구역 색을 그대로 따른다.
-            if (label != null) label.text = $"목표 {zone.StartSlot}~{zone.StartSlot + zone.Width - 1}";
-
-            if (_result == true)
+            if (label != null)
             {
-                image.color = SuccessColor;
-                if (label != null) label.color = SuccessColor;
+                label.text = $"목표 {lo}~{hi}";
+                label.color = _result == false ? new Color(1f, 1f, 1f, 0.5f) : tint;
             }
-            else if (_result == false)
-            {
-                image.color = FailColor;
-                if (label != null) label.color = new Color(1f, 1f, 1f, 0.45f);
-            }
-            else
-            {
-                image.color = CurrentColor;
-                if (label != null) label.color = CurrentColor;
-                _pulseTween = overlay.DOScale(1.06f, 0.5f).SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine);
-            }
+
+            ApplyEmphasis();
         }
 
-        private void PlayResultPop()
+        private void ApplyEmphasis()
         {
-            if (!HasBand || !_keyZoneOverlays[0].gameObject.activeSelf) return;
-
-            var overlay = _keyZoneOverlays[0];
-            _pulseTween?.Kill();
-            overlay.localScale = Vector3.one;
-            _pulseTween = overlay.DOScale(1.15f, 0.18f).SetLoops(2, LoopType.Yoyo).SetEase(Ease.OutQuad)
-                .OnComplete(() => overlay.localScale = Vector3.one);
+            if (_ecg == null) return;
+            _ecg.SetBandEmphasis(_keyTurn && _result == null && _shownZone != null, UiMotion.Settings.keyBandPulse);
         }
-
-        private void OnDisable() => _pulseTween?.Kill();
     }
 }

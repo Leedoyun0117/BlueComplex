@@ -17,8 +17,7 @@ namespace BlueComplex.UI.Presentation
         /// <summary>남은 턴이 줄 때 막대가 줄어드는 시간. 심박수 마커 이동(0.25초)과 비슷하게 맞췄다.</summary>
         private const float BarShrinkDuration = 0.3f;
 
-        /// <summary>한 행이 빛나는 데 걸리는 시간(올라갔다 내려오는 전체). ComplexListView.PlaySequence가
-        /// 다음 행으로 넘어가는 간격도 이 값을 그대로 쓴다 — 값이 어긋나면 겹치거나 빈 틈이 생긴다.</summary>
+        /// <summary>한 행이 빛나는 데 걸리는 시간(올라갔다 내려오는 전체).</summary>
         public const float GlowDuration = 0.35f;
 
         [SerializeField] private TMP_Text _nameText;

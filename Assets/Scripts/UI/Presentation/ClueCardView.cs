@@ -1,4 +1,5 @@
 using BlueComplex.Core.Clues;
+using BlueComplex.UI.Layout;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -60,6 +61,62 @@ namespace BlueComplex.UI.Presentation
             SetVisible(false);
         }
 
+        /// <summary>집어 든 동안 원래 자리에 남는 카드를 흐리게 한다 — 손에 든 카드(고스트)가 자리를 떠난 것처럼 보이게.</summary>
+        public void SetLifted(bool lifted)
+        {
+            if (IsEmpty) return;
+            EnsureGroup().alpha = lifted ? 0.28f : 1f;
+        }
+
+        /// <summary>드래그가 끝난 뒤 카드의 보임 상태를 손패 내용에 맞춘다(채워졌으면 보이고 비었으면 감춘다).</summary>
+        public void RestoreVisibility() => EnsureGroup().alpha = IsEmpty ? 0f : 1f;
+
+        /// <summary>
+        /// 지금 카드의 겉모습(배경·아이콘·이름)만 복제한 입력 없는 카드 한 장을 <paramref name="parent"/> 아래에 만든다 — 드래그 중 커서를 따라다니는 "손에 든 카드".
+        /// 슬롯 자체(이 오브젝트)는 손패 슬롯이라 드롭 직후 곧바로 다음 카드로 갱신되므로, 날아가는 카드는 슬롯과 분리해야 한다.
+        /// </summary>
+        public RectTransform BuildGhost(Transform parent)
+        {
+            var root = new GameObject("Clue Card Ghost", typeof(RectTransform), typeof(CanvasGroup), typeof(Image))
+            {
+                layer = gameObject.layer
+            };
+            root.transform.SetParent(parent, false);
+
+            var rect = (RectTransform)root.transform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = ((RectTransform)transform).rect.size;
+
+            var background = root.GetComponent<Image>();
+            background.sprite = _background.sprite;
+            background.type = _background.type;
+            background.color = _background.color;
+
+            MockupStyle.AddPaperEdge(root);
+
+            if (_iconImage != null && _iconImage.enabled) Instantiate(_iconImage.gameObject, rect, false);
+            if (_titleText != null) Instantiate(_titleText.gameObject, rect, false);
+
+            // 고스트는 입력을 받지 않는다 — 커서 밑의 드롭 영역이 가려지면 안 된다.
+            foreach (var graphic in root.GetComponentsInChildren<Graphic>(true)) graphic.raycastTarget = false;
+            var group = root.GetComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
+            group.interactable = false;
+
+            return rect;
+        }
+
+        private CanvasGroup EnsureGroup()
+        {
+            if (_group == null)
+            {
+                _group = GetComponent<CanvasGroup>();
+                if (_group == null) _group = gameObject.AddComponent<CanvasGroup>();
+            }
+
+            return _group;
+        }
+
         private void SetIcon(string clueId)
         {
             if (_iconImage == null) return;
@@ -71,14 +128,9 @@ namespace BlueComplex.UI.Presentation
 
         private void SetVisible(bool visible)
         {
-            if (_group == null)
-            {
-                _group = GetComponent<CanvasGroup>();
-                if (_group == null) _group = gameObject.AddComponent<CanvasGroup>();
-            }
-
-            _group.alpha = visible ? 1f : 0f;
-            _group.blocksRaycasts = visible;
+            var group = EnsureGroup();
+            group.alpha = visible ? 1f : 0f;
+            group.blocksRaycasts = visible;
         }
 
         private void HideLegacyUsesLabel()
