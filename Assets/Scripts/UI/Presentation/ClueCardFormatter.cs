@@ -14,11 +14,9 @@ namespace BlueComplex.UI.Presentation
         public readonly bool AttributesHidden;
         public readonly bool StoryVisible;
         public readonly string StoryText;
-        public readonly int RemainingUses;
 
         public ClueCardViewModel(string title, string timeText, IReadOnlyList<string> personTexts,
-            IReadOnlyList<string> emotionTexts, bool attributesHidden, bool storyVisible, string storyText,
-            int remainingUses)
+            IReadOnlyList<string> emotionTexts, bool attributesHidden, bool storyVisible, string storyText)
         {
             Title = title;
             TimeText = timeText;
@@ -27,7 +25,6 @@ namespace BlueComplex.UI.Presentation
             AttributesHidden = attributesHidden;
             StoryVisible = storyVisible;
             StoryText = storyText;
-            RemainingUses = remainingUses;
         }
     }
 
@@ -48,8 +45,7 @@ namespace BlueComplex.UI.Presentation
             if (censorship == CensorshipLevel.Full)
             {
                 return new ClueCardViewModel(def.DisplayName, "?", System.Array.Empty<string>(),
-                    System.Array.Empty<string>(), attributesHidden: true, storyVisible: false, CensorBlock,
-                    card.RemainingUses);
+                    System.Array.Empty<string>(), attributesHidden: true, storyVisible: false, CensorBlock);
             }
 
             var knowledge = ledger.GetKnowledge(def.Id);
@@ -73,7 +69,7 @@ namespace BlueComplex.UI.Presentation
             var storyText = storyVisible ? $"\"{def.Story}\"" : CensorBlock;
 
             return new ClueCardViewModel(def.DisplayName, timeText, personTexts, emotionTexts,
-                attributesHidden: false, storyVisible, storyText, card.RemainingUses);
+                attributesHidden: false, storyVisible, storyText);
         }
     }
 }

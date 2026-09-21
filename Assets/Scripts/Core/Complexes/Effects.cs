@@ -1,3 +1,4 @@
+using System.Linq;
 using BlueComplex.Core.Tags;
 
 namespace BlueComplex.Core.Complexes
@@ -20,6 +21,32 @@ namespace BlueComplex.Core.Complexes
                 if (emotion == _target) continue;
                 context.Tags.ReplaceEmotion(emotion, _target);
             }
+        }
+    }
+
+    /// <summary>조건이 매칭한 인물들을 지정 인물로 변환. (예: 친구 → 연인, 연인/친구 → 타인)</summary>
+    public sealed class ConvertMatchedPersonsTo : IComplexEffect
+    {
+        private readonly PersonTag _target;
+        public ConvertMatchedPersonsTo(PersonTag target) => _target = target;
+
+        public void Apply(ComplexContext context)
+        {
+            foreach (var person in context.MatchedPersons)
+            {
+                if (person == _target) continue;
+                context.Tags.ReplacePerson(person, _target);
+            }
+        }
+    }
+
+    /// <summary>지금 붙어 있는 감정 종류마다 하나씩 더 붙인다. (예: 되새김 — 과거의 감정을 한 번 더 느낀다)</summary>
+    public sealed class RepeatEachEmotion : IComplexEffect
+    {
+        public void Apply(ComplexContext context)
+        {
+            foreach (var emotion in context.Tags.Emotions.Keys.ToList())
+                context.Tags.AddEmotion(emotion);
         }
     }
 

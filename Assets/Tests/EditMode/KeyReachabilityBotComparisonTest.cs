@@ -1,12 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using NUnit.Framework;
 using UnityEngine;
-using BlueComplex.Core.Clues;
-using BlueComplex.Core.Complexes;
-using BlueComplex.Core.Stability;
 using BlueComplex.Core.Stage;
 using BlueComplex.Core.Tags;
 using BlueComplex.Core.Turn;
@@ -14,183 +10,119 @@ using BlueComplex.Core.Turn;
 namespace BlueComplex.Core.Tests
 {
     /// <summary>
-    /// 무전략 봇("손패 첫 장") vs 휴리스틱 봇("키 구역을 보고 ComplexResolver로 미리 해석해 방향을 고른다")을
-    /// 같은 시드 4개로 나란히 돌려 키 성공률 개선폭을 확인한다.
-    /// 휴리스틱은 ComplexBoard/TraitBoard를 직접 참조해 실제 턴 해석과 동일한 조건으로 미리보기만 하고,
-    /// 코어 상태를 전혀 변형하지 않는다(ComplexResolver.Resolve는 순수 함수).
+    /// 무전략 봇("손패 첫 장") vs 휴리스틱 봇(쿼터 구조를 알고 남은 쿼터의 카드 순서를 미리 시뮬레이션한다 — 봇 로직은 QuarterBots)을
+    /// 같은 시드로 나란히 돌려 개선폭을 확인한다. 4시드는 상세 로그(밸런스 눈검사)용이고,
+    /// 통과 여부는 1000시드 클리어율 배율로 판정한다.
     /// </summary>
     public class KeyReachabilityBotComparisonTest
     {
+        /// <summary>상세 로그를 눈으로 보는 용도. 표본이 작아서 단언에는 쓰지 않는다.</summary>
         private static readonly int[] Seeds = { 20260916, 1, 12345, 777 };
 
-        private readonly struct RunResult
-        {
-            public StageOutcome Outcome { get; }
-            public int KeysCollected { get; }
-            public int KeyRequired { get; }
-            public int KeyAttempts { get; }
-            public int KeyHits { get; }
-            public int TurnsPlayed { get; }
-
-            public RunResult(StageOutcome outcome, int keysCollected, int keyRequired,
-                             int keyAttempts, int keyHits, int turnsPlayed)
-            {
-                Outcome = outcome;
-                KeysCollected = keysCollected;
-                KeyRequired = keyRequired;
-                KeyAttempts = keyAttempts;
-                KeyHits = keyHits;
-                TurnsPlayed = turnsPlayed;
-            }
-        }
-
-        private static ClueInstance ChooseFirstCard(StageSession session) => session.Hand.Cards[0];
+        /// <summary>단언과 요약 통계에 쓰는 대표본.</summary>
+        private static readonly int[] WideSeeds = Enumerable.Range(1000, 1000).ToArray();
 
         /// <summary>
-        /// 다음 키 구역(이미 이번 턴이 키 턴이면 그 구역)과 현재 위치를 비교해 목표를 정하고,
-        /// 손패 각 카드를 ComplexResolver로 미리 해석해 실제 이동량을 계산한 뒤
-        /// 목표에 가장 가깝게(이미 구역 안이면 이동량이 0에 가장 가깝게) 만드는 카드를 고른다.
+        /// 휴리스틱 클리어율이 무전략의 몇 배 이상이어야 하는가. 쿼터 구조는 키 판정이 3번뿐이라 운의 비중이 구조적으로 크다 —
+        /// 카드 풀 도달 모델 적용 직후 실측 1.55배(42.7% vs 27.6%)를 실력이 작동하는 증거로 보고 여유를 둔 값이다.
         /// </summary>
-        private static ClueInstance ChooseHeuristicCard(StageSession session)
-        {
-            var heartbeat = session.Heartbeat;
-            var currentPosition = heartbeat.Value;
-
-            KeyZone? target = null;
-            foreach (var turn in session.Keys.Zones.Keys.OrderBy(t => t))
-            {
-                if (turn < session.Runner.CurrentTurn) continue;
-                target = session.Keys.Zones[turn];
-                break;
-            }
-            var targetZone = target ?? new KeyZone(heartbeat.StartValue, 1); // 남은 키 턴이 없으면 시작값(안정)을 목표로.
-
-            var previewResolver = new ComplexResolver(session.Complexes);
-            var evaluator = new TraitAwareEmotionEvaluator(
-                new EmotionEvaluator(new DefaultEmotionPolarityTable()), session.Traits);
-
-            // 우선순위: (1) 이동 후 구역까지의 거리를 최소화 — 이미 구역 안이면 거리 0을 유지하는 카드가 최우선이 된다.
-            // (2) 거리가 같다면(대표적으로 "이미 구역 안 → 여러 카드가 다 구역을 지킨다") 이동량이 0에 가장 가까운 카드.
-            // 거리만 보고 |delta|를 무시하면, 구역 경계(예: 폭2 구역의 끝 칸)에서 부호를 놓쳐 오히려 구역을 벗어나는
-            // 카드를 고를 수 있으므로 항상 "이동 후 예측 위치" 기준으로 판단한다.
-            ClueInstance best = null;
-            var bestDistance = int.MaxValue;
-            var bestAbsDelta = int.MaxValue;
-            foreach (var card in session.Hand.Cards)
-            {
-                var interpretation = previewResolver.Resolve(card.Definition.CreateOriginalTagSet());
-                var delta = evaluator.Evaluate(interpretation.Final);
-                var predicted = Math.Clamp(currentPosition + delta, Heartbeat.MinValue, Heartbeat.MaxValue);
-                var distance = DistanceToZone(predicted, targetZone);
-                var absDelta = Math.Abs(delta);
-
-                if (distance < bestDistance || (distance == bestDistance && absDelta < bestAbsDelta))
-                {
-                    bestDistance = distance;
-                    bestAbsDelta = absDelta;
-                    best = card;
-                }
-            }
-
-            return best;
-        }
-
-        private static int DistanceToZone(int position, KeyZone zone)
-        {
-            if (zone.Contains(position)) return 0;
-            var lastSlot = zone.StartSlot + zone.Width - 1;
-            return Math.Min(Math.Abs(position - zone.StartSlot), Math.Abs(position - lastSlot));
-        }
-
-        private static RunResult RunStage(int seed, string label, Func<StageSession, ClueInstance> chooseCard, StringBuilder log)
-        {
-            var random = new SystemRandomSource(seed);
-            var polarityTable = new DefaultEmotionPolarityTable();
-            var config = PrototypeContent.PrototypeStage(polarityTable);
-            var session = StageFactory.Create(config, random, new ClueKnowledgeLedger(), polarityTable);
-
-            var keyAttempts = 0;
-            var keyHits = 0;
-            session.Keys.ZoneOpened += _ => keyAttempts++;
-            session.Keys.KeyCollected += _ => keyHits++;
-
-            log.AppendLine($"--- {label} (seed={seed}) ---");
-            session.Runner.StartStage();
-            log.AppendLine("  키 구역(확정): " + string.Join(", ",
-                session.Keys.Zones.OrderBy(p => p.Key)
-                    .Select(p => $"{p.Key}턴:{p.Value.StartSlot}~{p.Value.StartSlot + p.Value.Width - 1}")));
-
-            var guard = 0;
-            while (session.Runner.Outcome == StageOutcome.InProgress && guard < 10)
-            {
-                guard++;
-                Assert.Greater(session.Hand.Cards.Count, 0,
-                    $"[{label} seed={seed}] 턴 {session.Runner.CurrentTurn} 시작 시 손패가 비어 있으면 안 된다.");
-
-                var card = chooseCard(session);
-                var before = session.Heartbeat.Value;
-
-                TurnReport report = null;
-                Assert.DoesNotThrow(() => report = session.Runner.PlayClue(card),
-                    $"[{label} seed={seed}] 턴 {session.Runner.CurrentTurn} 진행 중 예외 없이 처리되어야 한다.");
-
-                log.AppendLine($"  [턴 {report.Turn}] {card.Definition.DisplayName} " +
-                                $"이동:{report.HeartbeatDelta} ({before}→{report.HeartbeatValue}) 결과:{report.Outcome}");
-            }
-
-            log.AppendLine($"  => {session.Runner.Outcome}, 키 {session.Keys.Collected}/{config.RequiredKeys} " +
-                            $"(성공 {keyHits}/{keyAttempts}), 총 {session.Runner.CurrentTurn}턴");
-
-            Assert.AreNotEqual(StageOutcome.InProgress, session.Runner.Outcome,
-                $"[{label} seed={seed}] 10턴 이내에 종료되어야 한다.");
-
-            return new RunResult(session.Runner.Outcome, session.Keys.Collected, config.RequiredKeys,
-                keyAttempts, keyHits, session.Runner.CurrentTurn);
-        }
+        private const double MinClearRateRatio = 1.4;
 
         [Test]
-        public void HeuristicBot_ImprovesKeySuccessRate_ComparedToFirstCardBot()
+        public void HeuristicBot_ImprovesClearRate_ComparedToFirstCardBot()
         {
+            var config = PrototypeContent.PrototypeStage(new DefaultEmotionPolarityTable());
             var log = new StringBuilder();
-            log.AppendLine("=== 무전략 봇 vs 휴리스틱 봇 비교 ===");
+            log.AppendLine($"=== 무전략 봇 vs 휴리스틱 봇 비교 ({config.TotalTurns}턴 = {config.Quarters.QuarterCount}쿼터 × {config.Quarters.TurnsPerQuarter}턴, " +
+                           $"키 {config.RequiredKeys}개 필요, 폭 {config.KeyWidth}) ===");
 
-            var naiveResults = new List<RunResult>();
-            var heuristicResults = new List<RunResult>();
+            var naiveResults = new List<BotRunResult>();
+            var heuristicResults = new List<BotRunResult>();
 
             foreach (var seed in Seeds)
             {
-                naiveResults.Add(RunStage(seed, "무전략(첫 장)", ChooseFirstCard, log));
-                heuristicResults.Add(RunStage(seed, "휴리스틱(키 지향)", ChooseHeuristicCard, log));
+                naiveResults.Add(QuarterBots.RunStage(config, seed, "무전략(첫 장)", QuarterBots.ChooseFirstCard, log));
+                heuristicResults.Add(QuarterBots.RunStage(config, seed, "휴리스틱(쿼터 인지)", QuarterBots.ChooseHeuristicCard, log));
             }
 
-            var naiveHits = naiveResults.Sum(r => r.KeyHits);
-            var naiveAttempts = naiveResults.Sum(r => r.KeyAttempts);
-            var heuristicHits = heuristicResults.Sum(r => r.KeyHits);
-            var heuristicAttempts = heuristicResults.Sum(r => r.KeyAttempts);
-            var naiveCleared = naiveResults.Count(r => r.Outcome == StageOutcome.Cleared);
-            var heuristicCleared = heuristicResults.Count(r => r.Outcome == StageOutcome.Cleared);
-
-            log.AppendLine("=== 요약 ===");
-            log.AppendLine($"  {"시드",-10} {"무전략",-22} {"휴리스틱",-22}");
+            log.AppendLine("=== 요약 (4시드) ===");
+            log.AppendLine($"  {"시드",-10} {"무전략",-24} {"휴리스틱",-24}");
             for (var i = 0; i < Seeds.Length; i++)
             {
-                var n = naiveResults[i];
-                var h = heuristicResults[i];
-                log.AppendLine($"  {Seeds[i],-10} " +
-                                $"{n.Outcome + " " + n.KeysCollected + "/" + n.KeyRequired + "키(" + n.KeyHits + "/" + n.KeyAttempts + ")",-22} " +
-                                $"{h.Outcome + " " + h.KeysCollected + "/" + h.KeyRequired + "키(" + h.KeyHits + "/" + h.KeyAttempts + ")",-22}");
+                log.AppendLine($"  {Seeds[i],-10} {Describe(naiveResults[i]),-24} {Describe(heuristicResults[i]),-24}");
             }
 
-            var naiveRate = naiveAttempts == 0 ? 0 : 100.0 * naiveHits / naiveAttempts;
-            var heuristicRate = heuristicAttempts == 0 ? 0 : 100.0 * heuristicHits / heuristicAttempts;
-            log.AppendLine($"  키 성공률: 무전략 {naiveHits}/{naiveAttempts} ({naiveRate:F0}%) → " +
-                            $"휴리스틱 {heuristicHits}/{heuristicAttempts} ({heuristicRate:F0}%)");
-            log.AppendLine($"  Cleared 런: 무전략 {naiveCleared}/{Seeds.Length} → 휴리스틱 {heuristicCleared}/{Seeds.Length}");
+            log.AppendLine($"  키 성공률: 무전략 {Aggregate(naiveResults)} / 휴리스틱 {Aggregate(heuristicResults)}");
+
+            var wideNaive = WideSeeds.Select(seed => QuarterBots.RunStage(config, seed, "무전략(첫 장)", QuarterBots.ChooseFirstCard, null)).ToList();
+            var wideHeuristic = WideSeeds.Select(seed => QuarterBots.RunStage(config, seed, "휴리스틱(쿼터 인지)", QuarterBots.ChooseHeuristicCard, null)).ToList();
+            var wideNaiveClearRate = ClearRate(wideNaive);
+            var wideHeuristicClearRate = ClearRate(wideHeuristic);
+            var ratio = wideNaiveClearRate > 0 ? wideHeuristicClearRate / wideNaiveClearRate : double.PositiveInfinity;
+
+            log.AppendLine($"=== 요약 ({WideSeeds.Length}시드) ===");
+            log.AppendLine($"  무전략   : {DescribeAggregate(wideNaive)}");
+            log.AppendLine($"  휴리스틱 : {DescribeAggregate(wideHeuristic)}");
+            log.AppendLine($"  클리어율 배율: {ratio:F2}배 (통과 기준 {MinClearRateRatio:F1}배 이상)");
+            log.AppendLine("  구역 좌/우별 (배치 수 · 판정까지 간 수 · 적중) — 우측=131~ 쪽");
+            log.AppendLine($"    무전략   : {DescribeSides(wideNaive)}");
+            log.AppendLine($"    휴리스틱 : {DescribeSides(wideHeuristic)}");
 
             Debug.Log(log.ToString());
 
-            Assert.Greater(heuristicHits, naiveHits,
-                "같은 시드에서 휴리스틱 봇이 무전략 봇보다 키를 더 많이 획득해야 한다.");
+            Assert.GreaterOrEqual(wideHeuristicClearRate, wideNaiveClearRate * MinClearRateRatio,
+                $"{WideSeeds.Length}시드 기준 휴리스틱 클리어율({wideHeuristicClearRate:P1})이 " +
+                $"무전략({wideNaiveClearRate:P1})의 {MinClearRateRatio:F1}배 이상이어야 한다.");
+        }
+
+        private static string Describe(BotRunResult r) =>
+            $"{r.Outcome} {r.KeysCollected}/{r.KeyRequired}키(쿼터 {r.KeyHits}/{r.KeyAttempts})";
+
+        private static string Aggregate(IReadOnlyCollection<BotRunResult> results)
+        {
+            var hits = results.Sum(r => r.KeyHits);
+            var attempts = results.Sum(r => r.KeyAttempts);
+            return $"{hits}/{attempts} ({(attempts == 0 ? 0 : 100.0 * hits / attempts):F0}%)";
+        }
+
+        /// <summary>구역이 좌측(시작 100 미만)인지 우측인지로 나눠, 배치된 수와 실제로 판정까지 가서 맞힌 수를 센다.</summary>
+        private static string DescribeSides(IReadOnlyCollection<BotRunResult> results)
+        {
+            var text = new List<string>();
+            foreach (var (label, isLeft) in new[] { ("좌", true), ("우", false) })
+            {
+                var placed = 0;
+                var judged = 0;
+                var hit = 0;
+                foreach (var result in results)
+                {
+                    for (var quarter = 0; quarter < result.Zones.Count; quarter++)
+                    {
+                        if ((result.Zones[quarter].StartSlot < 100) != isLeft) continue;
+                        placed++;
+                        if (!result.QuarterResults[quarter].HasValue) continue;
+                        judged++;
+                        if (result.QuarterResults[quarter].Value) hit++;
+                    }
+                }
+
+                text.Add($"{label} {placed} · {judged} · {hit} ({(judged == 0 ? 0 : 100.0 * hit / judged):F1}%)");
+            }
+
+            return string.Join(" / ", text);
+        }
+
+        private static double ClearRate(IReadOnlyCollection<BotRunResult> results) =>
+            results.Count == 0 ? 0 : (double)results.Count(r => r.Outcome == StageOutcome.Cleared) / results.Count;
+
+        private static string DescribeAggregate(IReadOnlyCollection<BotRunResult> results)
+        {
+            var cleared = results.Count(r => r.Outcome == StageOutcome.Cleared);
+            var hits = results.Sum(r => r.KeyHits);
+            var attempts = results.Sum(r => r.KeyAttempts);
+            var hitRate = attempts == 0 ? 0 : 100.0 * hits / attempts;
+            return $"클리어 {cleared}/{results.Count} ({100.0 * cleared / results.Count:F1}%), " +
+                   $"키 성공률 {hitRate:F1}% ({hits}/{attempts}), 평균 키 {results.Average(r => (double)r.KeysCollected):F2}";
         }
     }
 }

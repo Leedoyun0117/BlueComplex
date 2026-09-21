@@ -19,6 +19,7 @@ namespace BlueComplex.UI.DebugPlay
             PersonTag.Family => "가족",
             PersonTag.Other => "타인",
             PersonTag.Friend => "친구",
+            PersonTag.Lover => "연인",
             _ => "-"
         };
 

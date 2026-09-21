@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using BlueComplex.Core.Clues;
 using BlueComplex.Core.Complexes;
 using BlueComplex.Core.Items;
@@ -28,7 +31,8 @@ namespace BlueComplex.Core.Stage
                                           IRandomSource random,
                                           ClueKnowledgeLedger ledger,
                                           IEmotionPolarityTable polarityTable = null,
-                                          int heartbeatStartValue = Heartbeat.DefaultStartValue)
+                                          int heartbeatStartValue = Heartbeat.DefaultStartValue,
+                                          IKeyZonePlacer keyPlacer = null)
         {
             polarityTable ??= new DefaultEmotionPolarityTable();
 
@@ -49,8 +53,8 @@ namespace BlueComplex.Core.Stage
             var activeItems = new ActiveItemBoard();
             var items = new ItemInventory(config.ItemPool, random);
 
-            var keys = new KeyProgress(config.RequiredKeys, config.KeyTurns);
-            var keyPlacer = new ReachabilityKeyZonePlacer(random, new KeyZoneLayout(zone));
+            var keys = new KeyProgress(config.RequiredKeys, config.Quarters);
+            keyPlacer ??= CreateKeyPlacer(config, random, zone, polarityTable);
 
             var runner = new TurnRunner(
                 hand,
@@ -66,8 +70,7 @@ namespace BlueComplex.Core.Stage
                 traits,
                 keys,
                 keyPlacer,
-                ledger,
-                config.TotalTurns);
+                ledger);
 
             return new StageSession
             {
@@ -82,6 +85,71 @@ namespace BlueComplex.Core.Stage
                 Ledger = ledger,
                 Censorship = censorship
             };
+        }
+
+        /// <summary>
+        /// 이 스테이지의 카드 풀이 만들 수 있는 이동량으로 도달 범위를 잡는 배치기. 단서는 한 번 쓰면 사라지므로
+        /// 턴당 최대 이동폭을 곱하는 것보다 카드 풀의 실제 구성(상승 카드가 몇 장인지)이 훨씬 촘촘한 상한을 준다.
+        /// 상승 여력은 카드 자체의 이동량, 하강 여력은 컴플렉스가 최악으로 겹칠 때의 이동량으로 잡는다(CardPoolReachModel 참고).
+        /// 구역의 절반 이상이 범위 안에 들어와야 도달 가능으로 본다.
+        /// </summary>
+        public static ReachabilityKeyZonePlacer CreateKeyPlacer(StageConfig config,
+                                                                IRandomSource random,
+                                                                HeartbeatZone zone,
+                                                                IEmotionPolarityTable polarityTable)
+        {
+            var evaluator = new EmotionEvaluator(polarityTable);
+
+            var complexes = config.ComplexPool.ToList();
+            if (config.StartingComplex != null && complexes.All(c => c.Id != config.StartingComplex.Id))
+                complexes.Add(config.StartingComplex);
+
+            var reach = new CardPoolReachModel(
+                config.Clues.Select(clue => (
+                    Best: evaluator.Evaluate(clue.CreateOriginalTagSet()),
+                    Worst: WorstCaseDelta(clue, complexes, evaluator, ComplexBoard.MaxSlots))),
+                ReachabilityKeyZonePlacer.DefaultMaxMovePerTurn,
+                ReachabilityKeyZonePlacer.DefaultMaxDropPerTurn);
+
+            return new ReachabilityKeyZonePlacer(random, new KeyZoneLayout(zone, keyWidth: config.KeyWidth),
+                reach: reach, minOverlapFraction: 0.5);
+        }
+
+        /// <summary>
+        /// 컴플렉스가 어떻게 붙어 있든(개수·우선순위 순서 모두) 이 단서가 만들 수 있는 가장 낮은 이동량.
+        /// 풀에서 최대 maxSlots개를 순서까지 구분해 붙이는 모든 경우의 최솟값이지만, 실제로 전수 조사하지는 않는다 —
+        /// 발동하지 않는 컴플렉스는 결과를 바꾸지 않으므로 붙이지 않은 경우와 같다(붙이는 개수는 0개부터 가능하다).
+        /// 그래서 "직전 상태에서 실제로 발동하는 컴플렉스"만 골라 깊이 maxSlots까지 내려가면 같은 최솟값이 나오고,
+        /// 풀이 10개일 때 단서당 수천 번이던 해석이 수십 번으로 줄어든다(스테이지를 만들 때마다 도는 계산이다).
+        /// </summary>
+        public static int WorstCaseDelta(ClueDefinition clue,
+                                         IReadOnlyList<ComplexDefinition> pool,
+                                         IEmotionEvaluator evaluator,
+                                         int maxSlots)
+        {
+            var worst = int.MaxValue;
+            var used = new bool[pool.Count];
+
+            void Visit(TagSet state, int depth)
+            {
+                worst = Math.Min(worst, evaluator.Evaluate(state));
+                if (depth == maxSlots) return;
+
+                for (var i = 0; i < pool.Count; i++)
+                {
+                    if (used[i]) continue;
+
+                    var next = state.Clone();
+                    if (!pool[i].TryInterpret(new ComplexContext(next))) continue;
+
+                    used[i] = true;
+                    Visit(next, depth + 1);
+                    used[i] = false;
+                }
+            }
+
+            Visit(clue.CreateOriginalTagSet(), 0);
+            return worst;
         }
     }
 }

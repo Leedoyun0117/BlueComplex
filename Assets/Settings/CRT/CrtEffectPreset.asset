@@ -17,7 +17,7 @@ MonoBehaviour:
     ScanCount: 420
     ScanThickness: 1
     ScanSpeed: 0
-    Curvature: 0.18
+    Curvature: 0.12
     Vignette: 0.55
     Bloom: 0.3
     Aberration: 0.002
@@ -32,7 +32,7 @@ MonoBehaviour:
     ScanCount: 360
     ScanThickness: 1
     ScanSpeed: 0.15
-    Curvature: 0.24
+    Curvature: 0.16
     Vignette: 1.05
     Bloom: 0.18
     Aberration: 0.004
@@ -47,7 +47,7 @@ MonoBehaviour:
     ScanCount: 500
     ScanThickness: 1
     ScanSpeed: 0.8
-    Curvature: 0.2
+    Curvature: 0.13333334
     Vignette: 0.4
     Bloom: 0.62
     Aberration: 0.012

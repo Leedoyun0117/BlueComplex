@@ -1,5 +1,6 @@
 using BlueComplex.Core.Stability;
 using BlueComplex.Core.Tags;
+using BlueComplex.Core.Traits;
 using BlueComplex.Core.Turn;
 
 namespace BlueComplex.UI.Presentation
@@ -23,6 +24,7 @@ namespace BlueComplex.UI.Presentation
             PersonTag.Family => "가족",
             PersonTag.Other => "타인",
             PersonTag.Friend => "친구",
+            PersonTag.Lover => "연인",
             _ => "-"
         };
 
@@ -46,6 +48,12 @@ namespace BlueComplex.UI.Presentation
             HeartbeatState.Excited => "흥분",
             HeartbeatState.VeryExcited => "매우 흥분",
             _ => "-"
+        };
+
+        public static string Trait(TraitType trait) => trait switch
+        {
+            TraitType.Sensitive => "예민",
+            _ => trait.ToString()
         };
 
         public static string Censorship(CensorshipLevel level) => level switch
