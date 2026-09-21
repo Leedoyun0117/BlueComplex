@@ -104,3 +104,13 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Unity Editor crash-recovery scenes
+/Assets/_Recovery/
+/Assets/_Recovery.meta
+
+# IDE settings
+.idea/
+
+# Nested scratch Unity project (its Library/Temp are not covered by the root-anchored rules above)
+/ShaderPractice/
