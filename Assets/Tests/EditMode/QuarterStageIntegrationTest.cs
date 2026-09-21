@@ -12,11 +12,11 @@ using BlueComplex.Core.Turn;
 namespace BlueComplex.Core.Tests
 {
     /// <summary>
-    /// 10턴 통합 실행 — 시드 고정, 매 턴 손패의 첫 카드를 내는 단순 전략으로
+    /// 12턴 3쿼터 통합 실행 — 시드 고정, 매 턴 손패의 첫 카드를 내는 단순 전략으로
     /// 프로토타입 스테이지를 끝까지 자동 진행한다. 예외 없이 완주하는 것이 1차 목표이며,
     /// 로그는 밸런스(특히 검열 지속 턴 수)를 눈으로 확인하기 위한 참고 자료다.
     /// </summary>
-    public class TenTurnIntegrationTest
+    public class QuarterStageIntegrationTest
     {
         private static string FormatTime(TimeTag time) => time switch
         {
@@ -31,6 +31,7 @@ namespace BlueComplex.Core.Tests
             PersonTag.Family => "가족",
             PersonTag.Other => "타인",
             PersonTag.Friend => "친구",
+            PersonTag.Lover => "연인",
             _ => "-"
         };
 
@@ -83,7 +84,7 @@ namespace BlueComplex.Core.Tests
         [TestCase(1)]
         [TestCase(12345)]
         [TestCase(777)]
-        public void PrototypeStage_RunsToCompletion_Over10Turns_WithFixedSeed(int seed)
+        public void PrototypeStage_RunsToCompletion_Over12Turns_WithFixedSeed(int seed)
         {
             var random = new SystemRandomSource(seed);
             var polarityTable = new DefaultEmotionPolarityTable();
@@ -92,25 +93,25 @@ namespace BlueComplex.Core.Tests
 
             var session = StageFactory.Create(config, random, ledger, polarityTable);
 
-            // OpenZone/Judge 는 TurnRunner 내부에서만 호출되고 TurnReport에 직접 노출되지 않으므로,
-            // 로그 출력을 위해 이벤트로 턴별 상태를 따로 수집한다.
-            var zoneByTurn = new Dictionary<int, KeyZone>();
-            var judgeByTurn = new Dictionary<int, string>();
-            session.Keys.ZoneOpened += zone => zoneByTurn[session.Runner.CurrentTurn] = zone;
-            session.Keys.KeyCollected += count => judgeByTurn[session.Runner.CurrentTurn] = $"성공(누적 {count})";
-            session.Keys.ZoneMissed += () => judgeByTurn[session.Runner.CurrentTurn] = "실패";
-
             var log = new StringBuilder();
-            log.AppendLine($"=== 10턴 통합 실행 (seed={seed}) ===");
+            log.AppendLine($"=== 12턴 3쿼터 통합 실행 (seed={seed}) ===");
 
             session.Runner.StartStage();
 
-            log.AppendLine("=== 키 구역 (스테이지 시작 시 확정) ===");
+            log.AppendLine("=== 쿼터별 키 구역 (스테이지 시작 시 확정, 쿼터 마지막 턴 종료 시점에 판정) ===");
             foreach (var pair in session.Keys.Zones.OrderBy(p => p.Key))
-                log.AppendLine($"  {pair.Key}턴: {pair.Value.StartSlot}~{pair.Value.StartSlot + pair.Value.Width - 1}");
+                log.AppendLine($"  {config.Quarters.QuarterOf(pair.Key)}쿼터({pair.Key}턴 종료 시): " +
+                               $"{pair.Value.StartSlot}~{pair.Value.StartSlot + pair.Value.Width - 1}");
 
+            var passReports = new List<TurnReport>();
+            session.Runner.TurnResolved += r =>
+            {
+                if (r.IsPass) passReports.Add(r);
+            };
+
+            var totalTurns = config.TotalTurns;
             var guard = 0;
-            while (session.Runner.Outcome == StageOutcome.InProgress && guard < 10)
+            while (session.Runner.Outcome == StageOutcome.InProgress && guard < totalTurns)
             {
                 guard++;
                 Assert.Greater(session.Hand.Cards.Count, 0, $"턴 {session.Runner.CurrentTurn} 시작 시 손패가 비어 있으면 안 된다.");
@@ -147,17 +148,27 @@ namespace BlueComplex.Core.Tests
                 log.AppendLine($"  최종: {FormatTags(report.FinalTags)}");
                 log.AppendLine($"  이동: {report.HeartbeatDelta}  심박수: {heartbeatBefore} → {report.HeartbeatValue}");
 
-                var zoneText = zoneByTurn.TryGetValue(report.Turn, out var zone)
-                    ? $"{zone.StartSlot}~{zone.StartSlot + zone.Width - 1}"
-                    : "없음";
-                var judgeText = judgeByTurn.TryGetValue(report.Turn, out var judge) ? judge : "-";
-                log.AppendLine($"  키 구역: {zoneText}  판정: {judgeText}");
+                var judgeText = report.KeyResult is { } judgement
+                    ? $"{judgement.Quarter}쿼터 {(judgement.Success ? "성공" : "실패")}" +
+                      $"(구역 {judgement.Zone.StartSlot}~{judgement.Zone.StartSlot + judgement.Zone.Width - 1}, 누적 {session.Keys.Collected})"
+                    : "-";
+                log.AppendLine($"  쿼터 {report.Quarter} · {report.TurnInQuarter}/{config.Quarters.TurnsPerQuarter}턴  키 판정: {judgeText}");
 
                 var state = session.Zone.StateOf(report.HeartbeatValue);
                 log.AppendLine($"  상태: {FormatState(state)}  검열: {FormatCensorship(session.Censorship.Level)}");
 
                 log.AppendLine($"  신규 컴플렉스: {(report.SpawnedComplex != null ? report.SpawnedComplex.Definition.DisplayName : "없음")}");
                 log.AppendLine($"  결과: {report.Outcome}");
+
+                // 손패가 비어 넘어간 턴은 PlayClue 호출 안에서 이어서 처리되므로 낸 턴 로그 뒤에 이어 붙인다.
+                foreach (var pass in passReports)
+                {
+                    var passJudge = pass.KeyResult is { } j
+                        ? $"{j.Quarter}쿼터 {(j.Success ? "성공" : "실패")}(구역 {j.Zone.StartSlot}~{j.Zone.StartSlot + j.Zone.Width - 1})"
+                        : "-";
+                    log.AppendLine($"[턴 {pass.Turn}] 손패 없음 — 넘어감  심박수: {pass.HeartbeatValue}  키 판정: {passJudge}  결과: {pass.Outcome}");
+                }
+                passReports.Clear();
             }
 
             log.AppendLine($"=== 종료: {session.Runner.Outcome}, 총 {session.Runner.CurrentTurn}턴, " +
@@ -165,8 +176,8 @@ namespace BlueComplex.Core.Tests
 
             Debug.Log(log.ToString());
 
-            Assert.AreNotEqual(StageOutcome.InProgress, session.Runner.Outcome, "10턴 이내에 Cleared 또는 Failed 로 종료되어야 한다.");
-            Assert.LessOrEqual(session.Runner.CurrentTurn, 10);
+            Assert.AreNotEqual(StageOutcome.InProgress, session.Runner.Outcome, "마지막 턴 이내에 Cleared 또는 Failed 로 종료되어야 한다.");
+            Assert.LessOrEqual(session.Runner.CurrentTurn, totalTurns);
         }
     }
 }
