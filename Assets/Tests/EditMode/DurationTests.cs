@@ -16,21 +16,22 @@ namespace BlueComplex.Core.Tests
         public void Complex_ExpiresAfterExactlyItsDuration_AndFiresExpiredOnce()
         {
             var board = new ComplexBoard();
-            var def = PrototypeContent.Stockholm(); // DefaultDuration = 3
+            var def = PrototypeContent.AntiPast(new DefaultEmotionPolarityTable());
+            Assert.AreEqual(3, def.DefaultDuration, "기획서: 반 과거 컴플렉스 지속 시간 3턴.");
             var instance = new ComplexInstance(def, priority: 0);
             board.TryAttach(instance);
 
             var expiredCount = 0;
             board.Expired += _ => expiredCount++;
 
-            for (var turn = 1; turn <= 3; turn++)
+            for (var turn = 1; turn <= def.DefaultDuration; turn++)
             {
                 CollectionAssert.Contains(board.Slots, instance,
                     $"턴 {turn} 해석 시점에는 아직 컴플렉스가 붙어 있어야 한다.");
                 board.TickDurations();
             }
 
-            CollectionAssert.DoesNotContain(board.Slots, instance, "3턴 경과 후 컴플렉스는 사라져야 한다.");
+            CollectionAssert.DoesNotContain(board.Slots, instance, "지속 시간이 지나면 컴플렉스는 사라져야 한다.");
             Assert.AreEqual(1, expiredCount, "만료 이벤트는 정확히 한 번만 발생해야 한다.");
         }
 

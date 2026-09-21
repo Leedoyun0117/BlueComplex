@@ -5,7 +5,7 @@ using BlueComplex.Core.Stage;
 
 namespace BlueComplex.Core.Tests
 {
-    /// <summary>A. 컴플렉스 해석 — 기획서 판정 표 검증.</summary>
+    /// <summary>A. 컴플렉스 해석 — 기획서 스테이지 1 컴플렉스 목록의 판정 표 검증.</summary>
     public class ComplexInterpretationTests
     {
         private static readonly IEmotionPolarityTable Polarity = new DefaultEmotionPolarityTable();
@@ -18,17 +18,16 @@ namespace BlueComplex.Core.Tests
             return board;
         }
 
+        private static InterpretationResult Resolve(ComplexDefinition def, TagSet tags) =>
+            new ComplexResolver(BoardWith(def)).Resolve(tags);
+
         [Test]
         public void AntiPast_PastPersonHappyLove_BecomesDisgustTimesTwo()
         {
-            // 헤진 토끼 인형: 과거/가족/행복,사랑
             var tags = new TagSet(TimeTag.Past, new[] { PersonTag.Family },
                 new[] { EmotionTag.Happiness, EmotionTag.Love });
 
-            var board = BoardWith(PrototypeContent.AntiPast(Polarity));
-            var resolver = new ComplexResolver(board);
-
-            var result = resolver.Resolve(tags);
+            var result = Resolve(PrototypeContent.AntiPast(Polarity), tags);
 
             Assert.IsTrue(result.Steps[0].Triggered, "반 과거는 조건이 성립해야 발동한다.");
             Assert.AreEqual(TimeTag.Past, result.Final.Time, "반 과거는 시간을 바꾸지 않는다.");
@@ -38,15 +37,39 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
+        public void AntiPast_PresentTime_ConditionFails_OriginalUnchanged()
+        {
+            var tags = new TagSet(TimeTag.Present, new[] { PersonTag.Other },
+                new[] { EmotionTag.Fear, EmotionTag.Sadness });
+
+            var result = Resolve(PrototypeContent.AntiPast(Polarity), tags);
+
+            Assert.IsFalse(result.Steps[0].Triggered, "시간이 과거가 아니므로 반 과거는 발동하지 않아야 한다.");
+            Assert.AreEqual(result.Original.Time, result.Final.Time);
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Fear));
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Sadness));
+            CollectionAssert.AreEquivalent(result.Original.Persons, result.Final.Persons);
+        }
+
+        [Test]
+        public void AntiPast_PastWithoutAnyPerson_DoesNotTrigger()
+        {
+            // 낡은 토끼 인형: 과거/(인물 없음)/행복 — '임의의 인물 태그'가 필요하므로 발동하지 않는다.
+            var tags = new TagSet(TimeTag.Past, null, new[] { EmotionTag.Happiness });
+
+            var result = Resolve(PrototypeContent.AntiPast(Polarity), tags);
+
+            Assert.IsFalse(result.Steps[0].Triggered);
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Happiness));
+        }
+
+        [Test]
         public void Stockholm_PersonFear_BecomesLove()
         {
             var tags = new TagSet(TimeTag.Present, new[] { PersonTag.Other },
                 new[] { EmotionTag.Fear, EmotionTag.Sadness });
 
-            var board = BoardWith(PrototypeContent.Stockholm());
-            var resolver = new ComplexResolver(board);
-
-            var result = resolver.Resolve(tags);
+            var result = Resolve(PrototypeContent.Stockholm(), tags);
 
             Assert.IsTrue(result.Steps[0].Triggered);
             Assert.IsFalse(result.Final.HasEmotion(EmotionTag.Fear));
@@ -55,39 +78,224 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void Trauma_PastPersonDepressedEmotion_ShiftsToPresentAndAddsFear()
+        public void Stockholm_FearWithoutPerson_DoesNotTrigger()
         {
-            // 유골함: 과거/가족/슬픔
-            var tags = new TagSet(TimeTag.Past, new[] { PersonTag.Family }, new[] { EmotionTag.Sadness });
+            // 공포 소설: 현재/(인물 없음)/공포 — 인물 태그가 없으면 스톡홀름은 발동하지 않는다.
+            var tags = new TagSet(TimeTag.Present, null, new[] { EmotionTag.Fear });
 
-            var board = BoardWith(PrototypeContent.Trauma(Polarity));
-            var resolver = new ComplexResolver(board);
+            var result = Resolve(PrototypeContent.Stockholm(), tags);
 
-            var result = resolver.Resolve(tags);
-
-            Assert.IsTrue(result.Steps[0].Triggered);
-            Assert.AreEqual(TimeTag.Present, result.Final.Time, "트라우마는 시간을 현재로 바꿔야 한다.");
-            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Sadness), "기존 슬픔은 그대로 남아야 한다.");
-            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Fear), "공포가 추가되어야 한다.");
+            Assert.IsFalse(result.Steps[0].Triggered);
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Fear));
         }
 
         [Test]
-        public void AntiPast_PresentTime_ConditionFails_OriginalUnchanged()
+        public void GoodChild_FamilyWithDepressedEmotion_AddsHappiness()
         {
-            // 입양 동의서: 현재/타인/공포,슬픔 — 시간이 현재라 반 과거 조건이 성립하지 않는다.
-            var tags = new TagSet(TimeTag.Present, new[] { PersonTag.Other },
-                new[] { EmotionTag.Fear, EmotionTag.Sadness });
+            var tags = new TagSet(TimeTag.Past, new[] { PersonTag.Family }, new[] { EmotionTag.Sadness });
 
-            var board = BoardWith(PrototypeContent.AntiPast(Polarity));
-            var resolver = new ComplexResolver(board);
+            var result = Resolve(PrototypeContent.GoodChild(Polarity), tags);
 
-            var result = resolver.Resolve(tags);
+            Assert.IsTrue(result.Steps[0].Triggered);
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Sadness), "기존 감정은 그대로 남는다.");
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Happiness));
+        }
 
-            Assert.IsFalse(result.Steps[0].Triggered, "시간이 과거가 아니므로 반 과거는 발동하지 않아야 한다.");
-            Assert.AreEqual(result.Original.Time, result.Final.Time);
-            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Fear));
+        [Test]
+        public void GoodChild_FamilyWithOnlyExcitedEmotion_DoesNotTrigger()
+        {
+            // 가족사진 액자: 과거/가족/행복 — 침체 감정이 없다.
+            var tags = new TagSet(TimeTag.Past, new[] { PersonTag.Family }, new[] { EmotionTag.Happiness });
+
+            var result = Resolve(PrototypeContent.GoodChild(Polarity), tags);
+
+            Assert.IsFalse(result.Steps[0].Triggered);
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Happiness));
+        }
+
+        [Test]
+        public void ChildhoodFriend_PastFriend_BecomesLover()
+        {
+            // 꽃 한 송이: 과거/친구/사랑
+            var tags = new TagSet(TimeTag.Past, new[] { PersonTag.Friend }, new[] { EmotionTag.Love });
+
+            var result = Resolve(PrototypeContent.ChildhoodFriend(), tags);
+
+            Assert.IsTrue(result.Steps[0].Triggered);
+            Assert.IsFalse(result.Final.HasPerson(PersonTag.Friend));
+            Assert.IsTrue(result.Final.HasPerson(PersonTag.Lover));
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Love), "감정은 건드리지 않는다.");
+        }
+
+        [Test]
+        public void ChildhoodFriend_PresentFriend_DoesNotTrigger()
+        {
+            var tags = new TagSet(TimeTag.Present, new[] { PersonTag.Friend }, new[] { EmotionTag.Happiness });
+
+            var result = Resolve(PrototypeContent.ChildhoodFriend(), tags);
+
+            Assert.IsFalse(result.Steps[0].Triggered, "'과거' 조건이 깨지면 발동하지 않는다.");
+            Assert.IsTrue(result.Final.HasPerson(PersonTag.Friend));
+        }
+
+        [Test]
+        public void ChildhoodFriend_KeepsOtherPersons_AndObservesOnlyFriend()
+        {
+            // 아이들의 낙서: 과거/타인,친구/분노
+            var tags = new TagSet(TimeTag.Past, new[] { PersonTag.Other, PersonTag.Friend }, new[] { EmotionTag.Anger });
+
+            var result = Resolve(PrototypeContent.ChildhoodFriend(), tags);
+
+            CollectionAssert.AreEquivalent(new[] { PersonTag.Other, PersonTag.Lover }, result.Final.Persons);
+            CollectionAssert.AreEqual(new[] { PersonTag.Friend }, result.Steps[0].ObservedPersons,
+                "조건이 참조한 인물(친구)만 관찰로 남아야 한다.");
+        }
+
+        [TestCase(PersonTag.Friend)]
+        [TestCase(PersonTag.Lover)]
+        public void Othering_FriendOrLover_BecomesOther(PersonTag source)
+        {
+            var tags = new TagSet(TimeTag.Past, new[] { source }, new[] { EmotionTag.Sadness });
+
+            var result = Resolve(PrototypeContent.Othering(), tags);
+
+            Assert.IsTrue(result.Steps[0].Triggered);
+            CollectionAssert.AreEqual(new[] { PersonTag.Other }, result.Final.Persons);
+        }
+
+        [Test]
+        public void Othering_OnlyFamilyOrOther_DoesNotTrigger()
+        {
+            var tags = new TagSet(TimeTag.Past, new[] { PersonTag.Family, PersonTag.Other }, new[] { EmotionTag.Sadness });
+
+            var result = Resolve(PrototypeContent.Othering(), tags);
+
+            Assert.IsFalse(result.Steps[0].Triggered);
+            CollectionAssert.AreEquivalent(new[] { PersonTag.Family, PersonTag.Other }, result.Final.Persons);
+        }
+
+        [Test]
+        public void Othering_FriendAndOther_MergesIntoSingleOther()
+        {
+            // 찢어진 책가방: 과거/타인,친구/공포,분노
+            var tags = new TagSet(TimeTag.Past, new[] { PersonTag.Other, PersonTag.Friend },
+                new[] { EmotionTag.Fear, EmotionTag.Anger });
+
+            var result = Resolve(PrototypeContent.Othering(), tags);
+
+            CollectionAssert.AreEqual(new[] { PersonTag.Other }, result.Final.Persons);
+        }
+
+        [Test]
+        public void Optimism_OtherWithAnyEmotion_AddsHappiness()
+        {
+            // 개학 날짜 달력: 미래/타인/슬픔,혐오
+            var tags = new TagSet(TimeTag.Future, new[] { PersonTag.Other },
+                new[] { EmotionTag.Sadness, EmotionTag.Disgust });
+
+            var result = Resolve(PrototypeContent.Optimism(), tags);
+
+            Assert.IsTrue(result.Steps[0].Triggered);
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Happiness));
             Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Sadness));
-            CollectionAssert.AreEquivalent(result.Original.Persons, result.Final.Persons);
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Disgust));
+        }
+
+        [Test]
+        public void Optimism_WithoutOtherOrWithoutEmotion_DoesNotTrigger()
+        {
+            var noOther = new TagSet(TimeTag.Past, new[] { PersonTag.Family }, new[] { EmotionTag.Happiness });
+            var noEmotion = new TagSet(TimeTag.Past, new[] { PersonTag.Other });
+
+            Assert.IsFalse(Resolve(PrototypeContent.Optimism(), noOther).Steps[0].Triggered);
+            Assert.IsFalse(Resolve(PrototypeContent.Optimism(), noEmotion).Steps[0].Triggered);
+        }
+
+        [Test]
+        public void Rumination_Past_EachEmotionGainsOne()
+        {
+            // 찢어진 책가방: 과거/타인,친구/공포,분노
+            var tags = new TagSet(TimeTag.Past, new[] { PersonTag.Other, PersonTag.Friend },
+                new[] { EmotionTag.Fear, EmotionTag.Anger });
+
+            var result = Resolve(PrototypeContent.Rumination(), tags);
+
+            Assert.IsTrue(result.Steps[0].Triggered);
+            Assert.AreEqual(2, result.Final.CountOf(EmotionTag.Fear));
+            Assert.AreEqual(2, result.Final.CountOf(EmotionTag.Anger));
+        }
+
+        [Test]
+        public void Rumination_NotPast_DoesNotTrigger()
+        {
+            var tags = new TagSet(TimeTag.Present, null, new[] { EmotionTag.Sadness });
+
+            var result = Resolve(PrototypeContent.Rumination(), tags);
+
+            Assert.IsFalse(result.Steps[0].Triggered);
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Sadness));
+        }
+
+        [Test]
+        public void Guilt_FamilyHappiness_BecomesSadness()
+        {
+            // 가족사진 액자: 과거/가족/행복
+            var tags = new TagSet(TimeTag.Past, new[] { PersonTag.Family }, new[] { EmotionTag.Happiness });
+
+            var result = Resolve(PrototypeContent.Guilt(), tags);
+
+            Assert.IsTrue(result.Steps[0].Triggered);
+            Assert.IsFalse(result.Final.HasEmotion(EmotionTag.Happiness));
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Sadness));
+        }
+
+        [Test]
+        public void Guilt_HappinessWithoutFamily_DoesNotTrigger()
+        {
+            // 낡은 토끼 인형: 과거/(인물 없음)/행복 — 가족 태그가 없다.
+            var tags = new TagSet(TimeTag.Past, null, new[] { EmotionTag.Happiness });
+
+            Assert.IsFalse(Resolve(PrototypeContent.Guilt(), tags).Steps[0].Triggered);
+        }
+
+        [Test]
+        public void Dependence_OtherSadness_BecomesLove()
+        {
+            // 개학 날짜 달력: 미래/타인/슬픔,혐오
+            var tags = new TagSet(TimeTag.Future, new[] { PersonTag.Other },
+                new[] { EmotionTag.Sadness, EmotionTag.Disgust });
+
+            var result = Resolve(PrototypeContent.Dependence(), tags);
+
+            Assert.IsTrue(result.Steps[0].Triggered);
+            Assert.IsFalse(result.Final.HasEmotion(EmotionTag.Sadness));
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Love));
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Disgust), "슬픔이 아닌 감정은 그대로 남는다.");
+        }
+
+        [Test]
+        public void Avoidance_PastFearOrDisgust_ShiftsToPresent()
+        {
+            // 찢어진 책가방: 과거/타인,친구/공포,분노
+            var tags = new TagSet(TimeTag.Past, new[] { PersonTag.Other, PersonTag.Friend },
+                new[] { EmotionTag.Fear, EmotionTag.Anger });
+
+            var result = Resolve(PrototypeContent.Avoidance(), tags);
+
+            Assert.IsTrue(result.Steps[0].Triggered);
+            Assert.AreEqual(TimeTag.Present, result.Final.Time);
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Fear), "감정은 바뀌지 않는다.");
+        }
+
+        [Test]
+        public void Avoidance_PastWithoutFearOrDisgust_DoesNotTrigger()
+        {
+            var tags = new TagSet(TimeTag.Past, new[] { PersonTag.Family }, new[] { EmotionTag.Sadness });
+
+            var result = Resolve(PrototypeContent.Avoidance(), tags);
+
+            Assert.IsFalse(result.Steps[0].Triggered);
+            Assert.AreEqual(TimeTag.Past, result.Final.Time);
         }
     }
 }
