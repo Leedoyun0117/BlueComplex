@@ -1,4 +1,5 @@
 using System.IO;
+using BlueComplex.Core.Complexes;
 using BlueComplex.Core.Stability;
 using BlueComplex.UI.Layout;
 using BlueComplex.UI.Presentation;
@@ -12,8 +13,10 @@ namespace BlueComplex.EditorTools
 {
     /// <summary>
     /// 정식 UI 레이아웃 골격 + 2단계 기능 요소를 전부 프리팹으로 만들고, MainHud 프리팹에
-    /// 앵커 배치로 중첩한다. 위치는 요청서 표에 대한 합리적 추정이며, 각 요소가 독립 프리팹이라
-    /// 나중에 앵커만 바꾸면 된다. 기준 해상도 1920x1080.
+    /// 앵커 배치로 중첩한다. 각 요소가 독립 프리팹이라 나중에 앵커만 바꾸면 된다. 기준 해상도 1920x1080.
+    ///
+    /// 여기서 굽는 건 어디까지나 골격(색 패널 placeholder 포함)이다. 최종 모양(목업 배치, 투명/반투명 배경,
+    /// 아이템 4칸 등)은 굽고 난 직후 UiLayoutCleanupTool이 입힌다 — 이미 구워진 프리팹도 그 도구로 제자리에서 고친다.
     ///
     /// StageBootstrapper 참조(SessionBoundView._bootstrapper, MemorySpaceDropZone._bootstrapper)는
     /// 여기서 와이어링하지 않는다 — 프리팹은 씬 오브젝트를 참조할 수 없으므로, MainHud를 씬에
@@ -30,11 +33,11 @@ namespace BlueComplex.EditorTools
         private static readonly Color PanelPortrait = new Color32(90, 90, 100, 179);
         private static readonly Color PanelXray = new Color32(140, 190, 210, 40);
         private static readonly Color PanelBubble = new Color32(150, 190, 230, 179);
-        private static readonly Color PanelDuration = new Color32(210, 170, 80, 179);
         private static readonly Color PanelCard = new Color32(120, 130, 150, 200);
         private static readonly Color RowBackground = new Color32(70, 70, 90, 180);
         private static readonly Color DurationBarBg = new Color32(40, 40, 45, 200);
         private static readonly Color DurationBarFill = new Color32(210, 170, 80, 220);
+        private static readonly Color StatusRowBackground = new Color32(10, 14, 22, 150);
         private static readonly Color KeyZoneUpcoming = new Color32(140, 140, 150, 140);
         private static readonly Color OverlayBackground = new Color32(10, 10, 15, 220);
         private static readonly Color ButtonColor = new Color32(90, 90, 120, 230);
@@ -89,12 +92,6 @@ namespace BlueComplex.EditorTools
             var memory = EnsureElementPrefab("MemorySpaceBubble.prefab", "MemorySpaceBubble",
                 go => go.AddComponent<MemorySpaceBubble>(), (go, comp) => BuildMemorySpaceBubble(go, comp, font));
 
-            var duration = EnsureElementPrefab("ComplexDurationDisplay.prefab", "ComplexDurationDisplay",
-                go => go.AddComponent<ComplexDurationDisplay>(), (go, comp) =>
-                {
-                    CreateImage(go.transform, "Background", PanelDuration, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-                });
-
             var dialogue = EnsureElementPrefab("DialogueText.prefab", "DialogueText",
                 go => go.AddComponent<DialogueText>(), (go, comp) =>
                 {
@@ -114,7 +111,9 @@ namespace BlueComplex.EditorTools
             var stageEnd = EnsureElementPrefab("StageEndPanel.prefab", "StageEndPanel",
                 go => go.AddComponent<StageEndPanel>(), (go, comp) => BuildStageEndPanel(go, comp, font));
 
-            return BuildMainHud(heartRate, bpm, items, portrait, xray, memory, duration, dialogue, clues, stageEnd, font);
+            var built = BuildMainHud(heartRate, bpm, items, portrait, xray, memory, dialogue, clues, stageEnd, font);
+            UiLayoutCleanupTool.Apply();
+            return built;
         }
 
         // ---------------------------------------------------------------
@@ -122,9 +121,11 @@ namespace BlueComplex.EditorTools
         // ---------------------------------------------------------------
 
         /// <summary>
-        /// 세 개 층으로 분리해서 쌓는다: 위쪽 KeyZoneRow(턴 라벨이 붙은 키 구역 탭, 바와는 별개
-        /// 레이어라 서로 안 섞인다) → 가운데 BarArea(구간 색 + 마커) → 아래쪽 FatalLabelRow(즉사
+        /// 세 개 층으로 분리해서 쌓는다: 위쪽 KeyZoneRow(현재 쿼터의 목표 구역 하나 + 목표 심박수 라벨,
+        /// 바와는 별개 레이어라 서로 안 섞인다) → 가운데 BarArea(구간 색 + 마커) → 아래쪽 FatalLabelRow(즉사
         /// 구간 라벨). 색상은 HeartbeatVisuals(런타임과 공유하는 표)를 그대로 쓴다.
+        /// 쿼터 HUD(키 표시 창, 쿼터 진행 창, 전체 스테이지 오버레이)는 여기서 굽지 않는다 — QuarterHud가
+        /// 런타임에 캔버스 아래에 직접 짓는다(ClueBookPanel과 같은 방식).
         /// </summary>
         private static void BuildHeartRatePanel(GameObject go, Component comp, TMP_FontAsset font)
         {
@@ -176,11 +177,11 @@ namespace BlueComplex.EditorTools
             capOutline.effectColor = new Color(0f, 0f, 0f, 0.9f);
             capOutline.effectDistance = new Vector2(1.5f, 1.5f);
 
-            // 키 구역 탭 4개 — 바 위 별도 레이어. 실제 anchorMin/Max(범위)와 라벨 텍스트는
-            // 런타임에 HeartRateBarView.SetKeyZones가 채운다.
-            var overlays = new RectTransform[4];
-            var overlayImages = new Image[4];
-            var overlayLabels = new TMP_Text[4];
+            // 목표 구역 탭 하나 — 바 위 별도 레이어. 실제 anchorMin/Max(범위)와 라벨 텍스트(목표 심박수)는
+            // 런타임에 HeartRateBarView.SetTargetZone이 채운다. 지금 진행 중인 쿼터의 구역만 그린다.
+            var overlays = new RectTransform[1];
+            var overlayImages = new Image[1];
+            var overlayLabels = new TMP_Text[1];
             for (var i = 0; i < overlays.Length; i++)
             {
                 var tab = CreateImage(keyZoneRow, $"KeyZone {i}", KeyZoneUpcoming, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
@@ -219,7 +220,7 @@ namespace BlueComplex.EditorTools
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = true;
 
-            var slots = new ItemSlotView[2];
+            var slots = new ItemSlotView[4];
             for (var i = 0; i < slots.Length; i++)
             {
                 var slotGo = new GameObject($"Slot {i}", typeof(RectTransform));
@@ -275,8 +276,6 @@ namespace BlueComplex.EditorTools
 
                 var nameText = CreateTmpText(rowGo.transform, "Name", string.Empty, font, 20, TextAlignmentOptions.TopLeft,
                     new Vector2(0f, 0.5f), Vector2.one, new Vector2(10f, 0f), new Vector2(-10f, -4f));
-                var descText = CreateTmpText(rowGo.transform, "Description", string.Empty, font, 13, TextAlignmentOptions.TopLeft,
-                    new Vector2(0f, 0.18f), new Vector2(0.72f, 0.5f), new Vector2(10f, 0f), new Vector2(-4f, 0f));
 
                 var barBg = CreateImage(rowGo.transform, "DurationBarBg", DurationBarBg,
                     new Vector2(0f, 0f), new Vector2(1f, 0.18f), new Vector2(10f, 4f), new Vector2(-10f, 0f));
@@ -290,7 +289,6 @@ namespace BlueComplex.EditorTools
 
                 var row = rowGo.AddComponent<ComplexRowView>();
                 Wire(row, "_nameText", nameText);
-                Wire(row, "_descriptionText", descText);
                 Wire(row, "_durationFill", barFill);
                 Wire(row, "_durationText", durationText);
                 rows[i] = row;
@@ -301,6 +299,75 @@ namespace BlueComplex.EditorTools
             var listView = listRoot.gameObject.AddComponent<ComplexListView>();
             Wire(listView, "_rows", rows);
             // _tooltip은 공유 TooltipPopup이 만들어진 뒤 BuildMainHud에서 인스턴스 단위로 와이어링한다.
+        }
+
+        // ---------------------------------------------------------------
+        // 컴플렉스 상시 표시 (UI 가이드 8번)
+        // ---------------------------------------------------------------
+
+        /// <summary>상시 표시 프리팹을 없으면 굽고 있으면 그대로 돌려준다. MainHud에 넣는 건 UiLayoutCleanupTool이 한다.</summary>
+        internal static GameObject EnsureComplexStatusPrefab()
+        {
+            var font = TmpKoreanFontSetupTool.EnsureKoreanFontAsset();
+            return EnsureElementPrefab("ComplexStatusPanel.prefab", "ComplexStatusPanel",
+                go => go.AddComponent<ComplexStatusController>(), (go, comp) => BuildComplexStatusPanel(go, comp, font));
+        }
+
+        /// <summary>
+        /// 작은 한 줄짜리 행 4개(ComplexBoard.MaxSlots) — 이름 | 남은 턴 막대 | 남은 턴 숫자. 붙은 컴플렉스만큼만 보이고 나머지 행은 숨는다.
+        /// 배경 패널 없이 행마다 어두운 반투명 띠만 깐다. 행은 엑스레이 판넬의 목록과 같은 ComplexRowView라 호버/클릭 상세 팝업이 그대로 붙는다
+        /// (공유 TooltipPopup은 MainHud 조립 때 UiLayoutCleanupTool이 물린다).
+        /// </summary>
+        private static void BuildComplexStatusPanel(GameObject go, Component comp, TMP_FontAsset font)
+        {
+            var layout = go.AddComponent<VerticalLayoutGroup>();
+            layout.spacing = 3f;
+            layout.childAlignment = TextAnchor.UpperCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+
+            var rows = new ComplexRowView[ComplexBoard.MaxSlots];
+            for (var i = 0; i < rows.Length; i++)
+            {
+                var rowGo = new GameObject($"Row {i}", typeof(RectTransform));
+                rowGo.transform.SetParent(go.transform, false);
+                rowGo.AddComponent<LayoutElement>().preferredHeight = 28f;
+
+                var bg = rowGo.AddComponent<Image>();
+                bg.color = StatusRowBackground;
+
+                var nameText = CreateTmpText(rowGo.transform, "Name", string.Empty, font, 14, TextAlignmentOptions.MidlineLeft,
+                    new Vector2(0f, 0f), new Vector2(0.55f, 1f), new Vector2(8f, 0f), Vector2.zero);
+                var barBg = CreateImage(rowGo.transform, "DurationBarBg", DurationBarBg,
+                    new Vector2(0.56f, 0.32f), new Vector2(0.84f, 0.68f), Vector2.zero, Vector2.zero);
+                barBg.raycastTarget = false;
+                var barFill = CreateImage(barBg.transform, "DurationBarFill", DurationBarFill,
+                    Vector2.zero, new Vector2(0f, 1f), Vector2.zero, Vector2.zero);
+                barFill.raycastTarget = false;
+                var durationText = CreateTmpText(rowGo.transform, "DurationNumber", string.Empty, font, 14, TextAlignmentOptions.MidlineRight,
+                    new Vector2(0.86f, 0f), Vector2.one, Vector2.zero, new Vector2(-8f, 0f));
+
+                foreach (var text in new[] { nameText, durationText })
+                {
+                    text.textWrappingMode = TextWrappingModes.NoWrap;
+                    text.overflowMode = TextOverflowModes.Ellipsis;
+                    text.raycastTarget = false; // 행 자체가 호버/클릭을 받는다.
+                }
+
+                var row = rowGo.AddComponent<ComplexRowView>();
+                Wire(row, "_nameText", nameText);
+                Wire(row, "_durationFill", barFill);
+                Wire(row, "_durationText", durationText);
+                rows[i] = row;
+
+                rowGo.SetActive(false);
+            }
+
+            var listView = go.AddComponent<ComplexListView>();
+            Wire(listView, "_rows", rows);
+            Wire(comp, "_list", listView);
         }
 
         // ---------------------------------------------------------------
@@ -357,15 +424,12 @@ namespace BlueComplex.EditorTools
                     new Vector2(0f, 0.45f), new Vector2(1f, 0.85f), new Vector2(4f, 0f), new Vector2(-4f, 0f));
                 var storyText = CreateTmpText(cardGo.transform, "Story", string.Empty, font, 12, TextAlignmentOptions.TopLeft,
                     new Vector2(0f, 0.15f), new Vector2(1f, 0.45f), new Vector2(4f, 0f), new Vector2(-4f, 0f));
-                var usesText = CreateTmpText(cardGo.transform, "Uses", string.Empty, font, 11, TextAlignmentOptions.BottomRight,
-                    Vector2.zero, new Vector2(1f, 0.15f), new Vector2(4f, 2f), new Vector2(-4f, 0f));
 
                 var view = cardGo.AddComponent<ClueCardView>();
                 Wire(view, "_background", bg);
                 Wire(view, "_titleText", titleText);
                 Wire(view, "_attributesText", attributesText);
                 Wire(view, "_storyText", storyText);
-                Wire(view, "_usesText", usesText);
 
                 var dragHandler = cardGo.AddComponent<ClueCardDragHandler>();
                 Wire(dragHandler, "_canvasGroup", canvasGroup);
@@ -413,7 +477,7 @@ namespace BlueComplex.EditorTools
         // ---------------------------------------------------------------
 
         private static GameObject BuildMainHud(GameObject heartRate, GameObject bpm, GameObject items, GameObject portrait,
-            GameObject xray, GameObject memory, GameObject duration, GameObject dialogue, GameObject clues,
+            GameObject xray, GameObject memory, GameObject dialogue, GameObject clues,
             GameObject stageEnd, TMP_FontAsset font)
         {
             var uiLayer = LayerMask.NameToLayer("UI");
@@ -431,19 +495,15 @@ namespace BlueComplex.EditorTools
             scaler.referenceResolution = new Vector2(1920, 1080);
             scaler.matchWidthOrHeight = 0.5f;
 
-            // 상단 레이아웃 재배치: 심박수 바(최우선 정보)를 화면 폭 78%까지 크게 잡고, 그 위에
-            // BPM 큰 숫자를 얹는다. 아이템 표시는 배럴 왜곡이 가장 심한 좌상단 코너에서
-            // 좌측 중단(세로로 넓은 자리)으로 옮겨 폰트를 키울 공간을 확보했다. 컴플렉스 지속시간
-            // 표시는 그 대칭 자리(우측 중단)로 옮겨 자리를 비켜준다.
+            // 심박수 바(최우선 정보)는 화면 폭 78%까지 크게 잡고 그 위에 BPM 큰 숫자를 얹는다.
+            // 나머지 요소의 위치는 여기서 굽는 값이 임시이며, 굽고 난 직후 UiLayoutCleanupTool이 목업 배치로 덮어쓴다.
             var itemsInstance = PlaceInstance(root.transform, items, "Item Display", 0.02f, 0.40f, 0.17f, 0.74f);
             var heartRateInstance = PlaceInstance(root.transform, heartRate, "Heart Rate Indicator", 0.11f, 0.74f, 0.89f, 0.92f);
             var bpmInstance = PlaceInstance(root.transform, bpm, "BPM Display", 0.40f, 0.92f, 0.60f, 0.995f);
-            PlaceInstance(root.transform, duration, "Complex Duration Display", 0.83f, 0.40f, 0.98f, 0.74f);
             var xrayInstance = PlaceInstance(root.transform, xray, "Complex X-ray Panel", 0.20f, 0.50f, 0.80f, 0.88f);
             var cluesInstance = PlaceInstance(root.transform, clues, "Clue Card Tray", 0.30f, 0.36f, 0.70f, 0.49f);
             var memoryInstance = PlaceInstance(root.transform, memory, "Memory Space Bubble", 0.30f, 0.19f, 0.70f, 0.355f);
             PlaceInstance(root.transform, portrait, "Yuki Portrait", 0.02f, 0.06f, 0.17f, 0.36f);
-            PlaceInstance(root.transform, portrait, "Natsu Portrait", 0.83f, 0.06f, 0.98f, 0.36f);
             var dialogueInstance = PlaceInstance(root.transform, dialogue, "Yuki Dialogue Text", 0.18f, 0.02f, 0.82f, 0.18f);
             var stageEndInstance = PlaceInstance(root.transform, stageEnd, "Stage End Panel", 0f, 0f, 1f, 1f);
 

@@ -35,6 +35,30 @@ namespace BlueComplex.EditorTools
             EditorUtility.DisplayDialog("TMP + 한글 폰트 셋업", msg, "확인");
         }
 
+        /// <summary>
+        /// 소스 폰트 파일을 바꾼 뒤(예: 가변 폰트를 정적 Regular 인스턴스로 교체) 동적 아틀라스에 남은 옛 글리프를 비운다.
+        /// 동적 아틀라스는 글자가 처음 쓰일 때 소스 폰트에서 글리프를 구워 넣으므로, 비워 두면 새 폰트로 다시 구워진다.
+        /// Font Asset 자체(GUID, 머티리얼 참조)는 그대로 둔다 — 프리팹의 TMP 텍스트가 이걸 참조하고 있다.
+        /// </summary>
+        [MenuItem("BlueComplex/UI/Refresh Korean Font Atlas")]
+        public static void RefreshAtlas()
+        {
+            var fontAsset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontAssetPath);
+            if (fontAsset == null)
+            {
+                Debug.LogWarning($"[TmpKoreanFontSetupTool] Font Asset이 없다: {FontAssetPath}");
+                return;
+            }
+
+            fontAsset.ClearFontAssetData(false);
+            EditorUtility.SetDirty(fontAsset);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[TmpKoreanFontSetupTool] 동적 아틀라스를 비웠다 — 다음에 글자가 쓰일 때 현재 소스 폰트로 다시 구워진다.");
+        }
+
+        /// <summary>배치모드용 진입점(-executeMethod).</summary>
+        public static void RefreshAtlasBatch() => RefreshAtlas();
+
         private static void EnsureTmpEssentials()
         {
             if (TMP_Settings.instance != null) return;
