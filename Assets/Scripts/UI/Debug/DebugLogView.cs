@@ -60,7 +60,7 @@ namespace BlueComplex.UI.DebugPlay
 
         private void OnStageEnded(StageOutcome outcome)
         {
-            AppendLine($"=== 종료: {DebugKoreanLabels.Outcome(outcome)} · 총 {Session.Runner.CurrentTurn}턴 · 획득 키 {Session.Keys.Collected} ===");
+            AppendLine($"=== 종료: {DebugKoreanLabels.Outcome(outcome)} · 총 {Session.Runner.CurrentTurn}턴 · 획득 키 {Session.Keys.Collected}/{Session.Keys.Required} ===");
         }
 
         protected override void Render()
@@ -84,18 +84,30 @@ namespace BlueComplex.UI.DebugPlay
         private static string FormatReport(TurnReport report)
         {
             var sb = new StringBuilder();
-            var triggered = report.Interpretation.Steps.Where(s => s.Triggered).ToList();
-            var chain = triggered.Count == 0
-                ? "없음"
-                : string.Join(" → ", triggered.Select(s => s.Complex.Definition.DisplayName));
 
-            var heartbeatBefore = report.HeartbeatValue - report.HeartbeatDelta;
+            if (report.IsPass)
+            {
+                sb.Append($"[턴 {report.Turn}] 손패 없음 · 넘어감 · 심박 {report.HeartbeatValue}");
+            }
+            else
+            {
+                var triggered = report.Interpretation.Steps.Where(s => s.Triggered).ToList();
+                var chain = triggered.Count == 0
+                    ? "없음"
+                    : string.Join(" → ", triggered.Select(s => s.Complex.Definition.DisplayName));
 
-            sb.Append($"[턴 {report.Turn}] {report.Clue.DisplayName} · 발동: {chain}\n");
-            sb.Append($"  최종: {FormatFinalTags(report)} · 심박 {heartbeatBefore}→{report.HeartbeatValue} ({report.HeartbeatDelta:+0;-0;0})");
+                var heartbeatBefore = report.HeartbeatValue - report.HeartbeatDelta;
+
+                sb.Append($"[턴 {report.Turn}] {report.Clue.DisplayName} · 발동: {chain}\n");
+                sb.Append($"  최종: {FormatFinalTags(report)} · 심박 {heartbeatBefore}→{report.HeartbeatValue} ({report.HeartbeatDelta:+0;-0;0})");
+            }
 
             if (report.SpawnedComplex != null)
                 sb.Append($"\n  신규 컴플렉스: {report.SpawnedComplex.Definition.DisplayName}");
+
+            if (report.KeyResult is { } key)
+                sb.Append($"\n  {key.Quarter}쿼터 키 판정: {(key.Success ? "성공" : "실패")} " +
+                          $"(구역 {key.Zone.StartSlot}~{key.Zone.StartSlot + key.Zone.Width - 1}, 심박 {key.Position})");
 
             return sb.ToString();
         }

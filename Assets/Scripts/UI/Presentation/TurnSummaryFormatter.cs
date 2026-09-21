@@ -11,17 +11,28 @@ namespace BlueComplex.UI.Presentation
         public static string Build(TurnReport report)
         {
             var sb = new StringBuilder();
-            sb.Append($"[{report.Turn}턴] \"{report.Clue.DisplayName}\"을(를) 냈다. ");
 
-            var triggeredCount = report.Interpretation.Steps.Count(step => step.Triggered);
-            if (triggeredCount > 0) sb.Append($"컴플렉스 {triggeredCount}개가 반응했다. ");
+            if (report.IsPass)
+            {
+                sb.Append($"[{report.Turn}턴] 손에 낼 단서가 없다. 시간만 흘렀다({report.HeartbeatValue}).");
+            }
+            else
+            {
+                sb.Append($"[{report.Turn}턴] \"{report.Clue.DisplayName}\"을(를) 냈다. ");
 
-            sb.Append(report.HeartbeatDelta >= 0
-                ? $"심박수가 {report.HeartbeatDelta}만큼 올랐다({report.HeartbeatValue})."
-                : $"심박수가 {-report.HeartbeatDelta}만큼 떨어졌다({report.HeartbeatValue}).");
+                var triggeredCount = report.Interpretation.Steps.Count(step => step.Triggered);
+                if (triggeredCount > 0) sb.Append($"컴플렉스 {triggeredCount}개가 반응했다. ");
+
+                sb.Append(report.HeartbeatDelta >= 0
+                    ? $"심박수가 {report.HeartbeatDelta}만큼 올랐다({report.HeartbeatValue})."
+                    : $"심박수가 {-report.HeartbeatDelta}만큼 떨어졌다({report.HeartbeatValue}).");
+            }
 
             if (report.SpawnedComplex != null)
                 sb.Append($" 새로운 컴플렉스 \"{report.SpawnedComplex.Definition.DisplayName}\"이(가) 나타났다.");
+
+            if (report.KeyResult is { } key)
+                sb.Append(key.Success ? $" {key.Quarter}쿼터 키를 얻었다!" : $" {key.Quarter}쿼터 키를 놓쳤다.");
 
             if (report.Outcome != StageOutcome.InProgress)
                 sb.Append(report.Outcome == StageOutcome.Cleared ? " 스테이지 클리어!" : " 스테이지 실패...");

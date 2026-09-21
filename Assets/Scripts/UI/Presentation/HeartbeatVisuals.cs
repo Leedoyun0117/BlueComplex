@@ -21,14 +21,16 @@ namespace BlueComplex.UI.Presentation
             _ => Color.gray
         };
 
+        /// <summary>모니터(숫자·상태 배지·심전도 선)의 색. 안정은 목업의 청록이고, 침체는 그보다 푸른 쪽, 흥분은 주황 쪽으로 갈라진다 —
+        /// 청록과 침체가 헷갈리지 않게 침체 계열은 청록에서 확실히 떨어진 청보라로 잡는다.</summary>
         public static Color TextColor(HeartbeatState state) => state switch
         {
             HeartbeatState.Fatal => new Color32(255, 95, 95, 255),
-            HeartbeatState.VeryDepressed => new Color32(150, 200, 230, 255),
-            HeartbeatState.Depressed => new Color32(180, 218, 232, 255),
-            HeartbeatState.Stable => new Color32(160, 245, 190, 255),
-            HeartbeatState.Excited => new Color32(240, 195, 135, 255),
-            HeartbeatState.VeryExcited => new Color32(255, 155, 105, 255),
+            HeartbeatState.VeryDepressed => new Color32(132, 150, 255, 255),
+            HeartbeatState.Depressed => new Color32(150, 186, 255, 255),
+            HeartbeatState.Stable => new Color32(72, 222, 234, 255),
+            HeartbeatState.Excited => new Color32(255, 196, 120, 255),
+            HeartbeatState.VeryExcited => new Color32(255, 140, 96, 255),
             _ => Color.white
         };
     }

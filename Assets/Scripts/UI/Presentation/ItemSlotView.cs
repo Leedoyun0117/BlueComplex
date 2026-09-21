@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using BlueComplex.Core.Items;
+using BlueComplex.UI.Layout;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -9,19 +10,18 @@ using UnityEngine.UI;
 namespace BlueComplex.UI.Presentation
 {
     /// <summary>아이템 슬롯 하나의 표시 + 클릭 입력 중계. 사용 판정은 하지 않는다.
-    /// 이름은 항상 크게 보이고, 설명은 CRT 왜곡이 덜한 안쪽에서도 뭉개지지 않도록 공유
-    /// TooltipPopup(ComplexRowView와 동일 패턴)으로 뺐다 — 슬롯 자체엔 늘 담기엔 너무 길다.</summary>
+    /// 슬롯에는 아이콘과 이름만 보이고, 설명은 공유 TooltipPopup(ComplexRowView와 동일 패턴)으로 뺐다 —
+    /// 슬롯 자체엔 담기엔 너무 길다. 비어 있는 슬롯은 아예 감춘다(빈 상자를 늘어놓지 않는다).</summary>
     public sealed class ItemSlotView : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
     {
         private const float HoverDelay = 0.25f;
 
         [SerializeField] private Image _background;
         [SerializeField] private TMP_Text _nameText;
+        [SerializeField] private Image _iconImage;
         [SerializeField] private TooltipPopup _tooltip;
-        [SerializeField] private Vector3 _tooltipOffset = new(0f, 60f, 0f);
 
-        private static readonly Color FilledColor = new Color32(120, 120, 130, 200);
-        private static readonly Color EmptyColor = new Color32(60, 60, 65, 100);
+        private static readonly Color FilledColor = MockupStyle.Card;
 
         private Coroutine _hoverRoutine;
 
@@ -33,16 +33,22 @@ namespace BlueComplex.UI.Presentation
         public void Render(ItemDefinition item)
         {
             Item = item;
+            gameObject.SetActive(true);
             _background.color = FilledColor;
             _nameText.text = item.DisplayName;
+
+            if (_iconImage == null) return;
+            var icon = UiIcons.Get(item.Id);
+            _iconImage.sprite = icon;
+            _iconImage.enabled = icon != null;
         }
 
         public void SetEmpty()
         {
             Item = null;
             HideTooltip();
-            _background.color = EmptyColor;
-            _nameText.text = "(비어있음)";
+            _nameText.text = string.Empty;
+            gameObject.SetActive(false);
         }
 
         public void OnPointerClick(PointerEventData eventData)
@@ -64,7 +70,7 @@ namespace BlueComplex.UI.Presentation
         {
             yield return new WaitForSeconds(HoverDelay);
             if (Item == null || _tooltip == null) yield break;
-            _tooltip.Show(Item.DisplayName, Item.Description, transform.position + _tooltipOffset);
+            _tooltip.Show(Item.DisplayName, Item.Description, transform.position);
         }
 
         private void HideTooltip()

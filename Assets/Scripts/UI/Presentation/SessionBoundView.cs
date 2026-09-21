@@ -22,6 +22,9 @@ namespace BlueComplex.UI.Presentation
         /// <summary>추가 Awake 로직이 필요하면 override하고 base.Awake()를 호출할 것.</summary>
         protected virtual void Awake()
         {
+            // 프리팹에 나중에 추가된 뷰는 씬 인스턴스에 이 필드의 오버라이드가 없다(UICompositorSetupTool을 다시 돌려야 채워진다) —
+            // 비어 있으면 씬의 StageBootstrapper를 직접 찾아 그 단계를 건너뛰어도 붙게 한다.
+            if (_bootstrapper == null) _bootstrapper = FindFirstObjectByType<StageBootstrapper>();
             if (_bootstrapper != null) Bind(_bootstrapper);
         }
 

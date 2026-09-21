@@ -1,6 +1,5 @@
-using System.Collections.Generic;
-using System.Linq;
 using BlueComplex.Core.Stability;
+using BlueComplex.UI.Layout;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -9,9 +8,16 @@ using UnityEngine.UI;
 namespace BlueComplex.UI.Presentation
 {
     /// <summary>
-    /// 0~200 심박수 바 위에 현재 값 마커를 그리고, 바와는 분리된 레이어(위쪽 KeyZoneRow, 셋업 도구가
-    /// 그렇게 배치한다)에 키 구역 4개를 턴 라벨과 함께 그린다. 표시만 한다 — 판정 없음.
-    /// 세그먼트 배경(구간 색칠)은 정적이라 셋업 도구가 프리팹에 미리 색칠해 둔다.
+    /// 심박수 모니터의 왼쪽 화면: 심전도 파형(<see cref="EcgWaveGraphic"/>, BPM에 맞춰 흐른다) + 화면 아래 얇은 0~200 눈금 띠.
+    /// 띠 위에 현재 값 마커를 그리고, 지금 진행 중인 쿼터의 목표 구역 하나만 강조한다(모니터 안 "목표 N~M" 문구 포함). 표시만 한다 — 판정 없음.
+    /// 예전의 색 구간 막대는 없앴다 — 띠는 무채색이고 즉사 구간(양 끝)만 붉게 표시한다.
+    ///
+    /// UI 기획서는 쿼터별 목표 심박수를 숫자로만 보여주지만(쿼터 HUD의 전체 스테이지 오버레이), 플레이어가
+    /// "지금 심박수가 목표에 가까운가"를 판단하려면 현재 값 옆에 목표 구간이 있어야 해서 현재 쿼터 것만 바에 남겼다.
+    /// 나머지 쿼터의 구역은 바에 그리지 않는다 — 여러 개를 그리면 구간이 겹쳐 탭이 포개지고 미래 쿼터 정보가 바를 어지럽힌다.
+    ///
+    /// 구역 슬롯 배열은 프리팹에 이미 구워진 필드를 그대로 쓴다(구 프리팹은 슬롯 4개) — 첫 슬롯 하나만 쓰고
+    /// 나머지는 숨긴다. 재생성한 프리팹은 슬롯이 하나다.
     /// </summary>
     public sealed class HeartRateBarView : MonoBehaviour
     {
@@ -20,104 +26,56 @@ namespace BlueComplex.UI.Presentation
         [SerializeField] private RectTransform[] _keyZoneOverlays;
         [SerializeField] private Image[] _keyZoneImages;
         [SerializeField] private TMP_Text[] _keyZoneLabels;
+        [SerializeField] private EcgWaveGraphic _ecg;
 
-        private const float LaneGapPixels = 1f;
-
-        private static readonly Color UpcomingColor = new Color32(140, 140, 150, 140);
         private static readonly Color CurrentColor = new Color32(255, 210, 70, 255);
         private static readonly Color SuccessColor = new Color32(90, 230, 130, 255);
-        private static readonly Color FailColor = new Color32(150, 60, 60, 110);
+        private static readonly Color FailColor = new Color32(150, 60, 60, 160);
 
-        /// <summary>슬롯 i가 담당하는 턴. 안 쓰는 슬롯은 -1.</summary>
-        private int[] _overlayTurns;
+        private int _shownQuarter;
+        private KeyZone? _shownZone;
+        private bool? _result;
+        private Tween _pulseTween;
 
-        /// <summary>슬롯별 판정 결과. null=아직 판정 전, true=성공, false=실패.</summary>
-        private bool?[] _results;
+        private bool HasBand => _keyZoneOverlays != null && _keyZoneOverlays.Length > 0 && _keyZoneImages != null &&
+                                _keyZoneImages.Length > 0;
 
-        /// <summary>재호출로 레이아웃이 실제로 바뀌었는지 판단하는 서명 — 매 턴 OnTurnBegan이
-        /// SetKeyZones를 다시 불러도(스테이지 중엔 구역 배정이 안 바뀐다) _results를 지우지 않기 위함.</summary>
-        private List<int> _lastTurnSignature;
-
-        private Tween[] _pulseTweens;
-        private int _activeTurn = -1;
-
-        /// <summary>스테이지 시작 시(또는 매 턴 재확인 시) 확정된 키 구역 전부를 턴 1부터 보여준다.
-        /// 구역 배정 자체가 이전과 같으면(같은 스테이지 진행 중) 이미 기록된 성공/실패 상태를 보존한다.</summary>
-        public void SetKeyZones(IReadOnlyDictionary<int, KeyZone> zonesByTurn)
+        /// <summary>바에 그릴 목표 구역을 정한다(null이면 감춘다). 같은 쿼터·같은 구역이면 이미 기록된 성공/실패 표시를 그대로 둔다 —
+        /// 매 턴 다시 불러도 결과 색이 지워지지 않는다.</summary>
+        public void SetTargetZone(int quarter, KeyZone? zone)
         {
-            var turns = new List<int>(zonesByTurn.Keys);
-            turns.Sort();
+            if (quarter == _shownQuarter && Equals(zone, _shownZone)) return;
 
-            var isFreshLayout = _lastTurnSignature == null || !turns.SequenceEqual(_lastTurnSignature);
-            _lastTurnSignature = turns;
-
-            _overlayTurns = new int[_keyZoneOverlays.Length];
-            if (isFreshLayout) _results = new bool?[_keyZoneOverlays.Length];
-            _pulseTweens ??= new Tween[_keyZoneOverlays.Length];
-
-            var used = Mathf.Min(turns.Count, _keyZoneOverlays.Length);
-            var ranges = new (float min, float max)[used];
-            for (var i = 0; i < used; i++)
-            {
-                var zone = zonesByTurn[turns[i]];
-                // 행(KeyZoneRow) 밖으로 나가는 탭이 없도록 0~1로 가둔다.
-                var min = Mathf.Clamp01(zone.StartSlot / (float)Heartbeat.MaxValue);
-                var max = Mathf.Clamp01((zone.StartSlot + zone.Width) / (float)Heartbeat.MaxValue);
-                ranges[i] = (min, Mathf.Max(max, min));
-            }
-
-            var lanes = AssignLanes(ranges, out var laneCount);
-
-            for (var i = 0; i < _keyZoneOverlays.Length; i++)
-            {
-                if (i < used)
-                {
-                    var turn = turns[i];
-                    _overlayTurns[i] = turn;
-
-                    var laneHeight = 1f / laneCount;
-                    var overlay = _keyZoneOverlays[i];
-                    overlay.gameObject.SetActive(true);
-                    overlay.anchorMin = new Vector2(ranges[i].min, lanes[i] * laneHeight);
-                    overlay.anchorMax = new Vector2(ranges[i].max, (lanes[i] + 1) * laneHeight);
-                    // 위아래 레인 사이에 1px씩 틈을 둔다.
-                    overlay.offsetMin = new Vector2(0f, LaneGapPixels);
-                    overlay.offsetMax = new Vector2(0f, -LaneGapPixels);
-
-                    if (_keyZoneLabels != null && i < _keyZoneLabels.Length && _keyZoneLabels[i] != null)
-                        _keyZoneLabels[i].text = $"{turn}턴";
-                }
-                else
-                {
-                    _overlayTurns[i] = -1;
-                    _keyZoneOverlays[i].gameObject.SetActive(false);
-                }
-            }
-
-            if (isFreshLayout) ApplyAllStates();
+            _shownQuarter = quarter;
+            _shownZone = zone;
+            _result = null;
+            Refresh();
         }
 
-        /// <summary>현재 턴에 해당하는 키 구역만 강조(펄스)한다. 나머지는 이미 기록된 성공/실패/대기 상태로 표시한다.</summary>
-        public void SetActiveTurn(int turn)
+        /// <summary>세션이 새로 시작될 때 표시를 처음으로 되돌린다.</summary>
+        public void ResetTargetZone()
         {
-            if (_overlayTurns == null) return;
-            _activeTurn = turn;
-            ApplyAllStates();
+            _shownQuarter = 0;
+            _shownZone = null;
+            _result = null;
+            Refresh();
         }
 
-        /// <summary>턴 결과 판정 후 해당 턴의 키 구역이 성공/실패했는지 기록한다.
+        /// <summary>쿼터 마지막 턴 종료 시점의 키 판정 결과를 기록한다. 지금 바에 그려진 쿼터의 결과일 때만 반영한다.
         /// 호출 시점(연출 타이밍)은 Presenter가 쥔다 — 이 메서드는 상태만 반영한다.</summary>
-        public void RecordKeyZoneResult(int turn, bool success)
+        public void RecordKeyResult(int quarter, bool success)
         {
-            if (_overlayTurns == null) return;
+            if (quarter != _shownQuarter || _shownZone == null) return;
 
-            for (var i = 0; i < _overlayTurns.Length; i++)
-            {
-                if (_overlayTurns[i] != turn) continue;
-                _results[i] = success;
-                ApplyState(i);
-                break;
-            }
+            _result = success;
+            Refresh();
+            PlayResultPop();
+        }
+
+        /// <summary>심전도 파형의 속도(BPM)와 선 색을 정한다. snap이면 속도도 바로 그 값으로.</summary>
+        public void SetPulse(int bpm, Color color, bool snap)
+        {
+            if (_ecg != null) _ecg.SetPulse(bpm, color, snap);
         }
 
         public void MoveMarker(int value, bool animate)
@@ -131,82 +89,73 @@ namespace BlueComplex.UI.Presentation
                 _marker.anchoredPosition = new Vector2(targetX, _marker.anchoredPosition.y);
         }
 
-        /// <summary>구간이 겹치는 탭끼리는 서로 다른 레인(세로 단)에 놓는다. 턴 순서대로 겹치지 않는
-        /// 가장 낮은 레인(0=바에 가장 가까운 아래쪽)에 배정하므로 안 겹치면 전부 레인 0 한 줄이다.
-        /// 같은 레인의 탭은 구간이 겹치지 않아 라벨도 포개지지 않는다.</summary>
-        private static int[] AssignLanes((float min, float max)[] ranges, out int laneCount)
+        private void Refresh()
         {
-            var lanes = new int[ranges.Length];
-            laneCount = 1;
+            if (!HasBand) return;
 
-            for (var i = 0; i < ranges.Length; i++)
-            {
-                var lane = 0;
-                while (OverlapsLane(ranges, lanes, i, lane)) lane++;
-                lanes[i] = lane;
-                laneCount = Mathf.Max(laneCount, lane + 1);
-            }
+            _pulseTween?.Kill();
 
-            return lanes;
-        }
+            // 첫 슬롯만 쓴다. 구 프리팹에 남은 나머지 슬롯은 숨긴다.
+            for (var slot = 1; slot < _keyZoneOverlays.Length; slot++)
+                _keyZoneOverlays[slot].gameObject.SetActive(false);
 
-        private static bool OverlapsLane((float min, float max)[] ranges, int[] lanes, int index, int lane)
-        {
-            for (var j = 0; j < index; j++)
-            {
-                if (lanes[j] != lane) continue;
-                if (ranges[index].min < ranges[j].max && ranges[j].min < ranges[index].max) return true;
-            }
-
-            return false;
-        }
-
-        private void ApplyAllStates()
-        {
-            for (var i = 0; i < _overlayTurns.Length; i++) ApplyState(i);
-        }
-
-        private void ApplyState(int i)
-        {
-            if (_overlayTurns[i] < 0) return;
-
-            var image = _keyZoneImages[i];
-            var label = _keyZoneLabels != null && i < _keyZoneLabels.Length ? _keyZoneLabels[i] : null;
-            var overlay = _keyZoneOverlays[i];
-
-            _pulseTweens[i]?.Kill();
+            var overlay = _keyZoneOverlays[0];
             overlay.localScale = Vector3.one;
 
-            if (_overlayTurns[i] == _activeTurn)
+            var label = _keyZoneLabels != null && _keyZoneLabels.Length > 0 ? _keyZoneLabels[0] : null;
+
+            if (_shownZone is not { } zone)
             {
-                image.color = CurrentColor;
-                if (label != null) label.color = Color.black;
-                _pulseTweens[i] = overlay.DOScale(1.12f, 0.5f).SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine);
+                overlay.gameObject.SetActive(false);
+                // 라벨은 구역 탭의 자식이 아니라 모니터 화면에 따로 붙어 있어서 탭이 꺼져도 남는다.
+                if (label != null) label.text = string.Empty;
                 return;
             }
 
-            var result = _results != null && i < _results.Length ? _results[i] : null;
-            if (result == true)
+            // 행(KeyZoneRow) 밖으로 나가는 구역이 없도록 0~1로 가둔다.
+            var min = Mathf.Clamp01(zone.StartSlot / (float)Heartbeat.MaxValue);
+            var max = Mathf.Max(Mathf.Clamp01((zone.StartSlot + zone.Width) / (float)Heartbeat.MaxValue), min);
+
+            overlay.gameObject.SetActive(true);
+            overlay.anchorMin = new Vector2(min, 0f);
+            overlay.anchorMax = new Vector2(max, 1f);
+            overlay.offsetMin = Vector2.zero;
+            overlay.offsetMax = Vector2.zero;
+
+            var image = _keyZoneImages[0];
+
+            // 목표 심박수는 구역의 양 끝 값 그대로 — 오버레이에 쓰는 문구와 같다. 라벨은 어두운 화면 위 글자라 구역 색을 그대로 따른다.
+            if (label != null) label.text = $"목표 {zone.StartSlot}~{zone.StartSlot + zone.Width - 1}";
+
+            if (_result == true)
             {
                 image.color = SuccessColor;
-                if (label != null) label.color = Color.black;
+                if (label != null) label.color = SuccessColor;
             }
-            else if (result == false)
+            else if (_result == false)
             {
                 image.color = FailColor;
-                if (label != null) label.color = new Color(1f, 1f, 1f, 0.5f);
+                if (label != null) label.color = new Color(1f, 1f, 1f, 0.45f);
             }
             else
             {
-                image.color = UpcomingColor;
-                if (label != null) label.color = Color.white;
+                image.color = CurrentColor;
+                if (label != null) label.color = CurrentColor;
+                _pulseTween = overlay.DOScale(1.06f, 0.5f).SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine);
             }
         }
 
-        private void OnDisable()
+        private void PlayResultPop()
         {
-            if (_pulseTweens == null) return;
-            foreach (var tween in _pulseTweens) tween?.Kill();
+            if (!HasBand || !_keyZoneOverlays[0].gameObject.activeSelf) return;
+
+            var overlay = _keyZoneOverlays[0];
+            _pulseTween?.Kill();
+            overlay.localScale = Vector3.one;
+            _pulseTween = overlay.DOScale(1.15f, 0.18f).SetLoops(2, LoopType.Yoyo).SetEase(Ease.OutQuad)
+                .OnComplete(() => overlay.localScale = Vector3.one);
         }
+
+        private void OnDisable() => _pulseTween?.Kill();
     }
 }

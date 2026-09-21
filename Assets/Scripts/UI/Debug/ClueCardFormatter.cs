@@ -29,8 +29,7 @@ namespace BlueComplex.UI.DebugPlay
             sb.AppendLine($"시간: {(knowledge.TimeRevealed ? DebugKoreanLabels.Time(def.Time) : "?")}");
             sb.AppendLine($"인물: {FormatPersons(def, knowledge)}");
             sb.AppendLine($"감정: {FormatEmotions(def, knowledge)}");
-            sb.AppendLine(censorship == CensorshipLevel.Partial ? CensorBlock : $"\"{def.Story}\"");
-            sb.Append($"남은 사용: {card.RemainingUses}회");
+            sb.Append(censorship == CensorshipLevel.Partial ? CensorBlock : $"\"{def.Story}\"");
 
             return sb.ToString();
         }

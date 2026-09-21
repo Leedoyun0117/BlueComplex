@@ -36,6 +36,10 @@ namespace BlueComplex.UI.Presentation
         /// <summary>실제로 드래그가 시작될 때(빈 슬롯이 아닐 때)만 쏜다 — 엑스레이 판넬이 이걸 구독해서 펼친다.</summary>
         public event Action DragStarted;
 
+        /// <summary>드래그가 끝났을 때(드롭이 처리됐든 허공에 놓았든) 쏜다. 드롭 처리는 OnEndDrag보다 먼저 일어나므로
+        /// 구독자는 이 시점에 턴이 이미 시작됐는지(ITurnResultPresenter.IsPresenting) 볼 수 있다.</summary>
+        public event Action DragEnded;
+
         private void Awake()
         {
             _view = GetComponent<ClueCardView>();
@@ -75,7 +79,8 @@ namespace BlueComplex.UI.Presentation
         public void OnEndDrag(PointerEventData eventData)
         {
             IsDragging = false;
-            if (_canvasGroup != null) _canvasGroup.blocksRaycasts = true;
+            // 드롭으로 낸 카드는 이미 손패에서 빠져 슬롯이 비어 있다 — 안 보이는 슬롯이 입력을 가로채지 않게 한다.
+            if (_canvasGroup != null) _canvasGroup.blocksRaycasts = !_view.IsEmpty;
 
             // 드롭이 처리됐어도(_handled) 트레이 슬롯으로 복귀시켜야 한다 — 이 오브젝트 자체가
             // ClueCardTray._cards의 슬롯이므로, 여기서 부모/위치를 되돌려놔야 RefreshAll이
@@ -83,6 +88,8 @@ namespace BlueComplex.UI.Presentation
             transform.SetParent(_originalParent, worldPositionStays: true);
             transform.SetSiblingIndex(_originalSiblingIndex);
             _rect.anchoredPosition = Vector2.zero;
+
+            DragEnded?.Invoke();
         }
 
         /// <summary>
