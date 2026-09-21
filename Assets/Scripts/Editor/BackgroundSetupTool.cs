@@ -30,6 +30,7 @@ namespace BlueComplex.EditorTools
         private const string LampLightName = "Lamp Point Light";
         private const string WindowLightName = "Window Spot Light";
         private const string ClockControllerName = "Clock Controller";
+        private const string SmokeName = "Lamp Smoke";
 
         private const float PixelsPerUnit = 100f;
         private const int MaxTextureSize = 4096;
@@ -52,22 +53,25 @@ namespace BlueComplex.EditorTools
             public float AlphaPower;    // 선형 블렌딩 보정(1 = 보정 없음)
             public float SurfaceGlow;   // 조명이 비추는 만큼 조명 색으로 더하는 양(선형). 거의 검정인 벽 전용
             public bool ClockHandPivot; // true면 ClockPivotPixel을 회전축으로 하는 피벗을 만든다
+            public bool CastShadow;     // true면 이 레이어의 도트 실루엣이 뒤 레이어에 그림자를 찍는다(테이블 위 사물/인물용)
+            public bool ReceiveShadow;  // true면 앞 레이어의 그림자를 받는다(벽면용)
         }
 
         // 카메라에서 먼 것부터. 그룹 간격은 1유닛, 시계 손은 시계 면 바로 앞(0.05)에 붙인다.
         private static readonly LayerSpec[] Layers =
         {
-            // 벽은 거의 검정이라 "아트색 × 조명"으론 밝아지지 않는다 — 빛이 닿는 만큼만 조명 색을 직접 더한다(할 일: 벽면 빛 밝게).
-            new LayerSpec { Name = "BG",           Texture = "BG",          Distance = 15.00f, LightGain = 1f, AlphaPower = 1.8f, SurfaceGlow = 0.08f },
+            // 벽은 거의 검정이라 "아트색 × 조명"으론 밝아지지 않는다 — 빛이 닿는 만큼만 조명 색을 직접 더한다.
+            // 테이블 위 사물/인물이 앞에서 가리는 만큼 여기 그림자가 진다(오브젝트 그림자).
+            new LayerSpec { Name = "BG",           Texture = "BG",          Distance = 15.00f, LightGain = 1f, AlphaPower = 1.8f, SurfaceGlow = 0.08f, ReceiveShadow = true },
             new LayerSpec { Name = "Window",       Texture = "Window",      Distance = 14.00f, LightGain = 1f, AlphaPower = 1.8f },
             new LayerSpec { Name = "Clock",        Texture = "Clock",       Distance = 13.00f, LightGain = 1f, AlphaPower = 1.8f },
             new LayerSpec { Name = "Min",          Texture = "Min",         Distance = 12.95f, LightGain = 1f, AlphaPower = 1.8f, ClockHandPivot = true },
             new LayerSpec { Name = "Hour",         Texture = "Hour",        Distance = 12.90f, LightGain = 1f, AlphaPower = 1.8f, ClockHandPivot = true },
             // 램프는 스스로 빛나는 아트(글로우 포함)라 조명으로 또 밝히면 이중 노출이 된다.
             new LayerSpec { Name = "Lamp",         Texture = "Lamp",        Distance = 12.00f, LightGain = 0f, AlphaPower = 1.8f },
-            new LayerSpec { Name = "Things",       Texture = "Things",      Distance = 11.00f, LightGain = 1f, AlphaPower = 1.8f },
-            new LayerSpec { Name = "LeftPerson",   Texture = "LeftPerson",  Distance = 10.00f, LightGain = 1f, AlphaPower = 1.8f },
-            new LayerSpec { Name = "RightPerson",  Texture = "RightPerson", Distance = 10.00f, LightGain = 1f, AlphaPower = 1.8f },
+            new LayerSpec { Name = "Things",       Texture = "Things",      Distance = 11.00f, LightGain = 1f, AlphaPower = 1.8f, CastShadow = true },
+            new LayerSpec { Name = "LeftPerson",   Texture = "LeftPerson",  Distance = 10.00f, LightGain = 1f, AlphaPower = 1.8f, CastShadow = true },
+            new LayerSpec { Name = "RightPerson",  Texture = "RightPerson", Distance = 10.00f, LightGain = 1f, AlphaPower = 1.8f, CastShadow = true },
             // Shadow.png는 흰 마스크가 아니라 "검정 + 알파" 비네트다 — 모든 레이어 위에 알파 블렌드로 얹으면 곱하기와 같다.
             // 완성본 = 모든 레이어 위에 이 오버레이를 얹은 것(실측 평균 오차 0.0008). 알파 보정은 하지 않는다.
             new LayerSpec { Name = "ShadowOverlay", Texture = "Shadow",     Distance =  9.50f, LightGain = 0f, AlphaPower = 1f },
@@ -215,6 +219,7 @@ namespace BlueComplex.EditorTools
                     material.SetFloat("_AlphaPower", spec.AlphaPower);
                     material.SetFloat("_LightGain", spec.LightGain);
                     material.SetFloat("_SurfaceGlow", spec.SurfaceGlow);
+                    material.SetFloat("_ShadowAlphaCutoff", 0.5f);
                 }
 
                 EditorUtility.SetDirty(material);
@@ -285,8 +290,8 @@ namespace BlueComplex.EditorTools
 
                 var meshRenderer = quad.GetComponent<MeshRenderer>();
                 meshRenderer.sharedMaterial = materials[spec.Name];
-                meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
-                meshRenderer.receiveShadows = false;
+                meshRenderer.shadowCastingMode = spec.CastShadow ? ShadowCastingMode.On : ShadowCastingMode.Off;
+                meshRenderer.receiveShadows = spec.ReceiveShadow;
                 meshRenderer.lightProbeUsage = LightProbeUsage.Off;
                 meshRenderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
                 meshRenderer.sortingOrder = i;
@@ -359,18 +364,44 @@ namespace BlueComplex.EditorTools
                 light.intensity = 2.0f;
                 // 테이블과 인물 상체까지만: 전구 아래 약 4.5유닛(캔버스 ~700px) 이내.
                 light.range = 5.0f;
-                light.shadows = LightShadows.None;
             }
+
+            // 그림자 on/off는 손으로 조정하는 예술적 값이 아니라 이 기능의 구조적 요구사항이라 재사용 시에도 강제한다.
+            light.shadows = LightShadows.Soft;
+            light.shadowStrength = 0.75f;
 
             var driver = go.GetComponent<LampLightDriver>();
             if (driver == null) driver = go.AddComponent<LampLightDriver>();
+
+            var smoke = EnsureSmoke(go.transform, log);
+
             var serialized = new SerializedObject(driver);
             serialized.FindProperty("_light").objectReferenceValue = light;
+            serialized.FindProperty("_smoke").objectReferenceValue = smoke;
             serialized.ApplyModifiedProperties();
 
             log.AppendLine($"  {LampLightName}: {(created ? "생성" : "재사용")} — {light.type}, color #{ColorUtility.ToHtmlStringRGB(light.color)}, " +
-                           $"intensity {light.intensity:0.##}, range {light.range:0.##}, pos {go.transform.position}");
+                           $"intensity {light.intensity:0.##}, range {light.range:0.##}, shadows {light.shadows}, pos {go.transform.position}");
             return driver;
+        }
+
+        /// <summary>램프 소켓에서 새어 나오는 옅은 연기. 파티클 모듈은 <see cref="LampSmokeEmitter"/>가 런타임에 코드로 구성하므로
+        /// 여기서는 오브젝트만 만들고 위치만 잡는다.</summary>
+        private static LampSmokeEmitter EnsureSmoke(Transform lampLight, StringBuilder log)
+        {
+            var (go, created) = FindOrCreateChild(lampLight, SmokeName);
+            if (created)
+            {
+                // 램프 소켓 살짝 위, 카메라 쪽으로 아주 조금 당겨서 램프 아트 바로 앞에 뜨도록.
+                go.transform.localPosition = new Vector3(0f, 0.15f, -0.05f);
+            }
+
+            if (go.GetComponent<ParticleSystem>() == null) go.AddComponent<ParticleSystem>();
+            var smoke = go.GetComponent<LampSmokeEmitter>();
+            if (smoke == null) smoke = go.AddComponent<LampSmokeEmitter>();
+
+            log.AppendLine($"  {SmokeName}: {(created ? "생성" : "재사용")} — 파티클 모듈은 런타임(Awake)에 코드로 구성됨");
+            return smoke;
         }
 
         /// <summary>창문 빛. 좌상단 앞쪽에서 창문 왼쪽 면을 향하는 Spot Light — 왼쪽 벽이 가장 밝고 오른쪽으로 갈수록 옅어진다.</summary>
@@ -395,8 +426,11 @@ namespace BlueComplex.EditorTools
                 light.range = 40f;
                 light.spotAngle = 80f;
                 light.innerSpotAngle = 30f;
-                light.shadows = LightShadows.None;
             }
+
+            // 그림자 on/off는 손으로 조정하는 예술적 값이 아니라 구조적 요구사항이라 재사용 시에도 강제한다.
+            light.shadows = LightShadows.Soft;
+            light.shadowStrength = 0.6f;
 
             log.AppendLine($"  {WindowLightName}: {(created ? "생성" : "재사용")} — {light.type}, color #{ColorUtility.ToHtmlStringRGB(light.color)}, " +
                            $"intensity {light.intensity:0.##}, range {light.range:0.##}, angle {light.spotAngle:0.#}/inner {light.innerSpotAngle:0.#}, " +

@@ -191,7 +191,7 @@ namespace BlueComplex.EditorTools
         }
 
         /// <summary>
-        /// 작은 한 줄짜리 행 4개(ComplexBoard.MaxSlots) — 이름 | 남은 턴 막대 | 남은 턴 숫자. 붙은 컴플렉스만큼만 보이고 나머지 행은 숨는다.
+        /// 작은 한 줄짜리 행 3개(ComplexBoard.DefaultMaxSlots) — 이름 | 남은 턴 막대 | 남은 턴 숫자. 붙은 컴플렉스만큼만 보이고 나머지 행은 숨는다.
         /// 배경 패널 없이 행마다 어두운 반투명 띠만 깐다. 행은 엑스레이 판넬의 목록과 같은 ComplexRowView라 호버/클릭 상세 팝업이 그대로 붙는다
         /// (공유 TooltipPopup은 MainHud 조립 때 UiLayoutCleanupTool이 물린다).
         /// </summary>
@@ -205,7 +205,7 @@ namespace BlueComplex.EditorTools
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
 
-            var rows = new ComplexRowView[ComplexBoard.MaxSlots];
+            var rows = new ComplexRowView[ComplexBoard.DefaultMaxSlots];
             for (var i = 0; i < rows.Length; i++)
             {
                 var rowGo = new GameObject($"Row {i}", typeof(RectTransform));

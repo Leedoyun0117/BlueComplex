@@ -74,6 +74,8 @@ namespace BlueComplex.UI.Motion
         public float xrayReturn = 0.3f;
         [Tooltip("컴플렉스 발동 시 뇌의 해당 부분이 빛나는 시간(올라갔다 내려오는 전체).")]
         public float brainGlow = 0.4f;
+        [Tooltip("컴플렉스 발동 시 초상화가 반응 표정으로 바뀌었다가 무표정으로 돌아오는 전체 시간.")]
+        public float portraitFlash = 0.5f;
 
         [Header("기억 공간 결과 태그")]
         [Tooltip("결과 태그 칩이 풍선 안에 하나씩 나타나는 시간.")]
@@ -88,6 +90,30 @@ namespace BlueComplex.UI.Motion
         public float itemUse = 0.5f;
         [Tooltip("새 카드가 빈 칸에 끼워지는 시간.")]
         public float itemInsert = 0.42f;
+        [Tooltip("대상 선택 모드에서 고를 수 있는 대상의 강조 테두리가 한 번 깜박이는(밝았다 어두워지는) 시간.")]
+        public float targetPulse = 0.7f;
+
+        [Header("포스트잇 (턴마다 떼어졌다 붙는 연출)")]
+        [Tooltip("포스트잇이 떼어지는 시간: 우하단 모서리가 말려 올라가고 → 압정이 빠지며 → 튀었다가 떨어진다.")]
+        public float postitPeel = 0.5f;
+        [Tooltip("압정이 빠지는 시점(떼어지는 시간 중 몇 %). 이만큼 들린 뒤에야 압정이 빠지고 종이가 튄다.")]
+        [Range(0.3f, 0.9f)] public float postitPinPopAt = 0.6f;
+        [Tooltip("새 포스트잇이 위에서 내려와 눌리고 압정이 꽂히기까지 걸리는 시간.")]
+        public float postitStick = 0.55f;
+        [Tooltip("두 포스트잇(컴플렉스 → 대화)이 떼어지고 붙는 시작 시차.")]
+        public float postitStagger = 0.1f;
+        [Tooltip("떼어진 사이에 글자 쓰는 소리가 나며 내용이 새로 쓰이는 시간.")]
+        public float postitWrite = 0.55f;
+
+        [Header("키 턴 연출 (암전 + 나츠 독백)")]
+        [Tooltip("화면이 어두워지거나 다시 밝아지는 시간. 어두워지는 건 포스트잇이 떼어지는 동안, 밝아지는 건 붙는 동안 함께 일어난다.")]
+        public float keyTurnFade = 0.6f;
+        [Tooltip("어두워졌을 때의 화면 어둡기(0 = 그대로, 1 = 완전한 암흑). 뒤의 방이 희미하게 보이는 정도.")]
+        [Range(0f, 1f)] public float keyTurnDim = 0.86f;
+        [Tooltip("독백 한 글자가 나오는 간격.")]
+        public float keyTurnSecondsPerChar = 0.06f;
+        [Tooltip("독백이 다 나온 뒤 화면이 밝아지기 전까지 머무는 시간(클릭하면 건너뛴다).")]
+        public float keyTurnHold = 1.1f;
     }
 
     /// <summary>모션 값 조회. 에셋이 없으면 기본값 인스턴스를 만들어 쓴다.</summary>

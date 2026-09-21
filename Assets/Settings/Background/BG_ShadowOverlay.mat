@@ -32,6 +32,7 @@ Material:
     - _AlphaPower: 1
     - _LightClamp: 0.6
     - _LightGain: 0
+    - _ShadowAlphaCutoff: 0.5
     - _SurfaceGlow: 0
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}

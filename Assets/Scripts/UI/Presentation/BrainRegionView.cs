@@ -10,12 +10,12 @@ using UnityEngine.UI;
 namespace BlueComplex.UI.Presentation
 {
     /// <summary>
-    /// 뇌의 한 영역(세 엽 + 뇌간). 이 컴포넌트가 붙은 Image는 그 영역만 초록으로 칠한 도트 오버레이다 — 평소엔 투명하고, 컴플렉스가 발동하면 빛난다.
+    /// 뇌의 한 영역(세 엽 중 하나). 이 컴포넌트가 붙은 Image는 그 영역만 초록으로 칠한 도트 오버레이다 — 평소엔 투명하고, 컴플렉스가 발동하면 빛난다.
     /// 영역 모양의 픽셀 알파로 호버를 판정하므로(alphaHitTestMinimumThreshold) 영역 밖은 뒤의 판넬 드래그를 막지 않는다.
     /// 컴플렉스가 할당된 영역만 이름 + 남은 턴 글자가 뜨고, 비어 있는 영역은 아무것도 안 보이며 입력도 안 받는다.
     /// 마우스를 0.25초 올리면(또는 클릭하면 바로) 컴플렉스 상세 팝업이 뜬다(ComplexRowView와 같은 규칙).
     /// </summary>
-    public sealed class BrainRegionView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
+    public sealed class BrainRegionView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler, ITargetHighlight
     {
         private const float HoverDelay = 0.25f;
         private const float HoverAlpha = 0.28f;
@@ -31,6 +31,8 @@ namespace BlueComplex.UI.Presentation
         private Coroutine _hoverRoutine;
         private Tween _glowTween;
         private Tween _labelTween;
+        private Tween _targetTween;
+        private bool _targetable;
 
         public ComplexInstance Complex { get; private set; }
 
@@ -46,6 +48,24 @@ namespace BlueComplex.UI.Presentation
             _lit.raycastTarget = false;
         }
 
+        /// <summary>아이템 대상 선택 모드에서 고를 수 있는 영역이면 도트 오버레이가 깜박인다(발광·호버 색과 같은 채널을 잠깐 빌린다).</summary>
+        public void SetTargetable(bool on)
+        {
+            _targetTween?.Kill();
+            _targetTween = null;
+            _targetable = on && Complex != null;
+
+            if (!_targetable)
+            {
+                if (_glowTween == null || !_glowTween.IsActive()) _lit.color = _hovered ? Hover : Rest;
+                return;
+            }
+
+            _lit.color = new Color(1f, 1f, 1f, 0.12f);
+            _targetTween = _lit.DOFade(0.55f, Mathf.Max(0.05f, UiMotion.Settings.targetPulse * 0.5f))
+                .SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine).SetUpdate(true).SetTarget(this);
+        }
+
         /// <summary>이 영역에 컴플렉스를 할당한다(null이면 비운다). 남은 턴이 바뀌면 다시 불러 글자를 갱신한다.</summary>
         public void Assign(ComplexInstance complex)
         {
@@ -54,6 +74,7 @@ namespace BlueComplex.UI.Presentation
 
             if (complex == null)
             {
+                if (_targetable) SetTargetable(false);
                 HideTooltip();
                 _label.text = string.Empty;
                 _glowTween?.Kill();
@@ -69,6 +90,7 @@ namespace BlueComplex.UI.Presentation
         {
             _glowTween?.Kill();
             _labelTween?.Kill();
+            _targetTween?.Kill();
 
             var half = UiMotion.Settings.brainGlow * 0.5f;
             _glowTween = DOTween.Sequence().SetUpdate(true).SetTarget(this)
@@ -87,14 +109,14 @@ namespace BlueComplex.UI.Presentation
             if (Complex == null) return;
 
             _hovered = true;
-            if (_glowTween == null || !_glowTween.IsActive()) _lit.DOColor(Hover, 0.12f).SetUpdate(true).SetTarget(this);
+            if (!_targetable && (_glowTween == null || !_glowTween.IsActive())) _lit.DOColor(Hover, 0.12f).SetUpdate(true).SetTarget(this);
             _hoverRoutine = StartCoroutine(HoverThenShow());
         }
 
         public void OnPointerExit(PointerEventData eventData)
         {
             _hovered = false;
-            if (_glowTween == null || !_glowTween.IsActive()) _lit.DOColor(Rest, 0.12f).SetUpdate(true).SetTarget(this);
+            if (!_targetable && (_glowTween == null || !_glowTween.IsActive())) _lit.DOColor(Rest, 0.12f).SetUpdate(true).SetTarget(this);
             HideTooltip();
         }
 
@@ -103,6 +125,9 @@ namespace BlueComplex.UI.Presentation
         {
             if (Complex == null) return;
 
+            // 아이템 대상 선택 중이면 클릭은 대상 선택이다(상세 팝업을 띄우지 않는다).
+            if (ItemTargetSelector.TryPick(Complex)) return;
+
             StopHoverRoutine();
             ShowTooltip();
         }
@@ -110,6 +135,7 @@ namespace BlueComplex.UI.Presentation
         private void OnDisable()
         {
             DOTween.Kill(this);
+            _targetable = false;
             _hovered = false;
             _lit.color = Rest;
             HideTooltip();

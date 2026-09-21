@@ -42,6 +42,9 @@ namespace BlueComplex.Core.Clues
             return true;
         }
 
+        /// <summary>풀에 남은 단서가 있는지(아이템 '선택적 기억'이 새 단서를 뽑을 수 있는지).</summary>
+        public bool HasAny => _available.Count > 0;
+
         /// <summary>손패에서 풀로 되돌린다. (아이템 '회상')</summary>
         public void Return(ClueDefinition definition) => _available.Add(definition);
     }
@@ -81,6 +84,29 @@ namespace BlueComplex.Core.Clues
             if (!_cards.Remove(card))
                 throw new InvalidOperationException($"{card.Definition.Id} 는 손패에 없습니다.");
             CardDestroyed?.Invoke(card);
+        }
+
+        /// <summary>풀에 바꿔 올 단서가 남아 있는가.</summary>
+        public bool CanReplaceOne => _pool.HasAny;
+
+        /// <summary>
+        /// 아이템 '선택적 기억' — 고른 단서를 풀에서 뽑은 랜덤 단서로 같은 자리에서 바꾼다. 새 단서를 먼저 뽑고 그 뒤에 고른 단서를 풀에 돌려놓으므로
+        /// 방금 고른 단서가 바로 다시 나오지는 않는다. 풀이 비어 있으면 아무것도 바꾸지 않고 false.
+        /// </summary>
+        public bool TryReplaceRandom(ClueInstance card, out ClueInstance replacement)
+        {
+            replacement = null;
+            var index = _cards.IndexOf(card);
+            if (index < 0) throw new InvalidOperationException($"{card.Definition.Id} 는 손패에 없습니다.");
+            if (!_pool.TryDraw(out var definition)) return false;
+
+            _pool.Return(card.Definition);
+            replacement = new ClueInstance(definition);
+            _cards[index] = replacement;
+
+            CardDestroyed?.Invoke(card);
+            CardAdded?.Invoke(replacement);
+            return true;
         }
 
         /// <summary>아이템 '회상' — 손패 전부를 풀에 돌려놓고 다시 뽑는다.</summary>

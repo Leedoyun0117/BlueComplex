@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using BlueComplex.Core.Complexes;
 using BlueComplex.UI.Layout;
 using BlueComplex.UI.Presentation;
 using TMPro;
@@ -273,16 +274,20 @@ namespace BlueComplex.EditorTools
         private static readonly Color XrayCyan = new Color32(120, 226, 236, 255);
         private static readonly Color BrainLabelInk = new Color32(74, 22, 36, 255);
 
-        /// <summary>도트 뇌 영역(0 위쪽 띠, 1 아래 왼쪽, 2 오른쪽 큰 엽, 3 뇌간)의 글자 중심(뇌 이미지 대비 0~1, 원점 왼쪽 아래). 아트에서 영역 마스크의 중심을 잰 값이다.</summary>
+        /// <summary>도트 뇌 영역(0 위쪽 띠, 1 아래 왼쪽, 2 오른쪽 큰 엽)의 글자 중심(뇌 이미지 대비 0~1, 원점 왼쪽 아래). 아트에서 영역 마스크의 중심을 잰 값이다.
+        /// 영역 수는 컴플렉스 최대 중첩(<see cref="ComplexBoard.DefaultMaxSlots"/>)과 같다 — 뇌의 세 부분과 슬롯은 1:1이다.</summary>
         private static readonly Vector2[] BrainLabelCenters =
         {
-            new Vector2(0.31f, 0.73f), new Vector2(0.29f, 0.38f), new Vector2(0.72f, 0.51f), new Vector2(0.77f, -0.075f),
+            new Vector2(0.31f, 0.73f), new Vector2(0.29f, 0.38f), new Vector2(0.72f, 0.51f),
         };
+
+        /// <summary>초상화 원본(yuki_neutral.png/yuki_reactive.png) 크기 163×201의 가로세로 비 — 둘이 같은 크기로 잘라 둬서 표정이 바뀌어도 틀 안에서 안 흔들린다.</summary>
+        private const float PortraitAspect = 163f / 201f;
 
         /// <summary>
         /// 엑스레이 판넬 = 관절 팔에 매달린 금속 틀의 판넬. 루트는 접힌 위치부터 펼친 위치까지를 덮는 투명 컨테이너이고(그래픽 없음),
         /// 안에 어깨 받침대 · 관절 팔(선분 두 개 + 관절 원 세 개) · 접힌 상태 손잡이 안내표 · 판넬(틀 + 유리 + 뇌)이 들어간다.
-        /// 뇌는 기획서의 도트 아트(Assets/Art/UI/Brain) 위에 영역별 오버레이 세 엽 + 뇌간을 얹고, 영역마다 컴플렉스 이름·남은 턴 글자를 단다.
+        /// 뇌는 기획서의 도트 아트(Assets/Art/UI/Brain) 위에 영역별 오버레이 세 엽을 얹고, 영역마다 컴플렉스 이름·남은 턴 글자를 단다.
         /// 위치·크기는 런타임에 ComplexXrayPanel이 접힘/펼침에 맞춰 놓는다 — 여기서는 구조와 참조만 만든다(멱등).
         /// 예전 목록형(Background + ComplexList 행 4개)은 걷어낸다.
         /// </summary>
@@ -351,9 +356,30 @@ namespace BlueComplex.EditorTools
             EnsureText(foldButtonImage.transform, "Label", "접기", font, 18f, XrayCyan, TextAlignmentOptions.Center,
                 Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, FontStyles.Bold);
 
+            // 초상화: "엑스레이" 타이틀 밑, 뇌 위에 유키의 얼굴을 작은 사진처럼 붙인다 — 판정에 관여하지 않는 장식이다.
+            // 컴플렉스가 발동해 뇌가 빛날 때마다 CinematicTurnResultPresenter가 PortraitXrayView.Flash()를 불러 잠깐 반응 표정으로 바뀐다.
+            // 뇌 영역(BrainArea)이 이 자리만큼 위에서 시작 지점을 내준다(0.88 → 0.70) — 나머지 배치는 그대로다.
+            var portraitSlot = EnsureImage(content, "PortraitSlot", XrayGlass, new Vector2(0.05f, 0.72f), new Vector2(0.32f, 0.885f));
+            MockupStyle.AddPaperEdge(portraitSlot.gameObject, shadow: false);
+
+            var portraitArea = Ensure(portraitSlot.transform, "PortraitArea");
+            SetRect(portraitArea, new Vector2(0.08f, 0.06f), new Vector2(0.92f, 0.94f), Vector2.zero, Vector2.zero);
+            var portraitFitter = GetOrAdd<AspectRatioFitter>(portraitArea.gameObject);
+            portraitFitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            portraitFitter.aspectRatio = PortraitAspect;
+
+            var portraitImage = GetOrAdd<Image>(portraitArea.gameObject);
+            portraitImage.preserveAspect = true;
+
+            var portraitView = GetOrAdd<PortraitXrayView>(portraitSlot.gameObject);
+            SetRef(portraitView, "_image", portraitImage);
+            SetRef(portraitView, "_neutral", LoadPortraitSprite("yuki_neutral.png"));
+            SetRef(portraitView, "_reactive", LoadPortraitSprite("yuki_reactive.png"));
+            SetRef(panel, "_portrait", portraitView);
+
             // 뇌: 영역이 정확히 겹치도록 비율(63:54)을 고정한 판 안에 기본 아트와 오버레이를 같은 크기로 쌓는다.
             var area = Ensure(content, "BrainArea");
-            SetRect(area, new Vector2(0.05f, 0.14f), new Vector2(0.95f, 0.88f), Vector2.zero, Vector2.zero);
+            SetRect(area, new Vector2(0.05f, 0.14f), new Vector2(0.95f, 0.70f), Vector2.zero, Vector2.zero);
             var brainRect = Ensure(area, "Brain");
             SetRect(brainRect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var fitter = GetOrAdd<AspectRatioFitter>(brainRect.gameObject);
@@ -365,6 +391,14 @@ namespace BlueComplex.EditorTools
 
             var regions = new BrainRegionView[BrainLabelCenters.Length];
             var labelsRoot = Ensure(brainRect, "Labels");
+
+            // 예전에 네 번째 영역(뇌간)이 있던 프리팹이면 그 오버레이와 글자를 걷어낸다(최대 중첩 4 → 3).
+            for (var stale = regions.Length; stale < regions.Length + 4; stale++)
+            {
+                Remove(brainRect, $"Lobe {stale}");
+                Remove(labelsRoot, $"Label {stale}");
+            }
+
             SetRect(labelsRoot, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             for (var i = 0; i < regions.Length; i++)
             {
@@ -373,7 +407,7 @@ namespace BlueComplex.EditorTools
                 lit.transform.SetSiblingIndex(1 + i); // 기본 아트 위, 글자 밑.
 
                 var center = BrainLabelCenters[i];
-                var label = EnsureText(labelsRoot, $"Label {i}", string.Empty, font, i == 3 ? 16f : 19f, i == 3 ? XrayCyan : BrainLabelInk,
+                var label = EnsureText(labelsRoot, $"Label {i}", string.Empty, font, 19f, BrainLabelInk,
                     TextAlignmentOptions.Center, center - new Vector2(0.21f, 0.09f), center + new Vector2(0.21f, 0.09f), Vector2.zero, Vector2.zero,
                     FontStyles.Bold);
                 label.textWrappingMode = TextWrappingModes.Normal;
@@ -408,15 +442,21 @@ namespace BlueComplex.EditorTools
             tablet.SetSiblingIndex(3);
         }
 
-        private static Sprite LoadBrainSprite(string fileName)
+        private static Sprite LoadBrainSprite(string fileName) => LoadArtSprite(BrainArtImporter.Folder, fileName);
+
+        private static Sprite LoadPortraitSprite(string fileName) => LoadArtSprite(PortraitArtImporter.Folder, fileName);
+
+        private static Sprite LoadArtSprite(string folder, string fileName)
         {
-            var path = BrainArtImporter.Folder + fileName;
+            var path = folder + fileName;
             var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
             if (sprite != null) return sprite;
 
-            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            // 정말 처음 임포트되는 에셋(예: 방금 추가한 초상화)은 V2 임포트 파이프라인이 비동기로 처리해서, ForceUpdate만으로는
+            // 바로 다음 줄의 LoadAssetAtPath가 아직 못 찾을 수 있다 — ForceSynchronousImport로 끝날 때까지 기다린다.
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
             sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
-            if (sprite == null) Debug.LogWarning($"[UiLayoutCleanupTool] 뇌 아트를 스프라이트로 못 읽었다: {path}");
+            if (sprite == null) Debug.LogWarning($"[UiLayoutCleanupTool] 아트를 스프라이트로 못 읽었다: {path}");
             return sprite;
         }
 
@@ -437,6 +477,22 @@ namespace BlueComplex.EditorTools
             rect.anchorMin = new Vector2(0f, 1f);
             rect.anchorMax = new Vector2(0f, 1f);
             rect.pivot = pivot;
+        }
+
+        /// <summary>컴플렉스 최대 중첩이 4에서 3으로 줄었으므로 상태 목록의 남는 행을 걷어내고 목록의 행 배열을 다시 잇는다(이미 맞으면 아무것도 안 한다).</summary>
+        private static void TrimStatusRows(GameObject root, int maxRows)
+        {
+            var rows = root.GetComponentsInChildren<ComplexRowView>(true);
+            if (rows.Length <= maxRows) return;
+
+            var kept = new ComplexRowView[maxRows];
+            for (var i = 0; i < rows.Length; i++)
+            {
+                if (i < maxRows) kept[i] = rows[i];
+                else Object.DestroyImmediate(rows[i].gameObject);
+            }
+
+            SetRefs(root.GetComponent<ComplexListView>(), "_rows", kept);
         }
 
         /// <summary>
@@ -463,6 +519,8 @@ namespace BlueComplex.EditorTools
             var title = EnsureText(root.transform, "Title", "컴플렉스", font, 26f, MockupStyle.Ink, TextAlignmentOptions.MidlineLeft,
                 new Vector2(0f, 1f), Vector2.one, new Vector2(16f, -52f), new Vector2(-16f, -10f), FontStyles.Bold);
             GetOrAdd<LayoutElement>(title.gameObject).ignoreLayout = true;
+
+            TrimStatusRows(root, ComplexBoard.DefaultMaxSlots);
 
             foreach (var row in root.GetComponentsInChildren<ComplexRowView>(true))
             {

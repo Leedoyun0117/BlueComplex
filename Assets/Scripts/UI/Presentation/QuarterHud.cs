@@ -24,9 +24,10 @@ namespace BlueComplex.UI.Presentation
         private static readonly (Vector2 Min, Vector2 Max) KeyWindowAnchors =
             (new Vector2(0.61f, 0.288f), new Vector2(0.85f, 0.438f));
 
-        // 쿼터 진행 포스트잇: 목업 표(L 0.57, T 0.13, W 0.08, H 0.12)에서 T만 0.14로 — 심박수 모니터(아래 끝 0.135) 밑에 겹치지 않게.
+        // 쿼터 진행(대화) 포스트잇: 목업 표(L 0.57, T 0.13, W 0.08, H 0.12)에서 T만 0.115로 — 심박수 모니터(아래 끝 0.135)의 하단 모서리에 걸쳐 붙는다
+        // (압정이 모니터 케이스 위, 종이 윗부분이 케이스 하단 여백을 덮는다. 모니터 화면·BPM 글자는 안 가린다).
         private static readonly (Vector2 Min, Vector2 Max) ProgressWindowAnchors =
-            (new Vector2(0.57f, 0.74f), new Vector2(0.65f, 0.86f));
+            (new Vector2(0.57f, 0.765f), new Vector2(0.65f, 0.885f));
 
         private Transform _canvasRoot;
         private StageSession _session;
@@ -45,6 +46,9 @@ namespace BlueComplex.UI.Presentation
         private int _turnInQuarter;
 
         public bool IsOverviewOpen => _overview != null && _overview.IsOpen;
+
+        /// <summary>대화 포스트잇(쿼터 진행 창)의 포스트잇 컴포넌트. 턴이 넘어갈 때 떼었다 붙이는 건 <see cref="PostitDirector"/>가 한다.</summary>
+        public Postit ProgressPostit => _progressPanel != null ? _progressPanel.Postit : null;
 
         public static QuarterHud GetOrCreate(Transform canvasRoot)
         {

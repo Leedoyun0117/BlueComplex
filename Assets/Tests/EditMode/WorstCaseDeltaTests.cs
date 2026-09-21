@@ -38,7 +38,7 @@ namespace BlueComplex.Core.Tests
             var worst = int.MaxValue;
             foreach (var attached in OrderedAttachments(pool, maxSlots))
             {
-                var board = new ComplexBoard();
+                var board = new ComplexBoard(maxSlots);
                 for (var i = 0; i < attached.Count; i++)
                     board.TryAttach(new ComplexInstance(attached[i], priority: i));
 
@@ -58,8 +58,8 @@ namespace BlueComplex.Core.Tests
             foreach (var clue in PrototypeContent.Clues())
             {
                 Assert.AreEqual(
-                    BruteForceWorst(clue, pool, evaluator, ComplexBoard.MaxSlots),
-                    StageFactory.WorstCaseDelta(clue, pool, evaluator, ComplexBoard.MaxSlots),
+                    BruteForceWorst(clue, pool, evaluator, ComplexBoard.DefaultMaxSlots),
+                    StageFactory.WorstCaseDelta(clue, pool, evaluator, ComplexBoard.DefaultMaxSlots),
                     $"{clue.DisplayName}: 최악 이동량이 전수 조사와 다르다.");
             }
         }
@@ -71,7 +71,7 @@ namespace BlueComplex.Core.Tests
             var clue = PrototypeContent.Clues().First(c => c.DisplayName == "개학 날짜 달력");
 
             Assert.AreEqual(evaluator.Evaluate(clue.CreateOriginalTagSet()),
-                StageFactory.WorstCaseDelta(clue, new ComplexDefinition[0], evaluator, ComplexBoard.MaxSlots));
+                StageFactory.WorstCaseDelta(clue, new ComplexDefinition[0], evaluator, ComplexBoard.DefaultMaxSlots));
         }
 
         [Test]
@@ -79,7 +79,7 @@ namespace BlueComplex.Core.Tests
         {
             // 도달 모델은 카드 한 장의 상승량을 DefaultMaxMovePerTurn 으로 자른다.
             // 상승 쪽은 컴플렉스를 뺀 원본 이동량을 쓰므로, 한도에 걸리는 카드가 없어야 카드 풀이 있는 그대로 반영된다.
-            // (하강 쪽은 컴플렉스 4개가 최악으로 겹치면 한도를 넘는 카드가 있다 — 가족사진 액자 -40. 튜닝 값이라 여기서 단언하지 않는다.)
+            // (하강 쪽은 컴플렉스가 최악으로 겹치면 한도를 넘는 카드가 있을 수 있다 — 튜닝 값이라 여기서 단언하지 않는다.)
             var evaluator = new EmotionEvaluator(new DefaultEmotionPolarityTable());
 
             foreach (var clue in PrototypeContent.Clues())

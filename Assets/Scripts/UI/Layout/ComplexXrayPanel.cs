@@ -56,6 +56,7 @@ namespace BlueComplex.UI.Layout
         [SerializeField] private CanvasGroup _handleGroup;
         [SerializeField] private Button _foldButton;
         [SerializeField] private BrainView _brain;
+        [SerializeField] private PortraitXrayView _portrait;
         [SerializeField] private ClueCardTray _clueTray;
 
         private RectTransform _rect;
@@ -87,6 +88,8 @@ namespace BlueComplex.UI.Layout
             if (_tablet == null) _tablet = (RectTransform)transform.Find("Tablet");
             if (_arm == null) _arm = GetComponentInChildren<XrayArm>(true);
             if (_brain == null) _brain = GetComponentInChildren<BrainView>(true);
+            // 초상화는 순수 장식이라 없어도 판넬은 정상 동작한다 — 못 찾아도 경고하지 않는다.
+            if (_portrait == null) _portrait = GetComponentInChildren<PortraitXrayView>(true);
 
             // 참조가 끊겼으면(프리팹의 스크립트 GUID가 어긋난 경우 등) 판넬이 프리팹 기본 자세(크게 펼쳐진 뇌)로 화면을 덮는다 — 그 전에 큰 소리로 알리고 뇌 내용만이라도 숨긴다.
             if (_contentGroup != null) _contentGroup.alpha = 0f;
@@ -142,6 +145,9 @@ namespace BlueComplex.UI.Layout
         {
             if (IsOpen) return null;
             IsOpen = true;
+
+            // 초상화는 열릴 때마다 무표정으로 되돌린다 — 지난 반응 표정이 이번 판에 남아 있지 않게(연출 유무와 무관).
+            _portrait?.ResetToNeutral();
 
             // 턴 연출 밖에서 그냥 열릴 때만 코어 상태로 뇌를 채운다 — 연출 중에는 Presenter가 자기 타이밍에 Refresh한다(결과를 앞질러 보여 주지 않게).
             if (!IsTurnPresenting && _brain != null) _brain.SyncFromSession();

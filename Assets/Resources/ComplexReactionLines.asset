@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45810c43d7b4449a925d626775105968, type: 3}
+  m_Name: ComplexReactionLines
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.ComplexReactionLines
+  _entries:
+  - complexId: complex_good_child
+    label: 착한 아이
+    lines:
+    - '이렇게 행복했던 건, 내가 착했기 때문이야.'
+  - complexId: complex_anti_past
+    label: 반 과거
+    lines:
+    - '다 지나간 일이야. 별로 기억하고 싶지 않다고.'
+  - complexId: complex_childhood_friend
+    label: 소꿉친구
+    lines:
+    - '.. 어릴 적을 추억하는 행동은 모두가 하지 않을까?'
+  - complexId: complex_othering
+    label: 타자화
+    lines:
+    - '사실 그 사람과는 별 관계가 아니었어.'
+  - complexId: complex_optimism
+    label: 낙관
+    lines:
+    - '…다 괜찮아.'
+  - complexId: complex_rumination
+    label: 되새김
+    lines:
+    - '계속 떠올라. 이제 그만하고 싶은데..'
+  - complexId: complex_guilt
+    label: 죄책감
+    lines:
+    - '가슴 한 곳이 빈 것 같아. 차라리 내가 없어지면, 다 해결되지 않을까?'
+  - complexId: complex_dependence
+    label: 의존
+    lines:
+    - '아무렇지도 않아. 정말로. 하지만, 딱 한번만 볼 수 있으면..'
+  - complexId: complex_avoidance
+    label: 회피
+    lines:
+    - '아니야. 나랑은 관련 없을거야. 제발 그래야만 해.'
+  - complexId: complex_stockholm
+    label: 스톡홀름
+    lines:
+    - '조금 무서웠지만 내 마음 속에 계속 남아있는 건, 좋은 감정이 아닐까?'
