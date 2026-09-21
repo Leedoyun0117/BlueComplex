@@ -1,6 +1,7 @@
 using System.Linq;
 using BlueComplex.Core.Stage;
 using BlueComplex.Core.Turn;
+using BlueComplex.UI.Background;
 using BlueComplex.UI.Layout;
 using UnityEngine;
 
@@ -19,6 +20,9 @@ namespace BlueComplex.UI.Presentation
         [SerializeField] private ClueCardTray _clueTray;
         [SerializeField] private HeartRateController _heartRate;
         [SerializeField] private MemorySpaceBubble _memoryBubble;
+        [SerializeField] private ComplexStatusController _complexStatus;
+        [SerializeField] private TraitStatusView _traitStatus;
+        [SerializeField] private ClockController _clock;
 
         /// <summary>즉시 끝나므로 연출 재생 중인 프레임이 없다 — 입력을 잠글 이유가 없다.</summary>
         public bool IsPresenting => false;
@@ -31,6 +35,10 @@ namespace BlueComplex.UI.Presentation
             // 있으니 같은 MainHud 아래에서 찾는다. _memoryBubble(최종 감정 고정 표시)도 같은 이유로 셀프힐한다.
             if (_heartRate == null) _heartRate = transform.root.GetComponentInChildren<HeartRateController>(true);
             if (_memoryBubble == null) _memoryBubble = transform.root.GetComponentInChildren<MemorySpaceBubble>(true);
+            if (_complexStatus == null) _complexStatus = transform.root.GetComponentInChildren<ComplexStatusController>(true);
+            if (_traitStatus == null) _traitStatus = transform.root.GetComponentInChildren<TraitStatusView>(true);
+            // 벽시계는 HUD가 아니라 3D 배경 리그에 있어 root 아래에서 못 찾는다.
+            if (_clock == null) _clock = FindFirstObjectByType<ClockController>(FindObjectsInactive.Include);
             base.Awake();
         }
 
@@ -45,9 +53,13 @@ namespace BlueComplex.UI.Presentation
         public void Present(TurnReport report)
         {
             _complexList.Refresh(Session.Complexes.InPriorityOrder().ToList());
+            _complexStatus?.Refresh();
+            _traitStatus?.Refresh();
             _dialogue.PlayTyped(TurnSummaryFormatter.Build(report));
             _heartRate?.PlayTurnResult(report);
-            _memoryBubble?.SetPersistentSummary(TurnSummaryFormatter.BuildFinalEmotionSummary(report));
+            if (_clock != null) _clock.AdvanceTo(report.Turn, animate: false);
+            if (!report.IsPass)
+                _memoryBubble?.SetPersistentSummary(TurnSummaryFormatter.BuildFinalEmotionSummary(report));
             _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger, Session.Censorship.Level);
         }
     }

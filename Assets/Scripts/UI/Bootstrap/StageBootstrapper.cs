@@ -3,6 +3,7 @@ using BlueComplex.Core.Clues;
 using BlueComplex.Core.Stage;
 using BlueComplex.Core.Tags;
 using BlueComplex.Core.Turn;
+using BlueComplex.UI.Background;
 using BlueComplex.UI.Debugging;
 using BlueComplex.UI.Presentation;
 using UnityEngine;
@@ -18,6 +19,7 @@ namespace BlueComplex.UI.Bootstrap
     public sealed class StageBootstrapper : MonoBehaviour
     {
         [SerializeField] private CrtEffectDriver _crtEffectDriver;
+        [SerializeField] private LampLightDriver _lampLightDriver;
 
         [Header("디버그 입력")]
         [Tooltip("숫자키 1~4로 해당 인덱스의 손패 카드를 즉시 낸다.")]
@@ -30,7 +32,14 @@ namespace BlueComplex.UI.Bootstrap
         [SerializeField] private int _seed = 20260916;
 
         public StageSession Session { get; private set; }
+
+        /// <summary>지금 돌고 있는 스테이지의 저작 설정 — 스테이지 이름 표시 같은 UI가 읽는다. 세션이 바뀌면 함께 바뀐다.</summary>
+        public StageConfig Config { get; private set; }
         public int CurrentSeed { get; private set; }
+
+        /// <summary>전체 화면 오버레이 같은 UI가 게임 입력을 잠글 때 켠다 — 그동안 디버그 숫자키가 카드를 내지 않는다.
+        /// (마우스 입력은 오버레이가 레이캐스트로 막는다.)</summary>
+        public bool InputBlocked { get; set; }
 
         /// <summary>새 StageSession이 만들어질 때마다(최초 시작 포함) 알린다. Ledger는 세션 간에 계속 유지된다.</summary>
         public event Action<StageSession> SessionStarted;
@@ -54,7 +63,7 @@ namespace BlueComplex.UI.Bootstrap
 
         private void Update()
         {
-            if (!_enableKeyboardInput || Session == null || Keyboard.current == null) return;
+            if (!_enableKeyboardInput || InputBlocked || Session == null || Keyboard.current == null) return;
 
             if (Keyboard.current.digit1Key.wasPressedThisFrame) PlayCardAtIndex(0);
             else if (Keyboard.current.digit2Key.wasPressedThisFrame) PlayCardAtIndex(1);
@@ -92,11 +101,15 @@ namespace BlueComplex.UI.Bootstrap
             var config = PrototypeContent.PrototypeStage(_polarityTable);
             var random = new SystemRandomSource(seed);
 
+            Config = config;
             Session = StageFactory.Create(config, random, _ledger, _polarityTable);
             _logger = new StageTurnLogger(Session);
 
             if (_crtEffectDriver != null)
                 _crtEffectDriver.Bind(Session.Heartbeat);
+
+            if (_lampLightDriver != null)
+                _lampLightDriver.Bind(Session.Heartbeat);
 
             // StartStage()가 첫 TurnBegan을 곧바로 쏘아 올리므로, 구독자는 그 전에 새 세션을 받아야 한다.
             SessionStarted?.Invoke(Session);

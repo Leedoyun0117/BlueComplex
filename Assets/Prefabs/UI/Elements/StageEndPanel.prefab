@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 8846317916804911700}
   - component: {fileID: 9039071810175316393}
   - component: {fileID: 4744757331277070330}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Label
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -148,7 +148,7 @@ GameObject:
   - component: {fileID: 9067508561338857321}
   - component: {fileID: 2224170196407269026}
   - component: {fileID: 2581627417810252377}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Overlay
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -198,7 +198,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.039215688, g: 0.039215688, b: 0.05882353, a: 0.8627451}
+  m_Color: {r: 0.023529412, g: 0.03137255, b: 0.05490196, a: 0.54901963}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -226,7 +226,7 @@ GameObject:
   - component: {fileID: 1165505619834577545}
   - component: {fileID: 5597417672184469912}
   - component: {fileID: 2304959255453259559}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: OutcomeText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -364,7 +364,7 @@ GameObject:
   - component: {fileID: 943434143532330636}
   - component: {fileID: 6114575554092924215}
   - component: {fileID: 6798436261002996939}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: RestartSameSeed
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -485,7 +485,7 @@ GameObject:
   - component: {fileID: 4067790281921633026}
   - component: {fileID: 4143313629758443733}
   - component: {fileID: 7138979054210341195}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: RestartNewSeed
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -605,7 +605,7 @@ GameObject:
   - component: {fileID: 8120135977489629135}
   - component: {fileID: 5991432851659035243}
   - component: {fileID: 3917915270121514797}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Label
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -741,7 +741,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8274147924899732832}
   - component: {fileID: 8060695546527385466}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: StageEndPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}

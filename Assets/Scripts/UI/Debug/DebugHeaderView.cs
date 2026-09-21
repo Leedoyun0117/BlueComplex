@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace BlueComplex.UI.DebugPlay
 {
-    /// <summary>상단 HUD: 심박수/상태, 검열 수준, 턴 진행도, 키 진행도.</summary>
+    /// <summary>상단 HUD: 심박수/상태, 검열 수준, 쿼터·턴 진행도, 키 진행도.</summary>
     internal sealed class DebugHeaderView : DebugSessionView
     {
         private Text _heartbeatText;
@@ -53,7 +53,9 @@ namespace BlueComplex.UI.DebugPlay
 
             _censorshipText.text = $"검열: {DebugKoreanLabels.Censorship(Session.Censorship.Level)}";
 
-            _turnText.text = $"턴: {Session.Runner.CurrentTurn} / {Session.Runner.TotalTurns}";
+            var runner = Session.Runner;
+            _turnText.text = $"{runner.CurrentQuarter}쿼터 · {runner.CurrentTurnInQuarter}/{runner.Schedule.TurnsPerQuarter}턴 " +
+                             $"(전체 {runner.CurrentTurn}/{runner.TotalTurns})";
 
             _keyText.text = $"키: {Session.Keys.Collected} / {Session.Keys.Required}";
         }

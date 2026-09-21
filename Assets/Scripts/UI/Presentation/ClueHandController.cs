@@ -34,7 +34,18 @@ namespace BlueComplex.UI.Presentation
             _tray.RefreshAll(Session.Hand.Cards, Session.Ledger, Session.Censorship.Level);
         }
 
-        private void OnHandChanged(ClueInstance card) => Render();
+        private ITurnResultPresenter _presenter;
+
+        private void OnHandChanged(ClueInstance card)
+        {
+            // 낸 카드가 사라지고 쿼터가 시작될 때 새 카드가 채워지는 변화는 모두 턴 해석 도중에 발생한다.
+            // 연출이 재생 중이면 그 타이밍은 Presenter가 쥔다 — 연출이 끝날 때 손패 전체를 다시 그린다.
+            _presenter ??= transform.root.GetComponentInChildren<ITurnResultPresenter>(true);
+            if (_presenter != null && _presenter.IsPresenting) return;
+
+            Render();
+        }
+
         private void OnCensorshipChanged(CensorshipLevel level) => Render();
     }
 }

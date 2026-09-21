@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 7623123983228906646}
   - component: {fileID: 4852947908774876519}
   - component: {fileID: 559449685432465140}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Bubble
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -58,8 +58,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.5882353, g: 0.74509805, b: 0.9019608, a: 0.7019608}
-  m_RaycastTarget: 1
+  m_Color: {r: 1, g: 1, b: 1, a: 0.55}
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -87,7 +87,7 @@ GameObject:
   - component: {fileID: 2755179704060280606}
   - component: {fileID: 2979083148833949297}
   - component: {fileID: 5623787093121870400}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: DropZone
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -175,7 +175,7 @@ GameObject:
   - component: {fileID: 8244678823004402522}
   - component: {fileID: 8752813631589724348}
   - component: {fileID: 398780057499022737}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: PersistentSummary
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -196,8 +196,8 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 2310854478544712658}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.04, y: 0}
-  m_AnchorMax: {x: 0.96, y: 0.28}
+  m_AnchorMin: {x: 0.24, y: 0.12}
+  m_AnchorMax: {x: 0.8, y: 0.3}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -256,8 +256,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 16
-  m_fontSizeBase: 16
+  m_fontSize: 18
+  m_fontSizeBase: 18
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -311,7 +311,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2310854478544712658}
   - component: {fileID: 4389391422694783233}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: MemorySpaceBubble
   m_TagString: Untagged
   m_Icon: {fileID: 0}

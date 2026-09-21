@@ -9,7 +9,8 @@ using UnityEngine.UI;
 namespace BlueComplex.UI.DebugPlay
 {
     /// <summary>
-    /// 키 구역 표시: 스테이지 시작 시 확정된 4개 구역을 전부 나열하고, 현재 턴 구역을 강조한다.
+    /// 키 구역 표시: 스테이지 시작 시 확정된 쿼터별 구역을 전부 나열하고, 현재 쿼터 구역을 강조한다.
+    /// 판정은 각 쿼터의 마지막 턴 종료 시점에만 일어난다(성공 ✓ / 실패 ✗).
     /// 심박수 0~200 스케일 바 위에 구역과 현재 심박 위치를 겹쳐 그린다.
     /// </summary>
     internal sealed class DebugKeyZoneView : DebugSessionView
@@ -65,14 +66,18 @@ namespace BlueComplex.UI.DebugPlay
             _indicator.anchorMin = new Vector2(fraction, 0f);
             _indicator.anchorMax = new Vector2(fraction, 1f);
 
-            var currentTurn = Session.Runner.CurrentTurn;
+            var currentQuarter = Session.Runner.CurrentQuarter;
+            var schedule = Session.Keys.Schedule;
             var lines = Session.Keys.KeyTurns.OrderBy(t => t)
                 .Select(turn =>
                 {
+                    var quarter = schedule.QuarterOf(turn);
+                    var result = Session.Keys.Results[quarter - 1];
+                    var mark = result == true ? " ✓" : result == false ? " ✗" : string.Empty;
                     var text = Session.Keys.Zones.TryGetValue(turn, out var zone)
-                        ? $"{turn}턴: {zone.StartSlot}~{zone.StartSlot + zone.Width - 1}"
-                        : $"{turn}턴: (미확정)";
-                    return turn == currentTurn ? $"▶ {text}" : $"   {text}";
+                        ? $"{quarter}쿼터({turn}턴): {zone.StartSlot}~{zone.StartSlot + zone.Width - 1}{mark}"
+                        : $"{quarter}쿼터({turn}턴): (미확정)";
+                    return quarter == currentQuarter ? $"▶ {text}" : $"   {text}";
                 });
             _listText.text = string.Join("   ", lines);
         }
@@ -82,7 +87,8 @@ namespace BlueComplex.UI.DebugPlay
             foreach (var marker in _markers) Destroy(marker);
             _markers.Clear();
 
-            var currentTurn = Session.Runner.CurrentTurn;
+            var currentQuarter = Session.Runner.CurrentQuarter;
+            var schedule = Session.Keys.Schedule;
             foreach (var pair in Session.Keys.Zones)
             {
                 var turn = pair.Key;
@@ -90,7 +96,7 @@ namespace BlueComplex.UI.DebugPlay
 
                 var markerGo = new GameObject($"Zone_{turn}", typeof(RectTransform), typeof(Image));
                 markerGo.transform.SetParent(_barTrack, false);
-                markerGo.GetComponent<Image>().color = turn == currentTurn
+                markerGo.GetComponent<Image>().color = schedule.QuarterOf(turn) == currentQuarter
                     ? new Color(1f, 0.85f, 0.2f, 0.9f)
                     : new Color(0.3f, 0.6f, 0.9f, 0.6f);
 

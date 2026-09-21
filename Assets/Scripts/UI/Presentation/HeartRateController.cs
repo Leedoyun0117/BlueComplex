@@ -1,3 +1,4 @@
+using BlueComplex.Core.Stability;
 using BlueComplex.Core.Stage;
 using BlueComplex.Core.Turn;
 using BlueComplex.UI.Layout;
@@ -6,53 +7,105 @@ using UnityEngine;
 namespace BlueComplex.UI.Presentation
 {
     /// <summary>
-    /// 심박수 바 + BPM 텍스트를 코어에 연결한다.
+    /// 심박수 모니터(심전도 + 목표 띠 + BPM 숫자·상태 배지) + 쿼터 HUD(키 표시 창, 쿼터 진행 창, 전체 스테이지 오버레이)를 코어에 연결한다.
     ///
     /// Heartbeat.Changed는 구독하지 않는다 — 코드상 그 이벤트는 TurnRunner.PlayClue의 턴 해석
     /// 경로(Heartbeat.Change 호출은 TurnRunner.cs 한 곳뿐)에서만 발동하는데, 거기 반응해서 마커를
     /// 바로 애니메이션하면 컴플렉스 발광/태그 연출보다 심박수가 먼저 움직여 순서가 뒤집힌다.
     /// UI 가이드: "태그가 위로 올라가며 사라지며, 그와 동시에 인디케이터가 움직인다" — 그 타이밍의
     /// 제어권은 3단계 CinematicTurnResultPresenter가 PlayTurnResult()를 부르는 시점이 쥔다.
+    /// 쿼터 HUD도 같은 규칙이다 — 키 아이콘은 PlayTurnResult로, 하얀 점은 SyncTurnState로만 움직인다.
     ///
     /// 이 컨트롤러가 직접 다루는 건 "턴 밖" 동기화뿐이다: Render()(세션 바인드 = 스테이지
-    /// 시작/재시작, 애니메이션 없이 스냅)와 OnTurnBegan(키 구역·활성 턴 갱신).
+    /// 시작/재시작, 애니메이션 없이 스냅)와 OnTurnBegan(목표 구역·현재 쿼터 갱신), StageEnded(오버레이 닫기).
+    /// 다만 TurnBegan은 TurnResolved 직후 동기로 쏘아지므로, 연출이 재생 중이면 현재 쿼터 전환을 미루고
+    /// Presenter가 연출을 마친 뒤 <see cref="SyncTurnState"/> 를 불러 반영한다 — 안 그러면 쿼터 마지막 턴의
+    /// 키 판정 연출 도중에 다음 쿼터 구역으로 바뀌어 버린다.
     /// </summary>
     public sealed class HeartRateController : SessionBoundView
     {
         [SerializeField] private HeartRateBarView _bar;
         [SerializeField] private BpmDisplay _bpm;
 
-        protected override void Subscribe(StageSession session) => session.Runner.TurnBegan += OnTurnBegan;
-        protected override void Unsubscribe(StageSession session) => session.Runner.TurnBegan -= OnTurnBegan;
+        private ITurnResultPresenter _presenter;
+        private QuarterHud _quarterHud;
+
+        private QuarterHud Hud => _quarterHud != null ? _quarterHud : _quarterHud = QuarterHud.GetOrCreate(transform.root);
+
+        protected override void Subscribe(StageSession session)
+        {
+            session.Runner.TurnBegan += OnTurnBegan;
+            session.Runner.StageEnded += OnStageEnded;
+        }
+
+        protected override void Unsubscribe(StageSession session)
+        {
+            session.Runner.TurnBegan -= OnTurnBegan;
+            session.Runner.StageEnded -= OnStageEnded;
+        }
 
         protected override void Render()
         {
+            // 새 세션이면 쿼터 HUD와 바의 목표 구역을 처음 상태로 되돌린다(같은 시드 재시작이면 구역 배치가 똑같아
+            // 이전 판의 결과 표시가 남을 수 있다).
+            _bar.ResetTargetZone();
+            Hud.Bind(Session, Bootstrapper);
+
             // Session.Keys.Zones는 TurnRunner.StartStage()가 실제로 채우는데, SessionStarted는
             // StartStage()보다 먼저 발동해서 여기선 아직 비어 있다 — OnTurnBegan에서 다시 채운다.
-            _bar.SetKeyZones(Session.Keys.Zones);
+            SyncTurnState();
             _bar.MoveMarker(Session.Heartbeat.Value, animate: false);
-            _bar.SetActiveTurn(Session.Runner.CurrentTurn);
-            _bpm.SetValue(Session.Heartbeat.Value, HeartbeatVisuals.TextColor(Session.Zone.StateOf(Session.Heartbeat.Value)));
+            ShowBpm(Session.Heartbeat.Value, snap: true);
         }
 
-        /// <summary>턴 결과의 심박수 이동 + 해당 턴이 키 턴이었다면 그 구역의 성공/실패를 반영한다 —
-        /// 호출 시점은 Presenter가 쥔다. 성공/실패는 KeyProgress 이벤트를 구독하는 대신, 이미 공개된
-        /// Session.Keys.Zones(구역 범위)와 report.HeartbeatValue(판정에 쓰인 값 그대로)를 견주어
-        /// KeyProgress.Judge와 같은 조건을 여기서 다시 계산한다 — 코어를 건드리지 않고, 턴 해석
-        /// 경로에서 발동하는 KeyCollected/ZoneMissed를 직접 구독하지 않기 위함(연출 순서는 Presenter 소유).</summary>
+        /// <summary>턴 결과의 심박수 이동 + 그 턴이 쿼터의 마지막 턴이었다면 키 판정 결과를 반영한다 —
+        /// 호출 시점은 Presenter가 쥔다. 판정은 코어가 이미 내려 TurnReport.KeyResult에 담아 두었으므로
+        /// 여기서 다시 계산하지 않고 그대로 표시만 한다(KeyProgress 이벤트도 구독하지 않는다).</summary>
         public void PlayTurnResult(TurnReport report)
         {
             _bar.MoveMarker(report.HeartbeatValue, animate: true);
-            _bpm.SetValue(report.HeartbeatValue, HeartbeatVisuals.TextColor(Session.Zone.StateOf(report.HeartbeatValue)));
+            ShowBpm(report.HeartbeatValue, snap: false);
 
-            if (Session.Keys.Zones.TryGetValue(report.Turn, out var zone))
-                _bar.RecordKeyZoneResult(report.Turn, zone.Contains(report.HeartbeatValue));
+            if (report.KeyResult is not { } judgement) return;
+
+            _bar.RecordKeyResult(judgement.Quarter, judgement.Success);
+            Hud.RecordKeyResult(judgement.Quarter, judgement.Success);
+        }
+
+        /// <summary>BPM 숫자·상태 배지·심전도 파형을 한 번에 갱신한다 — 셋 다 같은 시점(Presenter가 정한다)에 바뀌어야 어긋나 보이지 않는다.</summary>
+        private void ShowBpm(int value, bool snap)
+        {
+            var state = Session.Zone.StateOf(value);
+            var color = HeartbeatVisuals.TextColor(state);
+            _bpm.SetValue(value, color, KoreanLabels.State(state));
+            _bar.SetPulse(value, color, snap);
+        }
+
+        /// <summary>코어의 현재 턴 상태(현재 쿼터의 목표 구역, 쿼터 내 턴 위치)를 바와 쿼터 HUD에 반영한다.
+        /// 연출이 끝난 뒤 Presenter가 부른다.</summary>
+        public void SyncTurnState()
+        {
+            var runner = Session.Runner;
+            var quarter = runner.CurrentQuarter;
+
+            // 스테이지 시작 전(quarter 0)이나 구역이 아직 확정되기 전에는 그릴 구역이 없다.
+            KeyZone? zone = null;
+            if (quarter > 0 && Session.Keys.Zones.TryGetValue(Session.Keys.Schedule.LastTurnOf(quarter), out var found))
+                zone = found;
+
+            _bar.SetTargetZone(quarter, zone);
+            Hud.Sync(quarter, runner.CurrentTurnInQuarter);
         }
 
         private void OnTurnBegan(int turn)
         {
-            _bar.SetKeyZones(Session.Keys.Zones);
-            _bar.SetActiveTurn(turn);
+            // 연출 중이면 Presenter가 끝나고 SyncTurnState를 부른다.
+            _presenter ??= transform.root.GetComponentInChildren<ITurnResultPresenter>(true);
+            if (_presenter != null && _presenter.IsPresenting) return;
+
+            SyncTurnState();
         }
+
+        private void OnStageEnded(StageOutcome outcome) => Hud.CloseOverview();
     }
 }

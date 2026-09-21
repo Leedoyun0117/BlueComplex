@@ -1,7 +1,9 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using BlueComplex.Core.Stage;
 using BlueComplex.Core.Turn;
+using BlueComplex.UI.Background;
 using BlueComplex.UI.Layout;
 using DG.Tweening;
 using UnityEngine;
@@ -27,6 +29,9 @@ namespace BlueComplex.UI.Presentation
         [SerializeField] private HeartRateController _heartRate;
         [SerializeField] private ComplexXrayPanel _xrayPanel;
         [SerializeField] private MemorySpaceBubble _memoryBubble;
+        [SerializeField] private ComplexStatusController _complexStatus;
+        [SerializeField] private TraitStatusView _traitStatus;
+        [SerializeField] private ClockController _clock;
 
         public bool IsPresenting { get; private set; }
 
@@ -48,6 +53,11 @@ namespace BlueComplex.UI.Presentation
             if (_heartRate == null) _heartRate = root.GetComponentInChildren<HeartRateController>(true);
             if (_xrayPanel == null) _xrayPanel = root.GetComponentInChildren<ComplexXrayPanel>(true);
             if (_memoryBubble == null) _memoryBubble = root.GetComponentInChildren<MemorySpaceBubble>(true);
+            // 상시 표시가 없는 씬에서도 연출은 그대로 돈다.
+            if (_complexStatus == null) _complexStatus = root.GetComponentInChildren<ComplexStatusController>(true);
+            if (_traitStatus == null) _traitStatus = root.GetComponentInChildren<TraitStatusView>(true);
+            // 벽시계는 HUD가 아니라 3D 배경 리그에 있어 root 아래에서 못 찾는다. 없어도 연출은 그대로 돈다.
+            if (_clock == null) _clock = FindFirstObjectByType<ClockController>(FindObjectsInactive.Include);
 
             if (_complexList == null || _dialogue == null || _clueTray == null || _heartRate == null ||
                 _xrayPanel == null || _memoryBubble == null)
@@ -60,14 +70,63 @@ namespace BlueComplex.UI.Presentation
 
         protected override void Render()
         {
+            _pending.Clear(); // 재시작 시 이전 스테이지의 대기 중 연출은 버린다.
             _complexList.Refresh(Session.Complexes.InPriorityOrder().ToList());
         }
 
-        public void Present(TurnReport report) => StartCoroutine(PresentRoutine(report));
+        /// <summary>한 번의 PlayClue 호출 안에서 TurnResolved가 연달아 올 수 있다(마지막 단서를 낸 턴 뒤에 손패가 비어
+        /// 넘어간 턴). 연출은 겹치면 안 되므로 큐에 쌓아 순서대로 재생한다.</summary>
+        private readonly Queue<TurnReport> _pending = new();
+
+        public void Present(TurnReport report)
+        {
+            _pending.Enqueue(report);
+            if (IsPresenting) return;
+
+            IsPresenting = true;
+            StartCoroutine(DrainRoutine());
+        }
+
+        private IEnumerator DrainRoutine()
+        {
+            while (_pending.Count > 0)
+            {
+                var report = _pending.Dequeue();
+                yield return report.IsPass ? PassRoutine(report) : PresentRoutine(report);
+            }
+
+            // 쿼터 경계 등 다음 턴 시작 상태(현재 쿼터·목표 구역)는 연출이 모두 끝난 뒤에 반영한다.
+            _heartRate.SyncTurnState();
+            _complexStatus?.Refresh();
+            _traitStatus?.Refresh();
+            _memoryBubble.SetEngaged(false);
+            IsPresenting = false;
+        }
+
+        /// <summary>단서 없이 시간만 흐른 턴 — 컴플렉스/태그 연출 없이 결과(대사, 심박수, 키 판정)만 보여준다.</summary>
+        private IEnumerator PassRoutine(TurnReport report)
+        {
+            _heartRate.PlayTurnResult(report);
+            _complexStatus?.Refresh();
+            _traitStatus?.Refresh();
+            AdvanceClock(report);
+            yield return PlayDialogue(TurnSummaryFormatter.Build(report));
+
+            // 넘어간 턴에도 손패는 연출이 도는 동안 갱신이 미뤄져 있다(ClueHandController.OnHandChanged 참고).
+            _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger, Session.Censorship.Level);
+        }
+
+        /// <summary>시계는 심박수 이동과 같은 타이밍에 돌린다 — 컴플렉스 발광/대사가 끝난 뒤이고,
+        /// 분침 회전(0.7초)이 태그 상승(0.9초) 안에 끝나 다음 턴 연출과 겹치지 않는다.</summary>
+        private void AdvanceClock(TurnReport report)
+        {
+            if (_clock != null) _clock.AdvanceTo(report.Turn);
+        }
 
         private IEnumerator PresentRoutine(TurnReport report)
         {
-            IsPresenting = true;
+            // 드래그 없이 낸 단서(디버그 숫자키)도 연출 동안은 생각 공간이 켜져 있어야 한다.
+            _memoryBubble.SetEngaged(true);
 
             var openTween = _xrayPanel.Open();
             if (openTween != null) yield return openTween.WaitForCompletion(true);
@@ -86,8 +145,6 @@ namespace BlueComplex.UI.Presentation
             if (closeTween != null) yield return closeTween.WaitForCompletion(true);
 
             _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger, Session.Censorship.Level);
-
-            IsPresenting = false;
         }
 
         private IEnumerator PlayDialogue(string line)
@@ -112,6 +169,10 @@ namespace BlueComplex.UI.Presentation
 
             var tagSequence = _memoryBubble.PlayRemainingTags(labels);
             _heartRate.PlayTurnResult(report);
+            // 남은 턴이 줄고(막대가 줄어든다) 새로 붙거나 만료된 컴플렉스가 반영되는 시점 — 심박수 결과와 함께.
+            _complexStatus?.Refresh();
+            _traitStatus?.Refresh();
+            AdvanceClock(report);
             _memoryBubble.SetPersistentSummary(TurnSummaryFormatter.BuildFinalEmotionSummary(report));
 
             yield return tagSequence.WaitForCompletion(true);

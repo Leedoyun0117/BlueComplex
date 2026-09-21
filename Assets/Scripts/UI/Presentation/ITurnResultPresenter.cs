@@ -1,4 +1,4 @@
-using BlueComplex.Core.Turn;
+ using BlueComplex.Core.Turn;
 
 namespace BlueComplex.UI.Presentation
 {
