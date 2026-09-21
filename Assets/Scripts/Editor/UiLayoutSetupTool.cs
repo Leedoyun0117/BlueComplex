@@ -31,7 +31,6 @@ namespace BlueComplex.EditorTools
         private static readonly Color HeartPanelBackground = new Color32(28, 28, 32, 200);
         private static readonly Color PanelSlot = new Color32(120, 120, 130, 179);
         private static readonly Color PanelPortrait = new Color32(90, 90, 100, 179);
-        private static readonly Color PanelXray = new Color32(140, 190, 210, 40);
         private static readonly Color PanelBubble = new Color32(150, 190, 230, 179);
         private static readonly Color PanelCard = new Color32(120, 130, 150, 200);
         private static readonly Color RowBackground = new Color32(70, 70, 90, 180);
@@ -174,58 +173,9 @@ namespace BlueComplex.EditorTools
         // 5. 컴플렉스 인터페이스 (목록)
         // ---------------------------------------------------------------
 
+        /// <summary>엑스레이 판넬은 빈 컨테이너만 굽는다 — 관절 팔·판넬·뇌 영역은 굽고 난 직후 UiLayoutCleanupTool이 만든다(최종 모양을 한 곳에서 정한다).</summary>
         private static void BuildComplexXrayPanel(GameObject go, Component comp, TMP_FontAsset font)
         {
-            // raycastTarget은 true로 둔다 — ComplexXrayPanel 자체가 IBeginDrag/IDrag/IEndDrag로
-            // "판넬을 유키 위에 드래그해서 놓기" 조건을 처리하므로 Background가 히트테스트를 받아야 한다.
-            CreateImage(go.transform, "Background", PanelXray, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-
-            var listRoot = CreateRect(go.transform, "ComplexList", Vector2.zero, Vector2.one, new Vector2(8f, 8f), new Vector2(-8f, -8f));
-
-            var vLayout = listRoot.gameObject.AddComponent<VerticalLayoutGroup>();
-            vLayout.spacing = 6;
-            vLayout.childControlWidth = true;
-            vLayout.childControlHeight = true;
-            vLayout.childForceExpandWidth = true;
-            vLayout.childForceExpandHeight = false;
-
-            var rows = new ComplexRowView[4];
-            for (var i = 0; i < rows.Length; i++)
-            {
-                var rowGo = new GameObject($"Row {i}", typeof(RectTransform));
-                rowGo.transform.SetParent(listRoot, false);
-
-                var layoutElement = rowGo.AddComponent<LayoutElement>();
-                layoutElement.preferredHeight = 76;
-
-                var bg = rowGo.AddComponent<Image>();
-                bg.color = RowBackground;
-
-                var nameText = CreateTmpText(rowGo.transform, "Name", string.Empty, font, 20, TextAlignmentOptions.TopLeft,
-                    new Vector2(0f, 0.5f), Vector2.one, new Vector2(10f, 0f), new Vector2(-10f, -4f));
-
-                var barBg = CreateImage(rowGo.transform, "DurationBarBg", DurationBarBg,
-                    new Vector2(0f, 0f), new Vector2(1f, 0.18f), new Vector2(10f, 4f), new Vector2(-10f, 0f));
-                barBg.raycastTarget = false;
-                var barFill = CreateImage(barBg.transform, "DurationBarFill", DurationBarFill,
-                    Vector2.zero, new Vector2(0f, 1f), Vector2.zero, Vector2.zero);
-                barFill.raycastTarget = false;
-                var durationText = CreateTmpText(rowGo.transform, "DurationNumber", string.Empty, font, 15,
-                    TextAlignmentOptions.MidlineRight, new Vector2(0.72f, 0.18f), new Vector2(1f, 0.5f),
-                    Vector2.zero, new Vector2(-10f, 0f));
-
-                var row = rowGo.AddComponent<ComplexRowView>();
-                Wire(row, "_nameText", nameText);
-                Wire(row, "_durationFill", barFill);
-                Wire(row, "_durationText", durationText);
-                rows[i] = row;
-
-                rowGo.SetActive(false);
-            }
-
-            var listView = listRoot.gameObject.AddComponent<ComplexListView>();
-            Wire(listView, "_rows", rows);
-            // _tooltip은 공유 TooltipPopup이 만들어진 뒤 BuildMainHud에서 인스턴스 단위로 와이어링한다.
         }
 
         // ---------------------------------------------------------------
@@ -436,9 +386,6 @@ namespace BlueComplex.EditorTools
 
             var tooltip = BuildTooltipPopup(root.transform, font);
 
-            var xrayListView = xrayInstance.GetComponentInChildren<ComplexListView>(true);
-            Wire(xrayListView, "_tooltip", tooltip);
-
             var xrayPanel = xrayInstance.GetComponent<ComplexXrayPanel>();
             Wire(xrayPanel, "_clueTray", cluesInstance.GetComponent<ClueCardTray>());
 
@@ -474,7 +421,6 @@ namespace BlueComplex.EditorTools
 
             BuildController<CinematicTurnResultPresenter>(root.transform, "Turn Result Presenter", controller =>
             {
-                Wire(controller, "_complexList", xrayListView);
                 Wire(controller, "_dialogue", dialogueText);
                 Wire(controller, "_clueTray", clueTray);
                 Wire(controller, "_heartRate", heartRateController);

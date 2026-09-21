@@ -48,8 +48,9 @@ namespace BlueComplex.EditorTools
             // 기억 풍선: 목업 표의 T는 0.17~0.20(슬라이드마다 다르다). 가운데 값.
             public static readonly (Vector2 Min, Vector2 Max) Memory = Box(0.21f, 0.19f, 0.23f, 0.39f);
 
-            /// <summary>엑스레이 판넬이 펼쳐진 자리 — 목업에는 없는 일시적 요소라, 어떤 상시 요소(스테이지 표기·기억 풍선·컴플렉스 포스트잇)와도 안 겹치는 왼쪽 위 빈 자리에 둔다.</summary>
-            public static readonly (Vector2 Min, Vector2 Max) Xray = Box(0.02f, 0.18f, 0.18f, 0.37f);
+            /// <summary>엑스레이 판넬 컨테이너 — 접힌 위치(스테이지 표기 바로 밑 왼쪽 구석)부터 펼친 판넬 자리까지를 덮는 투명 영역이다. 목업에는 없는 일시적 요소라
+            /// 어떤 상시 요소(스테이지 표기·기억 풍선·컴플렉스 포스트잇)와도 안 겹치는 왼쪽 위 빈 자리에 둔다. 안의 배치는 ComplexXrayPanel이 이 크기(1080p에서 422×529)를 기준으로 계산한다.</summary>
+            public static readonly (Vector2 Min, Vector2 Max) Xray = Box(0.00f, 0.085f, 0.22f, 0.49f);
 
             /// <summary>보이지 않는 드롭 영역 — 엑스레이 판넬을 끌어다 유키 위에 놓는 조건(작동 조건 1)에 쓴다. 목업의 유키 초상화 자리(왼쪽)다.</summary>
             public static readonly (Vector2 Min, Vector2 Max) YukiDrop = Box(0.08f, 0.34f, 0.14f, 0.34f);
@@ -59,8 +60,6 @@ namespace BlueComplex.EditorTools
         private static readonly Rect EcgScreenInMonitor = Rect.MinMaxRect(0.039f, 0.163f, 0.720f, 0.888f);
         private static readonly Rect BpmScreenInMonitor = Rect.MinMaxRect(0.738f, 0.163f, 0.985f, 0.888f);
 
-        private static readonly Color DarkPanel = new Color32(8, 12, 18, 170);
-        private static readonly Color DarkRow = new Color32(16, 20, 30, 185);
         private static readonly Color EndOverlay = new Color32(6, 8, 14, 140);
         private static readonly Color FoldTabColor = new Color32(74, 133, 222, 255);
         private static readonly Color StickyGlow = new Color32(255, 150, 60, 215);
@@ -76,7 +75,7 @@ namespace BlueComplex.EditorTools
             EditElement("BpmDisplay", root => CleanBpmDisplay(root, font));
             EditElement("ItemDisplayPanel", root => CleanItemPanel(root, font));
             EditElement("PortraitView", CleanPortrait);
-            EditElement("ComplexXrayPanel", CleanXrayPanel);
+            EditElement("ComplexXrayPanel", root => CleanXrayPanel(root, font));
             EditElement("ClueCardTray", root => CleanClueTray(root, font));
             EditElement("MemorySpaceBubble", CleanMemoryBubble);
             EditElement("DialogueText", root => CleanDialogue(root, font));
@@ -267,34 +266,177 @@ namespace BlueComplex.EditorTools
         // 컴플렉스
         // ---------------------------------------------------------------
 
-        /// <summary>엑스레이 판넬(단서를 집으면 펼쳐지는 일시적 요소): 목록을 좁은 세로 띠로 — 이름 + 남은 턴 막대(폭 제한) + 남은 턴 숫자. 설명은 호버 팝업에만 뜬다.</summary>
-        private static void CleanXrayPanel(GameObject root)
+        // 엑스레이 판넬의 금속 틀과 유리, 뇌 영역 글자색.
+        private static readonly Color XrayMetal = new Color32(150, 164, 168, 255);
+        private static readonly Color XrayMetalDark = new Color32(96, 108, 114, 255);
+        private static readonly Color XrayGlass = new Color32(12, 30, 34, 245);
+        private static readonly Color XrayCyan = new Color32(120, 226, 236, 255);
+        private static readonly Color BrainLabelInk = new Color32(74, 22, 36, 255);
+
+        /// <summary>도트 뇌 영역(0 위쪽 띠, 1 아래 왼쪽, 2 오른쪽 큰 엽, 3 뇌간)의 글자 중심(뇌 이미지 대비 0~1, 원점 왼쪽 아래). 아트에서 영역 마스크의 중심을 잰 값이다.</summary>
+        private static readonly Vector2[] BrainLabelCenters =
         {
-            root.transform.Find("Background").GetComponent<Image>().color = DarkPanel;
+            new Vector2(0.31f, 0.73f), new Vector2(0.29f, 0.38f), new Vector2(0.72f, 0.51f), new Vector2(0.77f, -0.075f),
+        };
 
-            var list = root.transform.Find("ComplexList");
-            var layout = list.GetComponent<VerticalLayoutGroup>();
-            layout.spacing = 6f;
-            layout.childAlignment = TextAnchor.UpperCenter;
-            layout.childForceExpandHeight = false;
+        /// <summary>
+        /// 엑스레이 판넬 = 관절 팔에 매달린 금속 틀의 판넬. 루트는 접힌 위치부터 펼친 위치까지를 덮는 투명 컨테이너이고(그래픽 없음),
+        /// 안에 어깨 받침대 · 관절 팔(선분 두 개 + 관절 원 세 개) · 접힌 상태 손잡이 안내표 · 판넬(틀 + 유리 + 뇌)이 들어간다.
+        /// 뇌는 기획서의 도트 아트(Assets/Art/UI/Brain) 위에 영역별 오버레이 세 엽 + 뇌간을 얹고, 영역마다 컴플렉스 이름·남은 턴 글자를 단다.
+        /// 위치·크기는 런타임에 ComplexXrayPanel이 접힘/펼침에 맞춰 놓는다 — 여기서는 구조와 참조만 만든다(멱등).
+        /// 예전 목록형(Background + ComplexList 행 4개)은 걷어낸다.
+        /// </summary>
+        private static void CleanXrayPanel(GameObject root, TMP_FontAsset font)
+        {
+            Remove(root.transform, "Background");
+            Remove(root.transform, "ComplexList");
+            var oldGroup = root.GetComponent<CanvasGroup>();
+            if (oldGroup != null) Object.DestroyImmediate(oldGroup);
 
-            foreach (var row in list.GetComponentsInChildren<ComplexRowView>(true))
+            var panel = root.GetComponent<ComplexXrayPanel>();
+
+            var basePlate = Ensure(root.transform, "BasePlate");
+            TopLeft(basePlate, new Vector2(0.5f, 0.5f));
+            var plateImage = GetOrAdd<Image>(basePlate.gameObject);
+            plateImage.color = XrayMetalDark;
+            plateImage.raycastTarget = false;
+            MockupStyle.AddPaperEdge(basePlate.gameObject);
+
+            // 관절 팔: 선분은 왼쪽 끝이 축(pivot 0, 0.5), 관절은 원(스프라이트는 런타임에 입힌다).
+            var armRect = Ensure(root.transform, "Arm");
+            SetRect(armRect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var arm = GetOrAdd<XrayArm>(armRect.gameObject);
+            var upper = EnsureArmPiece(armRect, "Upper", new Vector2(0f, 0.5f), XrayMetal);
+            var lower = EnsureArmPiece(armRect, "Lower", new Vector2(0f, 0.5f), XrayMetal);
+            var shoulder = EnsureArmPiece(armRect, "Shoulder", new Vector2(0.5f, 0.5f), XrayMetalDark);
+            var elbow = EnsureArmPiece(armRect, "Elbow", new Vector2(0.5f, 0.5f), XrayMetalDark);
+            var wrist = EnsureArmPiece(armRect, "Wrist", new Vector2(0.5f, 0.5f), XrayMetalDark);
+            SetRef(arm, "_upper", upper);
+            SetRef(arm, "_lower", lower);
+            SetRef(arm, "_shoulder", shoulder);
+            SetRef(arm, "_elbow", elbow);
+            SetRef(arm, "_wrist", wrist);
+
+            // 접힌 상태 손잡이 안내표: 작은 접힌 판넬 밑에 뜨고 끌 수 있다(레이캐스트 켬 — 이벤트가 루트의 드래그 핸들러까지 올라간다).
+            var handleRect = Ensure(root.transform, "HandleTag");
+            TopLeft(handleRect, new Vector2(0.5f, 0.5f));
+            var handleImage = GetOrAdd<Image>(handleRect.gameObject);
+            handleImage.color = new Color32(20, 44, 50, 235);
+            handleImage.raycastTarget = true;
+            MockupStyle.AddPaperEdge(handleRect.gameObject);
+            var handleGroup = GetOrAdd<CanvasGroup>(handleRect.gameObject);
+            var handleText = EnsureText(handleRect, "Text", "엑스레이 · 끌어서 열기", font, 17f, XrayCyan, TextAlignmentOptions.Center,
+                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, FontStyles.Bold);
+            handleText.textWrappingMode = TextWrappingModes.NoWrap;
+
+            // 판넬.
+            var tablet = Ensure(root.transform, "Tablet");
+            TopLeft(tablet, new Vector2(0.5f, 0.5f));
+            tablet.sizeDelta = new Vector2(346f, 400f);
+            var frame = EnsureImage(tablet, "Frame", XrayMetal, Vector2.zero, Vector2.one, raycast: true);
+            MockupStyle.AddPaperEdge(frame.gameObject);
+            var glass = EnsureImage(tablet, "Glass", XrayGlass, new Vector2(0.035f, 0.03f), new Vector2(0.965f, 0.97f), raycast: true);
+
+            var content = Ensure(tablet, "Content");
+            SetRect(content, new Vector2(0.035f, 0.03f), new Vector2(0.965f, 0.97f), Vector2.zero, Vector2.zero);
+            var contentGroup = GetOrAdd<CanvasGroup>(content.gameObject);
+
+            EnsureText(content, "Title", "엑스레이", font, 22f, XrayCyan, TextAlignmentOptions.MidlineLeft,
+                new Vector2(0.05f, 0.90f), new Vector2(0.5f, 0.99f), Vector2.zero, Vector2.zero, FontStyles.Bold);
+
+            var foldButtonImage = EnsureImage(content, "FoldButton", new Color32(30, 72, 84, 255), new Vector2(0.72f, 0.91f), new Vector2(0.96f, 0.985f), raycast: true);
+            var foldButton = GetOrAdd<Button>(foldButtonImage.gameObject);
+            foldButton.targetGraphic = foldButtonImage;
+            MockupStyle.AddPaperEdge(foldButtonImage.gameObject, shadow: false);
+            EnsureText(foldButtonImage.transform, "Label", "접기", font, 18f, XrayCyan, TextAlignmentOptions.Center,
+                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, FontStyles.Bold);
+
+            // 뇌: 영역이 정확히 겹치도록 비율(63:54)을 고정한 판 안에 기본 아트와 오버레이를 같은 크기로 쌓는다.
+            var area = Ensure(content, "BrainArea");
+            SetRect(area, new Vector2(0.05f, 0.14f), new Vector2(0.95f, 0.88f), Vector2.zero, Vector2.zero);
+            var brainRect = Ensure(area, "Brain");
+            SetRect(brainRect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var fitter = GetOrAdd<AspectRatioFitter>(brainRect.gameObject);
+            fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fitter.aspectRatio = 63f / 54f;
+
+            var baseImage = EnsureImage(brainRect, "Base", Color.white, Vector2.zero, Vector2.one);
+            baseImage.sprite = LoadBrainSprite("brain_base.png");
+
+            var regions = new BrainRegionView[BrainLabelCenters.Length];
+            var labelsRoot = Ensure(brainRect, "Labels");
+            SetRect(labelsRoot, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            for (var i = 0; i < regions.Length; i++)
             {
-                var rowTransform = row.transform;
-                GetOrAdd<LayoutElement>(row.gameObject).preferredHeight = 56f;
-                row.GetComponent<Image>().color = DarkRow;
+                var lit = EnsureImage(brainRect, $"Lobe {i}", Color.white, Vector2.zero, Vector2.one);
+                lit.sprite = LoadBrainSprite($"brain_lobe_{i}.png");
+                lit.transform.SetSiblingIndex(1 + i); // 기본 아트 위, 글자 밑.
 
-                var description = rowTransform.Find("Description");
-                if (description != null) Object.DestroyImmediate(description.gameObject);
+                var center = BrainLabelCenters[i];
+                var label = EnsureText(labelsRoot, $"Label {i}", string.Empty, font, i == 3 ? 16f : 19f, i == 3 ? XrayCyan : BrainLabelInk,
+                    TextAlignmentOptions.Center, center - new Vector2(0.21f, 0.09f), center + new Vector2(0.21f, 0.09f), Vector2.zero, Vector2.zero,
+                    FontStyles.Bold);
+                label.textWrappingMode = TextWrappingModes.Normal;
+                label.lineSpacing = -14f;
 
-                // 막대는 행 폭의 62%까지만 — 화면 폭 전체로 늘어나지 않는다.
-                SetRect(rowTransform.Find("Name"), new Vector2(0f, 0.40f), new Vector2(0.62f, 1f), new Vector2(10f, 0f), new Vector2(0f, -4f));
-                SetRect(rowTransform.Find("DurationBarBg"), new Vector2(0f, 0.12f), new Vector2(0.62f, 0.30f), new Vector2(10f, 0f), Vector2.zero);
-                SetRect(rowTransform.Find("DurationNumber"), new Vector2(0.64f, 0f), Vector2.one, Vector2.zero, new Vector2(-10f, 0f));
-
-                StyleLabel(rowTransform.Find("Name"), 20f, TextAlignmentOptions.MidlineLeft);
-                StyleLabel(rowTransform.Find("DurationNumber"), 20f, TextAlignmentOptions.MidlineRight);
+                var region = GetOrAdd<BrainRegionView>(lit.gameObject);
+                SetRef(region, "_lit", lit);
+                SetRef(region, "_label", label);
+                regions[i] = region;
             }
+
+            labelsRoot.SetAsLastSibling();
+
+            var brain = GetOrAdd<BrainView>(brainRect.gameObject);
+            SetRefs(brain, "_regions", regions);
+
+            SetRef(panel, "_tablet", tablet);
+            SetRef(panel, "_basePlate", basePlate);
+            SetRef(panel, "_handleTag", handleRect);
+            SetRef(panel, "_frame", frame);
+            SetRef(panel, "_glass", glass);
+            SetRef(panel, "_arm", arm);
+            SetRef(panel, "_contentGroup", contentGroup);
+            SetRef(panel, "_handleGroup", handleGroup);
+            SetRef(panel, "_foldButton", foldButton);
+            SetRef(panel, "_brain", brain);
+
+            // 그리는 순서: 받침대 → 팔 → 손잡이 안내표 → 판넬(팔이 판넬 뒤로 들어간다).
+            basePlate.SetSiblingIndex(0);
+            armRect.SetSiblingIndex(1);
+            handleRect.SetSiblingIndex(2);
+            tablet.SetSiblingIndex(3);
+        }
+
+        private static Sprite LoadBrainSprite(string fileName)
+        {
+            var path = BrainArtImporter.Folder + fileName;
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (sprite != null) return sprite;
+
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (sprite == null) Debug.LogWarning($"[UiLayoutCleanupTool] 뇌 아트를 스프라이트로 못 읽었다: {path}");
+            return sprite;
+        }
+
+        private static RectTransform EnsureArmPiece(Transform parent, string name, Vector2 pivot, Color color)
+        {
+            var rect = Ensure(parent, name);
+            TopLeft(rect, pivot);
+            var image = GetOrAdd<Image>(rect.gameObject);
+            image.color = color;
+            image.raycastTarget = false;
+            MockupStyle.AddPaperEdge(rect.gameObject, shadow: false);
+            return rect;
+        }
+
+        /// <summary>왼쪽 위 기준점 + 지정한 피벗 — 위치는 런타임에 컨테이너 크기 비율로 환산해 anchoredPosition으로 놓는다.</summary>
+        private static void TopLeft(RectTransform rect, Vector2 pivot)
+        {
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = pivot;
         }
 
         /// <summary>
@@ -512,6 +654,10 @@ namespace BlueComplex.EditorTools
             // 컴플렉스 목록(엑스레이 판넬 안, 포스트잇)도 같은 공유 팝업을 쓴다.
             foreach (var list in root.GetComponentsInChildren<ComplexListView>(true))
                 SetTooltip(list, tooltip);
+
+            // 뇌의 영역들도 같은 공유 팝업을 쓴다(0.25초 호버 상세).
+            foreach (var brain in root.GetComponentsInChildren<BrainView>(true))
+                SetTooltip(brain, tooltip);
 
             // 새 글자 뷰는 툴팁 팝업 밑에 둔다 — 팝업이 항상 맨 위여야 한다.
             foreach (var name in new[] { "Stage Title", "Trait Status" })

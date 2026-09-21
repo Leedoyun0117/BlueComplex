@@ -5,6 +5,7 @@ using BlueComplex.Core.Stage;
 using BlueComplex.Core.Turn;
 using BlueComplex.UI.Background;
 using BlueComplex.UI.Layout;
+using BlueComplex.UI.Motion;
 using DG.Tweening;
 using UnityEngine;
 
@@ -12,8 +13,9 @@ namespace BlueComplex.UI.Presentation
 {
     /// <summary>
     /// 3단계 연출 버전 ITurnResultPresenter. Present() 순서:
-    /// 엑스레이 판넬 Open() → 컴플렉스 순차 발광(발동할 때마다 대사창에 짧은 이벤트 대사) → 대사 타이핑 →
-    /// (남은 감정 태그 상승/소멸 + 심박수 이동을 동시에) → 판넬 Close() → 손패 갱신 → (모든 연출이 끝나면) 아이템 칸 갱신.
+    /// 엑스레이 판넬 Open()(관절 팔이 펴지며 뇌가 드러난다) → 컴플렉스가 우선순위 순서로 뇌에서 빛남(발동할 때마다 대사창에 짧은 이벤트 대사) →
+    /// 남은 감정 태그가 풍선 안에 나타남(요약 대사가 타이핑되는 동안, 다 나타난 뒤 최소 tagHold초 정지) →
+    /// (태그 상승·페이드 + 심박수 모니터 변화를 동시에) → 풍선이 지워짐 + 판넬 Close() → 손패 갱신 → (모든 연출이 끝나면) 아이템 칸 갱신.
     ///
     /// TurnRunner.PlayClue는 TurnResolved를 동기(synchronous)로 쏘고 그 직후 바로 다음 턴을
     /// 시작한다 — 연출은 여러 프레임에 걸쳐야 하므로 Present()는 코루틴을 발사만 하고 즉시
@@ -23,7 +25,7 @@ namespace BlueComplex.UI.Presentation
     /// </summary>
     public sealed class CinematicTurnResultPresenter : SessionBoundView, ITurnResultPresenter
     {
-        [SerializeField] private ComplexListView _complexList;
+        [SerializeField] private BrainView _brain;
         [SerializeField] private DialogueText _dialogue;
         [SerializeField] private ClueCardTray _clueTray;
         [SerializeField] private HeartRateController _heartRate;
@@ -51,7 +53,7 @@ namespace BlueComplex.UI.Presentation
         private void ResolveReferences()
         {
             var root = transform.root;
-            if (_complexList == null) _complexList = root.GetComponentInChildren<ComplexListView>(true);
+            if (_brain == null) _brain = root.GetComponentInChildren<BrainView>(true);
             if (_dialogue == null) _dialogue = root.GetComponentInChildren<DialogueText>(true);
             if (_clueTray == null) _clueTray = root.GetComponentInChildren<ClueCardTray>(true);
             if (_heartRate == null) _heartRate = root.GetComponentInChildren<HeartRateController>(true);
@@ -64,7 +66,7 @@ namespace BlueComplex.UI.Presentation
             // 벽시계는 HUD가 아니라 3D 배경 리그에 있어 root 아래에서 못 찾는다. 없어도 연출은 그대로 돈다.
             if (_clock == null) _clock = FindFirstObjectByType<ClockController>(FindObjectsInactive.Include);
 
-            if (_complexList == null || _dialogue == null || _clueTray == null || _heartRate == null ||
+            if (_brain == null || _dialogue == null || _clueTray == null || _heartRate == null ||
                 _xrayPanel == null || _memoryBubble == null)
                 Debug.LogWarning("[CinematicTurnResultPresenter] 필수 참조를 하나 이상 못 찾았다 — " +
                                   "연출이 중간에 멈출 수 있다.", this);
@@ -76,7 +78,7 @@ namespace BlueComplex.UI.Presentation
         protected override void Render()
         {
             _pending.Clear(); // 재시작 시 이전 스테이지의 대기 중 연출은 버린다.
-            _complexList.Refresh(Session.Complexes.InPriorityOrder().ToList());
+            _brain.Refresh(Session.Complexes.InPriorityOrder().ToList());
         }
 
         /// <summary>한 번의 PlayClue 호출 안에서 TurnResolved가 연달아 올 수 있다(마지막 단서를 낸 턴 뒤에 손패가 비어
@@ -139,14 +141,17 @@ namespace BlueComplex.UI.Presentation
             var openTween = _xrayPanel.Open();
             if (openTween != null) yield return openTween.WaitForCompletion(true);
 
-            // TickDurations/스폰이 Resolve 이후에 일어나므로, 발광 전에 먼저 행 배치를 최신 보드
-            // 상태로 맞춰야 한다(ComplexListView.PlayGlow 문서 참고).
-            _complexList.Refresh(Session.Complexes.InPriorityOrder().ToList());
+            // TickDurations/스폰이 Resolve 이후에 일어나므로, 발광 전에 먼저 뇌의 영역 배치를 최신 보드
+            // 상태로 맞춰야 한다(BrainView.PlayGlow 문서 참고).
+            _brain.Refresh(Session.Complexes.InPriorityOrder().ToList());
             yield return PlayComplexReactions(report);
 
-            yield return PlayDialogue(TurnSummaryFormatter.Build(report));
+            yield return PlaySummaryWithResultTags(report);
 
             yield return PlayTagsAndHeartbeatTogether(report);
+
+            // 태그가 올라가 사라지면 풍선을 지우개로 지우고, 판넬은 그와 함께 접힌다.
+            _memoryBubble.SetEngaged(false);
 
             var closeTween = _xrayPanel.Close();
             if (closeTween != null) yield return closeTween.WaitForCompletion(true);
@@ -161,7 +166,7 @@ namespace BlueComplex.UI.Presentation
             foreach (var step in report.Interpretation.Steps)
             {
                 // 같은 턴에 만료돼 이미 행이 없는 컴플렉스는 조용히 건너뛴다.
-                if (!step.Triggered || !_complexList.PlayGlow(step.Complex)) continue;
+                if (!step.Triggered || !_brain.PlayGlow(step.Complex)) continue;
 
                 yield return PlayDialogue(TurnSummaryFormatter.BuildComplexEventLine(step.Complex), isEvent: true);
                 yield return new WaitForSeconds(_eventLinePause);
@@ -179,16 +184,43 @@ namespace BlueComplex.UI.Presentation
             _dialogue.TypingComplete -= OnComplete;
         }
 
+        /// <summary>UI 가이드: "시퀀스가 끝나고, 남은 감정 태그도 생각 공간에 나타난다." 컴플렉스 발광이 끝나면 태그 칩이 풍선 안에 나타나고,
+        /// 그동안 요약 대사가 타이핑된다. 칩이 다 나타난 뒤에도 최소 <c>tagHold</c>초는 가만히 둔다 — 읽을 시간 없이 바로 떠오르지 않게.</summary>
+        private IEnumerator PlaySummaryWithResultTags(TurnReport report)
+        {
+            var tags = BuildResultTags(report);
+            var appearedAt = Time.unscaledTime;
+            var show = _memoryBubble.ShowResultTags(tags);
+
+            yield return PlayDialogue(TurnSummaryFormatter.Build(report));
+
+            if (tags.Count == 0) yield break;
+
+            var readyAt = appearedAt + show.Duration() + UiMotion.Settings.tagHold;
+            yield return new WaitUntil(() => Time.unscaledTime >= readyAt);
+        }
+
+        /// <summary>남은 감정 태그를 칩 목록으로 — 같은 감정은 "슬픔 ×2"처럼 하나로 묶고, 색은 침체/흥분 쪽을 따른다.</summary>
+        private static List<MemorySpaceBubble.ResultTag> BuildResultTags(TurnReport report)
+        {
+            var tags = new List<MemorySpaceBubble.ResultTag>();
+            if (report.FinalTags == null) return tags;
+
+            foreach (var pair in report.FinalTags.Emotions)
+            {
+                var text = pair.Value > 1 ? $"{KoreanLabels.Emotion(pair.Key)} ×{pair.Value}" : KoreanLabels.Emotion(pair.Key);
+                tags.Add(new MemorySpaceBubble.ResultTag(text, EmotionVisuals.ChipColor(pair.Key)));
+            }
+
+            return tags;
+        }
+
         /// <summary>UI 가이드 원문: "태그가 위로 올라가며 사라지며, 그와 동시에 인디케이터가 움직인다."
         /// 두 연출을 같은 프레임에 시작하고, 더 긴 쪽(태그 상승)이 끝날 때까지 기다린다 — 심박수
         /// 파형·숫자의 심박수 전환 시간(UiMotionSettings.heartTransition, 기본 0.9초)을 태그 상승과 맞춰 두었다.</summary>
         private IEnumerator PlayTagsAndHeartbeatTogether(TurnReport report)
         {
-            var labels = report.FinalTags.EnumerateEmotionsFlat()
-                .Select(KoreanLabels.Emotion)
-                .ToList();
-
-            var tagSequence = _memoryBubble.PlayRemainingTags(labels);
+            var tagSequence = _memoryBubble.RiseResultTags();
             _heartRate.PlayTurnResult(report);
             // 남은 턴이 줄고(막대가 줄어든다) 새로 붙거나 만료된 컴플렉스가 반영되는 시점 — 심박수 결과와 함께.
             _complexStatus?.Refresh();
