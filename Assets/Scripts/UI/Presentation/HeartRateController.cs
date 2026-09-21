@@ -7,11 +7,11 @@ using UnityEngine;
 namespace BlueComplex.UI.Presentation
 {
     /// <summary>
-    /// 심박수 모니터(심전도 + 목표 띠 + BPM 숫자·상태 배지) + 쿼터 HUD(키 표시 창, 쿼터 진행 창, 전체 스테이지 오버레이)를 코어에 연결한다.
+    /// 심박수 모니터(심전도 파형 + 목표 띠 + BPM 숫자·상태 배지) + 쿼터 HUD(키 표시 창, 쿼터 진행 창, 전체 스테이지 오버레이)를 코어에 연결한다.
     ///
     /// Heartbeat.Changed는 구독하지 않는다 — 코드상 그 이벤트는 TurnRunner.PlayClue의 턴 해석
-    /// 경로(Heartbeat.Change 호출은 TurnRunner.cs 한 곳뿐)에서만 발동하는데, 거기 반응해서 마커를
-    /// 바로 애니메이션하면 컴플렉스 발광/태그 연출보다 심박수가 먼저 움직여 순서가 뒤집힌다.
+    /// 경로(Heartbeat.Change 호출은 TurnRunner.cs 한 곳뿐)에서만 발동하는데, 거기 반응해서 파형을
+    /// 바로 움직이면 컴플렉스 발광/태그 연출보다 심박수가 먼저 움직여 순서가 뒤집힌다.
     /// UI 가이드: "태그가 위로 올라가며 사라지며, 그와 동시에 인디케이터가 움직인다" — 그 타이밍의
     /// 제어권은 3단계 CinematicTurnResultPresenter가 PlayTurnResult()를 부르는 시점이 쥔다.
     /// 쿼터 HUD도 같은 규칙이다 — 키 아이콘은 PlayTurnResult로, 하얀 점은 SyncTurnState로만 움직인다.
@@ -48,13 +48,13 @@ namespace BlueComplex.UI.Presentation
         {
             // 새 세션이면 쿼터 HUD와 바의 목표 구역을 처음 상태로 되돌린다(같은 시드 재시작이면 구역 배치가 똑같아
             // 이전 판의 결과 표시가 남을 수 있다).
+            _bar.BindScale(Session.Zone);
             _bar.ResetTargetZone();
             Hud.Bind(Session, Bootstrapper);
 
             // Session.Keys.Zones는 TurnRunner.StartStage()가 실제로 채우는데, SessionStarted는
             // StartStage()보다 먼저 발동해서 여기선 아직 비어 있다 — OnTurnBegan에서 다시 채운다.
             SyncTurnState();
-            _bar.MoveMarker(Session.Heartbeat.Value, animate: false);
             ShowBpm(Session.Heartbeat.Value, snap: true);
         }
 
@@ -63,7 +63,6 @@ namespace BlueComplex.UI.Presentation
         /// 여기서 다시 계산하지 않고 그대로 표시만 한다(KeyProgress 이벤트도 구독하지 않는다).</summary>
         public void PlayTurnResult(TurnReport report)
         {
-            _bar.MoveMarker(report.HeartbeatValue, animate: true);
             ShowBpm(report.HeartbeatValue, snap: false);
 
             if (report.KeyResult is not { } judgement) return;
@@ -72,13 +71,16 @@ namespace BlueComplex.UI.Presentation
             Hud.RecordKeyResult(judgement.Quarter, judgement.Success);
         }
 
-        /// <summary>BPM 숫자·상태 배지·심전도 파형을 한 번에 갱신한다 — 셋 다 같은 시점(Presenter가 정한다)에 바뀌어야 어긋나 보이지 않는다.</summary>
+        /// <summary>BPM 숫자·상태 배지·심전도 파형을 한 번에 갱신한다 — 셋 다 같은 시점(Presenter가 정한다)에 바뀌고 같은 시간 동안 넘어가야 어긋나 보이지 않는다.
+        /// 파형이 불규칙해지는 구간은 코어 구간표의 검열 수준이 아니라 상태(매우 침체·매우 흥분·즉사)로 정한다.</summary>
         private void ShowBpm(int value, bool snap)
         {
             var state = Session.Zone.StateOf(value);
             var color = HeartbeatVisuals.TextColor(state);
-            _bpm.SetValue(value, color, KoreanLabels.State(state));
-            _bar.SetPulse(value, color, snap);
+            var irregular = state is HeartbeatState.VeryDepressed or HeartbeatState.VeryExcited or HeartbeatState.Fatal;
+
+            _bpm.SetValue(value, color, KoreanLabels.State(state), animate: !snap);
+            _bar.SetPulse(value, color, irregular, snap);
         }
 
         /// <summary>코어의 현재 턴 상태(현재 쿼터의 목표 구역, 쿼터 내 턴 위치)를 바와 쿼터 HUD에 반영한다.
@@ -94,6 +96,7 @@ namespace BlueComplex.UI.Presentation
                 zone = found;
 
             _bar.SetTargetZone(quarter, zone);
+            _bar.SetKeyTurn(quarter > 0 && runner.CurrentTurnInQuarter == Session.Keys.Schedule.TurnsPerQuarter);
             Hud.Sync(quarter, runner.CurrentTurnInQuarter);
         }
 

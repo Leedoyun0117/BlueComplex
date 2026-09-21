@@ -85,14 +85,13 @@ namespace BlueComplex.UI.Presentation
             Refresh(animate: sameQuarter);
         }
 
-        /// <summary>쿼터의 키 판정 결과를 반영한다. 획득이면 그 칸의 아이콘이 파랗게 바뀌며 잠깐 부푼다.</summary>
+        /// <summary>쿼터의 키 판정 결과를 반영한다. 획득이면 그 칸의 빈 자리에 열쇠가 찍힌다(KeyStatusPanel).</summary>
         public void RecordKeyResult(int quarter, bool success)
         {
             if (quarter < 1 || quarter > _results.Length) return;
 
             _results[quarter - 1] = success;
             Refresh(animate: true);
-            if (success) _keyPanel.Pop(quarter - 1);
         }
 
         /// <summary>스테이지가 끝나면 오버레이를 닫는다 — 결과 패널이 그 밑에 깔리지 않게.</summary>
@@ -105,7 +104,7 @@ namespace BlueComplex.UI.Presentation
         {
             if (_session == null || _keyPanel == null) return;
 
-            _keyPanel.SetResults(_results);
+            _keyPanel.SetResults(_results, animate);
             _progressPanel.SetQuarter(_quarter, _session.Keys.Schedule.QuarterCount);
             _progressPanel.SetTurn(_turnInQuarter, animate);
             _overview.Refresh(_quarter, _turnInQuarter, BuildTargetTexts(), _results, animate);

@@ -48,7 +48,7 @@ namespace BlueComplex.UI.Presentation
             ScanCount = 420f,
             ScanThickness = 1.0f,
             ScanSpeed = 0f,
-            Curvature = 0.18f,
+            Curvature = 0.12f,
             Vignette = 0.55f,
             Bloom = 0.30f,
             Aberration = 0.002f,

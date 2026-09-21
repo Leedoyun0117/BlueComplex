@@ -38,7 +38,6 @@ namespace BlueComplex.EditorTools
         private static readonly Color DurationBarBg = new Color32(40, 40, 45, 200);
         private static readonly Color DurationBarFill = new Color32(210, 170, 80, 220);
         private static readonly Color StatusRowBackground = new Color32(10, 14, 22, 150);
-        private static readonly Color KeyZoneUpcoming = new Color32(140, 140, 150, 140);
         private static readonly Color OverlayBackground = new Color32(10, 10, 15, 220);
         private static readonly Color ButtonColor = new Color32(90, 90, 120, 230);
         private static readonly Color TooltipBackground = new Color32(20, 20, 25, 235);
@@ -121,9 +120,8 @@ namespace BlueComplex.EditorTools
         // ---------------------------------------------------------------
 
         /// <summary>
-        /// 세 개 층으로 분리해서 쌓는다: 위쪽 KeyZoneRow(현재 쿼터의 목표 구역 하나 + 목표 심박수 라벨,
-        /// 바와는 별개 레이어라 서로 안 섞인다) → 가운데 BarArea(구간 색 + 마커) → 아래쪽 FatalLabelRow(즉사
-        /// 구간 라벨). 색상은 HeartbeatVisuals(런타임과 공유하는 표)를 그대로 쓴다.
+        /// 배경 패널과 <see cref="HeartRateBarView"/>만 굽는다. 심전도 화면·목표 띠·글자는 굽고 난 직후 UiLayoutCleanupTool이 만든다 —
+        /// 모니터의 최종 모양은 그 도구 한 곳에서 정한다.
         /// 쿼터 HUD(키 표시 창, 쿼터 진행 창, 전체 스테이지 오버레이)는 여기서 굽지 않는다 — QuarterHud가
         /// 런타임에 캔버스 아래에 직접 짓는다(ClueBookPanel과 같은 방식).
         /// </summary>
@@ -132,78 +130,7 @@ namespace BlueComplex.EditorTools
             var bg = CreateImage(go.transform, "Background", HeartPanelBackground, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             Wire(comp, "_background", bg);
 
-            var keyZoneRow = CreateRect(go.transform, "KeyZoneRow", new Vector2(0.02f, 0.54f), new Vector2(0.98f, 1f),
-                Vector2.zero, Vector2.zero);
-
-            var barArea = CreateRect(go.transform, "BarArea", new Vector2(0.02f, 0.20f), new Vector2(0.98f, 0.52f),
-                Vector2.zero, Vector2.zero);
-
-            // BarArea와 같은 x 범위(0.02~0.98)를 써야 세그먼트 바로 아래 라벨이 정확히 겹친다.
-            var fatalLabelRow = CreateRect(go.transform, "FatalLabelRow", new Vector2(0.02f, 0f), new Vector2(0.98f, 0.18f),
-                Vector2.zero, Vector2.zero);
-
-            foreach (var boundary in HeartbeatZone.DefaultBoundaries)
-            {
-                var minX = boundary.Min / (float)Heartbeat.MaxValue;
-                var maxX = (boundary.Max + 1) / (float)Heartbeat.MaxValue;
-                var segment = CreateImage(barArea, $"Segment {boundary.State}", HeartbeatVisuals.SegmentColor(boundary.State),
-                    new Vector2(minX, 0f), new Vector2(maxX, 1f), Vector2.zero, Vector2.zero);
-                segment.raycastTarget = false;
-
-                if (boundary.State != HeartbeatState.Fatal) continue;
-
-                var fatalLabel = CreateTmpText(fatalLabelRow, $"FatalLabel {boundary.Min}", "즉사", font, 15,
-                    TextAlignmentOptions.Center, new Vector2(minX, 0f), new Vector2(maxX, 1f), Vector2.zero, Vector2.zero);
-                fatalLabel.color = new Color32(255, 110, 110, 255);
-                fatalLabel.fontStyle = FontStyles.Bold;
-                fatalLabel.raycastTarget = false;
-            }
-
-            // 마커: 굵은 흰 선 + 위로 튀어나온 캡. 배경 세그먼트 색이 뭐든 항상 도드라지게
-            // 검은 아웃라인을 두르고, 바 위아래로 살짝 삐져나오게 해서 위치를 즉시 알아볼 수 있다.
-            var marker = CreateRect(barArea, "Marker", new Vector2(0f, 0f), new Vector2(0f, 1f),
-                new Vector2(-4f, -6f), new Vector2(4f, 6f));
-            var markerLine = marker.gameObject.AddComponent<Image>();
-            markerLine.color = Color.white;
-            markerLine.raycastTarget = false;
-            var markerOutline = marker.gameObject.AddComponent<Outline>();
-            markerOutline.effectColor = new Color(0f, 0f, 0f, 0.9f);
-            markerOutline.effectDistance = new Vector2(1.5f, 1.5f);
-
-            var cap = CreateImage(marker, "Cap", Color.white, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(-7f, 0f), new Vector2(7f, 14f));
-            cap.raycastTarget = false;
-            var capOutline = cap.gameObject.AddComponent<Outline>();
-            capOutline.effectColor = new Color(0f, 0f, 0f, 0.9f);
-            capOutline.effectDistance = new Vector2(1.5f, 1.5f);
-
-            // 목표 구역 탭 하나 — 바 위 별도 레이어. 실제 anchorMin/Max(범위)와 라벨 텍스트(목표 심박수)는
-            // 런타임에 HeartRateBarView.SetTargetZone이 채운다. 지금 진행 중인 쿼터의 구역만 그린다.
-            var overlays = new RectTransform[1];
-            var overlayImages = new Image[1];
-            var overlayLabels = new TMP_Text[1];
-            for (var i = 0; i < overlays.Length; i++)
-            {
-                var tab = CreateImage(keyZoneRow, $"KeyZone {i}", KeyZoneUpcoming, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
-                tab.raycastTarget = false;
-                tab.gameObject.SetActive(false);
-
-                var label = CreateTmpText(tab.transform, "Label", string.Empty, font, 16, TextAlignmentOptions.Center,
-                    Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-                label.raycastTarget = false;
-                label.fontStyle = FontStyles.Bold;
-
-                overlays[i] = tab.rectTransform;
-                overlayImages[i] = tab;
-                overlayLabels[i] = label;
-            }
-
-            var barView = go.AddComponent<HeartRateBarView>();
-            Wire(barView, "_barArea", barArea);
-            Wire(barView, "_marker", marker);
-            Wire(barView, "_keyZoneOverlays", overlays);
-            Wire(barView, "_keyZoneImages", overlayImages);
-            Wire(barView, "_keyZoneLabels", overlayLabels);
+            go.AddComponent<HeartRateBarView>();
         }
 
         // ---------------------------------------------------------------
@@ -545,7 +472,7 @@ namespace BlueComplex.EditorTools
                 Wire(controller, "_panel", itemPanel);
             });
 
-            BuildController<ImmediateTurnResultPresenter>(root.transform, "Turn Result Presenter", controller =>
+            BuildController<CinematicTurnResultPresenter>(root.transform, "Turn Result Presenter", controller =>
             {
                 Wire(controller, "_complexList", xrayListView);
                 Wire(controller, "_dialogue", dialogueText);

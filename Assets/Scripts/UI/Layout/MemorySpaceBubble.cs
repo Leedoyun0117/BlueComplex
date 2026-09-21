@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using BlueComplex.UI.Motion;
 using BlueComplex.UI.Presentation;
 using DG.Tweening;
 using TMPro;
@@ -8,11 +9,13 @@ using UnityEngine.UI;
 namespace BlueComplex.UI.Layout
 {
     /// <summary>
-    /// 생각 공간(말풍선). 손으로 그린 흰 선(채우지 않은 열린 곡선)만 그리고, 평소엔 흐리게 있다가 단서를 집으면(드래그 시작) 또렷해진다.
-    /// 놓으면 다시 흐려지지만, 놓은 단서로 턴 연출이 시작됐다면 연출이 끝날 때까지(Presenter가 <see cref="SetEngaged"/>로 알린다) 또렷하게 둔다.
+    /// 생각 공간(말풍선). 손으로 그린 흰 선(<see cref="HandDrawnStrokeGraphic"/>, 채우지 않은 열린 곡선)만 그리고, 평소엔 보이지 않는다.
+    /// 단서를 집으면(드래그 시작) 선이 한 바퀴 돌며 그려지듯 나타나고(그릴 때마다 모양이 조금씩 다르다), 놓으면 지우개로 지우듯 사라진다.
+    /// 놓은 단서로 턴 연출이 시작됐다면 연출이 끝날 때까지(Presenter가 <see cref="SetEngaged"/>로 알린다) 선을 그대로 둔다.
     /// 턴 결과 후에는 남은 감정 태그가 위로 떠오르며 사라진다. UI 디자인 가이드 원문: "태그는 위로 올라가며 서서히
     /// 사라지며, 그와 동시에 인디케이터가 움직인다" — 이 클래스는 자기 애니메이션만 알고, 심박수
     /// 이동과 나란히 맞추는 건 3단계 CinematicTurnResultPresenter가 쥔다.
+    /// 드롭 판정은 이 선이 아니라 프리팹의 DropZone(선보다 사방 32px 넉넉한 사각형)이 받는다 — 선 모양은 판정과 무관하다.
     /// </summary>
     public sealed class MemorySpaceBubble : MonoBehaviour
     {
@@ -20,10 +23,6 @@ namespace BlueComplex.UI.Layout
         private const float RiseDuration = 0.9f;
         private const float StaggerPerTag = 0.08f;
         private const float TagSpacingX = 90f;
-        private const float FadeDuration = 0.2f;
-
-        private static readonly Color IdleColor = new(1f, 1f, 1f, 0.55f);
-        private static readonly Color EngagedColor = new(1f, 1f, 1f, 1f);
 
         [SerializeField] private Image _bubbleBackground;
         [SerializeField] private TMP_FontAsset _font;
@@ -31,25 +30,16 @@ namespace BlueComplex.UI.Layout
 
         private ITurnResultPresenter _presenter;
         private ClueCardTray _tray;
-        private Tween _fadeTween;
+        private HandDrawnStrokeGraphic _stroke;
 
         public RectTransform Root => (RectTransform)transform;
-        public Image BubbleBackground => _bubbleBackground;
 
         /// <summary>단서를 집은 동안(또는 그 단서의 턴 연출이 도는 동안) true.</summary>
         public bool IsEngaged { get; private set; }
 
         private void Awake()
         {
-            // 색으로 채운 사각형이 아니라 손그림 선으로 그린다. 스프라이트를 프리팹에 굽지 않고 런타임에 만든다(RuntimeUi.Circle과 같은 방식).
-            if (_bubbleBackground != null)
-            {
-                _bubbleBackground.sprite = RuntimeUi.HandDrawnLoop;
-                _bubbleBackground.type = Image.Type.Simple;
-                _bubbleBackground.raycastTarget = false; // 드롭은 DropZone이 받는다.
-                _bubbleBackground.color = IdleColor;
-            }
-
+            BuildStroke();
             SubscribeToClueDrag();
 
             // BuildMemorySpaceBubble(UiLayoutSetupTool.cs)은 폰트를 직렬화해서 넘기지 않는다 —
@@ -62,22 +52,41 @@ namespace BlueComplex.UI.Layout
             }
         }
 
-        private void OnDestroy()
+        /// <summary>구워진 Bubble 이미지는 색 사각형이라 끄고, 같은 자리에 손그림 선을 런타임에 짓는다(스프라이트를 프리팹에 굽지 않는다).</summary>
+        private void BuildStroke()
         {
-            _fadeTween?.Kill();
-            UnsubscribeFromClueDrag();
+            if (_bubbleBackground == null) return;
+
+            _bubbleBackground.enabled = false;
+            _bubbleBackground.raycastTarget = false; // 드롭은 DropZone이 받는다.
+
+            var rect = RuntimeUi.CreateStretched(_bubbleBackground.transform, "Stroke");
+            _stroke = rect.gameObject.AddComponent<HandDrawnStrokeGraphic>();
+            _stroke.color = Color.white;
         }
 
-        /// <summary>또렷하게(true) 또는 흐리게(false). 이미 그 상태면 아무것도 안 한다.</summary>
+        private void OnDestroy() => UnsubscribeFromClueDrag();
+
+        /// <summary>선을 그려 넣는다(true) 또는 지운다(false). 이미 그 상태면 아무것도 안 한다.</summary>
         public void SetEngaged(bool engaged)
         {
             if (IsEngaged == engaged) return;
             IsEngaged = engaged;
 
-            if (_bubbleBackground == null) return;
+            if (_stroke == null) return;
 
-            _fadeTween?.Kill();
-            _fadeTween = _bubbleBackground.DOColor(engaged ? EngagedColor : IdleColor, FadeDuration);
+            var motion = UiMotion.Settings;
+            UiSoundHooks.Play(UiSoundCue.Pen);
+
+            if (engaged)
+            {
+                _stroke.Regenerate(0);
+                _stroke.Draw(motion.bubbleDraw);
+            }
+            else
+            {
+                _stroke.Erase(motion.bubbleErase);
+            }
         }
 
         private void SubscribeToClueDrag() => ForEachCardDragHandler(h =>

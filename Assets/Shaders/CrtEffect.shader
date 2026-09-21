@@ -6,7 +6,7 @@ Shader "BlueComplex/CRT/PostProcess"
         _ScanCount ("Scanline Count", Range(100, 900)) = 420
         _ScanThickness ("Scanline Thickness", Range(0.2, 4)) = 1.0
         _ScanSpeed ("Scanline Speed", Range(0, 2)) = 0
-        _Curvature ("Barrel Curvature", Range(0, 0.6)) = 0.18
+        _Curvature ("Barrel Curvature", Range(0, 0.6)) = 0.12
         _Vignette ("Vignette", Range(0, 1.5)) = 0.55
         _Bloom ("Bloom", Range(0, 1)) = 0.30
         // 블룸이 시작되는 밝기(선형). 배경 라이팅이 들어온 뒤 전구/창문 같은 하이라이트에만 걸리도록 머티리얼에서 올린다.

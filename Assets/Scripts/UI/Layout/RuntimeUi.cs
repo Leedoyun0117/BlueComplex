@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using BlueComplex.UI.Motion;
 using BlueComplex.UI.Presentation;
 using DG.Tweening;
 using TMPro;
@@ -104,129 +106,6 @@ namespace BlueComplex.UI.Layout
                 _triangleDown = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), 100f);
                 _triangleDown.hideFlags = HideFlags.HideAndDontSave;
                 return _triangleDown;
-            }
-        }
-
-        private static Sprite _handDrawnLoop;
-
-        /// <summary>
-        /// 생각 공간(기억 풍선)의 손그림 선. 디자인 목업의 흰 선을 따라 그린 불규칙한 열린 곡선이다 — 균일한 타원이 아니라
-        /// 획 굵기가 오르내리고 양 끝이 가늘어지며, 왼쪽 아래(유키가 있는 쪽)가 열려 있다.
-        /// 안티앨리어싱된 흰 선이라 틴트로 밝기를 준다. 채우지 않는 건 배경 아트가 그대로 비쳐야 해서다. 아트가 생기면 이 스프라이트만 바꾸면 된다.
-        /// </summary>
-        public static Sprite HandDrawnLoop
-        {
-            get
-            {
-                if (_handDrawnLoop != null) return _handDrawnLoop;
-
-                const int width = 512;
-                const int height = 488;
-
-                // 목업 스크린샷에서 뽑은 획의 중심선(0~1 정규화, 원점 좌하단). 처음과 끝은 초상화에 가려 있던 자리라 살짝 이어 붙였다.
-                var control = new[]
-                {
-                    new Vector2(0.010f, 0.545f), new Vector2(0.003f, 0.605f),
-                    new Vector2(0.005f, 0.657f), new Vector2(0.011f, 0.727f), new Vector2(0.039f, 0.799f), new Vector2(0.083f, 0.863f),
-                    new Vector2(0.139f, 0.917f), new Vector2(0.202f, 0.958f), new Vector2(0.271f, 0.988f), new Vector2(0.344f, 0.996f),
-                    new Vector2(0.415f, 0.995f), new Vector2(0.483f, 0.995f), new Vector2(0.548f, 0.986f), new Vector2(0.612f, 0.968f),
-                    new Vector2(0.673f, 0.945f), new Vector2(0.728f, 0.911f), new Vector2(0.779f, 0.870f), new Vector2(0.823f, 0.823f),
-                    new Vector2(0.862f, 0.773f), new Vector2(0.899f, 0.720f), new Vector2(0.930f, 0.662f), new Vector2(0.957f, 0.601f),
-                    new Vector2(0.978f, 0.534f), new Vector2(0.989f, 0.463f), new Vector2(0.985f, 0.393f), new Vector2(0.972f, 0.321f),
-                    new Vector2(0.950f, 0.251f), new Vector2(0.920f, 0.182f), new Vector2(0.885f, 0.113f), new Vector2(0.825f, 0.069f),
-                    new Vector2(0.758f, 0.038f), new Vector2(0.689f, 0.017f), new Vector2(0.619f, 0.007f), new Vector2(0.550f, 0.004f),
-                    new Vector2(0.485f, 0.004f), new Vector2(0.417f, 0.014f), new Vector2(0.356f, 0.041f), new Vector2(0.316f, 0.071f),
-                    new Vector2(0.285f, 0.100f),
-                };
-
-                var path = SamplePath(control, width, height, out var lengths);
-                var alpha = new float[width * height];
-                var total = lengths[lengths.Count - 1];
-
-                for (var i = 0; i < path.Count; i++)
-                {
-                    var t = total > 0f ? lengths[i] / total : 0f;
-
-                    // 획 압력: 양 끝은 가늘고 가운데가 굵다. 사인 두 개를 겹쳐 사람 손처럼 굵기가 살짝 출렁이게 한다(무작위 없음 — 항상 같은 모양).
-                    var pressure = Mathf.Max(0f, Mathf.Sin(Mathf.PI * Mathf.Clamp01(t * 1.04f)));
-                    var wobble = 0.16f * Mathf.Sin(t * 41f) + 0.10f * Mathf.Sin(t * 17f + 1.3f);
-                    var radius = 1.5f + 2.1f * Mathf.Pow(pressure, 0.6f) + wobble;
-                    Stamp(alpha, width, height, path[i], Mathf.Max(1.2f, radius));
-                }
-
-                var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
-                {
-                    wrapMode = TextureWrapMode.Clamp,
-                    filterMode = FilterMode.Bilinear,
-                    hideFlags = HideFlags.HideAndDontSave,
-                };
-
-                var pixels = new Color32[width * height];
-                for (var i = 0; i < pixels.Length; i++)
-                    pixels[i] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(alpha[i]) * 255f));
-
-                texture.SetPixels32(pixels);
-                texture.Apply(false, true);
-
-                _handDrawnLoop = Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), 100f);
-                _handDrawnLoop.hideFlags = HideFlags.HideAndDontSave;
-                return _handDrawnLoop;
-            }
-        }
-
-        /// <summary>Catmull-Rom으로 제어점을 이어 텍스처 픽셀 좌표의 촘촘한 점열을 만든다(누적 길이 포함).</summary>
-        private static List<Vector2> SamplePath(Vector2[] control, int width, int height, out List<float> lengths)
-        {
-            var points = new List<Vector2>();
-            lengths = new List<float>();
-
-            // 가장자리에 반 두께가 잘리지 않도록 살짝 안쪽으로 모은다.
-            const float margin = 8f;
-            Vector2 ToPixel(Vector2 p) => new Vector2(margin + p.x * (width - 2f * margin), margin + p.y * (height - 2f * margin));
-
-            var accumulated = 0f;
-            for (var i = 0; i < control.Length - 1; i++)
-            {
-                var p0 = ToPixel(control[Mathf.Max(i - 1, 0)]);
-                var p1 = ToPixel(control[i]);
-                var p2 = ToPixel(control[i + 1]);
-                var p3 = ToPixel(control[Mathf.Min(i + 2, control.Length - 1)]);
-
-                var steps = Mathf.Max(2, Mathf.CeilToInt(Vector2.Distance(p1, p2) * 2f));
-                for (var s = 0; s < steps; s++)
-                {
-                    var t = s / (float)steps;
-                    var t2 = t * t;
-                    var t3 = t2 * t;
-                    var point = 0.5f * (2f * p1 + (-p0 + p2) * t + (2f * p0 - 5f * p1 + 4f * p2 - p3) * t2 +
-                                        (-p0 + 3f * p1 - 3f * p2 + p3) * t3);
-
-                    if (points.Count > 0) accumulated += Vector2.Distance(points[points.Count - 1], point);
-                    points.Add(point);
-                    lengths.Add(accumulated);
-                }
-            }
-
-            return points;
-        }
-
-        /// <summary>반지름 radius(픽셀)의 안티앨리어싱된 원을 max로 합성한다 — 점을 촘촘히 찍으면 굵기가 변하는 매끈한 획이 된다.</summary>
-        private static void Stamp(float[] alpha, int width, int height, Vector2 center, float radius)
-        {
-            var reach = Mathf.CeilToInt(radius + 1f);
-            var cx = Mathf.RoundToInt(center.x);
-            var cy = Mathf.RoundToInt(center.y);
-
-            for (var y = Mathf.Max(0, cy - reach); y <= Mathf.Min(height - 1, cy + reach); y++)
-            {
-                for (var x = Mathf.Max(0, cx - reach); x <= Mathf.Min(width - 1, cx + reach); x++)
-                {
-                    var dx = x + 0.5f - center.x;
-                    var dy = y + 0.5f - center.y;
-                    var coverage = Mathf.Clamp01(radius + 0.5f - Mathf.Sqrt(dx * dx + dy * dy));
-                    var index = y * width + x;
-                    if (coverage > alpha[index]) alpha[index] = coverage;
-                }
             }
         }
 
@@ -416,12 +295,19 @@ namespace BlueComplex.UI.Layout
     /// <summary>
     /// 키 아이콘. 카탈로그에 "key" 스프라이트(Assets/Art/UI/Icons/key.png)가 있으면 그걸 쓰고, 없으면 임시 도형(원 머리 + 축 + 톱니)으로 그린다.
     /// 정사각형 안에 그려지므로 AspectRatioFitter로 부모 칸 안에 정사각형으로 맞춘다. 색은 틴트로 준다(획득 파랑 / 미획득 회색).
+    /// 움직임(찍히기 등)은 AspectRatioFitter가 위치·크기를 쥐고 있는 Root가 아니라 그 안의 <see cref="Mover"/>에 준다.
     /// </summary>
     internal sealed class KeyGlyph
     {
         private readonly Image[] _parts;
+        private readonly CanvasGroup _group;
+        private Tween _stamp;
+        private Tween _flash;
 
         public RectTransform Root { get; }
+
+        /// <summary>열쇠 그림만 담은 안쪽 판. 위치·기울기·크기·투명도를 트윈으로 움직이는 대상.</summary>
+        public RectTransform Mover { get; }
 
         public KeyGlyph(Transform slot, string name)
         {
@@ -430,10 +316,13 @@ namespace BlueComplex.UI.Layout
             fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
             fitter.aspectRatio = 1f;
 
+            Mover = RuntimeUi.CreateStretched(Root, "Mover");
+            _group = Mover.gameObject.AddComponent<CanvasGroup>();
+
             var sprite = UiIcons.GetExact(UiIconCatalog.KeyId);
             if (sprite != null)
             {
-                var icon = RuntimeUi.CreateImage(Root, "Icon", Color.white, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, sprite);
+                var icon = RuntimeUi.CreateImage(Mover, "Icon", Color.white, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, sprite);
                 icon.preserveAspect = true;
                 _parts = new[] { icon };
                 return;
@@ -441,13 +330,13 @@ namespace BlueComplex.UI.Layout
 
             _parts = new[]
             {
-                RuntimeUi.CreateImage(Root, "Head", Color.white, new Vector2(0.08f, 0.30f), new Vector2(0.42f, 0.70f),
+                RuntimeUi.CreateImage(Mover, "Head", Color.white, new Vector2(0.08f, 0.30f), new Vector2(0.42f, 0.70f),
                     Vector2.zero, Vector2.zero, RuntimeUi.Circle),
-                RuntimeUi.CreateImage(Root, "Shaft", Color.white, new Vector2(0.38f, 0.45f), new Vector2(0.94f, 0.55f),
+                RuntimeUi.CreateImage(Mover, "Shaft", Color.white, new Vector2(0.38f, 0.45f), new Vector2(0.94f, 0.55f),
                     Vector2.zero, Vector2.zero),
-                RuntimeUi.CreateImage(Root, "Tooth A", Color.white, new Vector2(0.68f, 0.28f), new Vector2(0.76f, 0.47f),
+                RuntimeUi.CreateImage(Mover, "Tooth A", Color.white, new Vector2(0.68f, 0.28f), new Vector2(0.76f, 0.47f),
                     Vector2.zero, Vector2.zero),
-                RuntimeUi.CreateImage(Root, "Tooth B", Color.white, new Vector2(0.84f, 0.33f), new Vector2(0.92f, 0.47f),
+                RuntimeUi.CreateImage(Mover, "Tooth B", Color.white, new Vector2(0.84f, 0.33f), new Vector2(0.92f, 0.47f),
                     Vector2.zero, Vector2.zero),
             };
         }
@@ -459,17 +348,63 @@ namespace BlueComplex.UI.Layout
 
         public void SetVisible(bool visible) => Root.gameObject.SetActive(visible);
 
-        public void Pop()
+        /// <summary>빈 칸에 열쇠가 "탁" 찍힌다: 위에서 크게 떨어져 칸에 닿으며 살짝 눌리고, 닿는 순간 밝아졌다가 작게 튀며 가라앉는다.
+        /// <paramref name="onImpact"/>는 닿는 순간 한 번 불린다(소리 훅·칸 배경 번쩍임용).</summary>
+        public void PlayStamp(Color finalColor, Color flashColor, Action onImpact)
         {
-            Root.DOKill();
-            Root.localScale = Vector3.one;
-            Root.DOScale(1.35f, 0.18f).SetLoops(2, LoopType.Yoyo).SetEase(Ease.OutQuad);
+            var motion = UiMotion.Settings;
+            Kill();
+
+            SetColor(finalColor);
+            _group.alpha = 0f;
+            Mover.anchoredPosition = new Vector2(0f, motion.keyDropHeight);
+            Mover.localScale = Vector3.one * 1.55f;
+            Mover.localRotation = Quaternion.Euler(0f, 0f, 14f);
+
+            var bounceHeight = motion.keyDropHeight * 0.14f;
+            var up = motion.keyBounce * 0.4f;
+            var down = motion.keyBounce * 0.6f;
+
+            _stamp = DOTween.Sequence().SetUpdate(true).SetTarget(Mover)
+                .Append(_group.DOFade(1f, motion.keyFall * 0.4f))
+                .Join(Mover.DOAnchorPosY(0f, motion.keyFall).SetEase(Ease.InQuad))
+                .Join(Mover.DOScale(0.9f, motion.keyFall).SetEase(Ease.InQuad))
+                .Join(Mover.DOLocalRotate(Vector3.zero, motion.keyFall).SetEase(Ease.InQuad))
+                .AppendCallback(() =>
+                {
+                    PlayFlash(flashColor, finalColor, motion.keyFlash);
+                    onImpact?.Invoke();
+                })
+                .Append(Mover.DOAnchorPosY(bounceHeight, up).SetEase(Ease.OutQuad))
+                .Join(Mover.DOScale(1.1f, up).SetEase(Ease.OutQuad))
+                .Append(Mover.DOAnchorPosY(0f, down).SetEase(Ease.InQuad))
+                .Join(Mover.DOScale(1f, down).SetEase(Ease.InQuad));
         }
 
+        private void PlayFlash(Color from, Color to, float seconds)
+        {
+            _flash?.Kill();
+            var current = from;
+            SetColor(from);
+            _flash = DOTween.To(() => current, c =>
+                {
+                    current = c;
+                    SetColor(c);
+                }, to, seconds)
+                .SetEase(Ease.OutQuad).SetUpdate(true).SetTarget(Mover);
+        }
+
+        /// <summary>진행 중인 움직임을 멈추고 원래 자세로 되돌린다.</summary>
         public void Kill()
         {
-            Root.DOKill();
-            Root.localScale = Vector3.one;
+            _stamp?.Kill();
+            _flash?.Kill();
+            Mover.DOKill();
+            _group.DOKill();
+            _group.alpha = 1f;
+            Mover.anchoredPosition = Vector2.zero;
+            Mover.localScale = Vector3.one;
+            Mover.localRotation = Quaternion.identity;
         }
     }
 }

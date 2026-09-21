@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using BlueComplex.Core.Complexes;
-using DG.Tweening;
 using UnityEngine;
 
 namespace BlueComplex.UI.Presentation
@@ -29,30 +28,18 @@ namespace BlueComplex.UI.Presentation
         }
 
         /// <summary>
-        /// 발동한(Triggered) 컴플렉스만, 우선순위 순서(Steps가 이미 그 순서다) 그대로 한 번에 하나씩
-        /// 빛난다. TickDurations/스폰이 Resolve 이후에 일어나므로 이 시점의 행 배치는 Steps가 계산됐을
-        /// 때와 다를 수 있다 — 그래서 인덱스가 아니라 ComplexInstance 참조로 행을 찾는다. 같은 턴에
-        /// 만료돼 이미 행이 없는 컴플렉스는 조용히 건너뛴다.
-        ///
-        /// 호출 전에 Refresh()로 최신 보드 상태를 먼저 반영해 둬야 한다 — 순서 제어(재생 시점)는
-        /// Presenter가 쥐고, 이 메서드는 반환한 Sequence를 재생할지 말지도 관여하지 않는다.
+        /// 이 컴플렉스의 행을 한 번 빛나게 한다. 행을 못 찾으면(같은 턴에 만료돼 이미 행이 없다) false — 호출자는 조용히 건너뛴다.
+        /// 어느 컴플렉스를 어떤 순서(우선순위, InterpretationResult.Steps가 이미 그 순서다)로 빛낼지, 그 사이에 무엇을 보여줄지(이벤트 대사)는
+        /// Presenter가 쥔다. TickDurations/스폰이 Resolve 이후에 일어나므로 행 배치는 Steps가 계산됐을 때와 다를 수 있어 인덱스가 아니라
+        /// ComplexInstance 참조로 찾는다 — 호출 전에 Refresh()로 최신 보드 상태를 먼저 반영해 둬야 한다.
         /// </summary>
-        public Sequence PlaySequence(InterpretationResult result)
+        public bool PlayGlow(ComplexInstance complex)
         {
-            var sequence = DOTween.Sequence();
+            var row = FindRow(complex);
+            if (row == null) return false;
 
-            foreach (var step in result.Steps)
-            {
-                if (!step.Triggered) continue;
-
-                var row = FindRow(step.Complex);
-                if (row == null) continue;
-
-                sequence.AppendCallback(row.PlayGlow);
-                sequence.AppendInterval(ComplexRowView.GlowDuration);
-            }
-
-            return sequence;
+            row.PlayGlow();
+            return true;
         }
 
         private ComplexRowView FindRow(ComplexInstance complex)
