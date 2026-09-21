@@ -74,18 +74,8 @@ namespace BlueComplex.UI.Presentation
             TweenTo(target);
         }
 
-        /// <summary>
-        /// 80을 중앙(0)으로 두고 하한 10 / 상한 190을 각각 -1 / +1로 매핑한다.
-        /// 안정 구간이 중앙 기준 비대칭(-9/+20)이므로 양방향을 따로 계산한다.
-        /// </summary>
-        private float NormalizedT(int value)
-        {
-            if (value == _normalizationCenter) return 0f;
-
-            return value < _normalizationCenter
-                ? (value - _normalizationCenter) / (float)(_normalizationCenter - _normalizationLower)
-                : (value - _normalizationCenter) / (float)(_normalizationUpper - _normalizationCenter);
-        }
+        private float NormalizedT(int value) =>
+            HeartbeatNormalization.Normalize(value, _normalizationCenter, _normalizationLower, _normalizationUpper);
 
         private void TweenTo(CrtParams target)
         {
