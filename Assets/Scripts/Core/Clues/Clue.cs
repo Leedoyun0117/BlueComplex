@@ -32,26 +32,14 @@ namespace BlueComplex.Core.Clues
         public TagSet CreateOriginalTagSet() => new(Time, Persons, Emotions);
     }
 
-    /// <summary>런 중 손에 들고 있는 단서. 사용 횟수를 소모한다.</summary>
+    /// <summary>런 중 손에 들고 있는 단서. 한 번 내면 손패에서 사라진다(사용 횟수 제한 없음 — 영구 소멸은 ClueHand.Use).</summary>
     public sealed class ClueInstance
     {
-        public const int MaxUses = 2;
-
         public ClueDefinition Definition { get; }
-        public int RemainingUses { get; private set; }
 
-        public bool IsExhausted => RemainingUses <= 0;
-
-        public ClueInstance(ClueDefinition definition, int uses = MaxUses)
+        public ClueInstance(ClueDefinition definition)
         {
             Definition = definition ?? throw new ArgumentNullException(nameof(definition));
-            RemainingUses = uses;
-        }
-
-        public void ConsumeUse()
-        {
-            if (IsExhausted) throw new InvalidOperationException($"{Definition.Id} 는 이미 소멸했습니다.");
-            RemainingUses--;
         }
     }
 }

@@ -6,9 +6,12 @@ Shader "BlueComplex/CRT/PostProcess"
         _ScanCount ("Scanline Count", Range(100, 900)) = 420
         _ScanThickness ("Scanline Thickness", Range(0.2, 4)) = 1.0
         _ScanSpeed ("Scanline Speed", Range(0, 2)) = 0
-        _Curvature ("Barrel Curvature", Range(0, 0.6)) = 0.18
+        _Curvature ("Barrel Curvature", Range(0, 0.6)) = 0.12
         _Vignette ("Vignette", Range(0, 1.5)) = 0.55
         _Bloom ("Bloom", Range(0, 1)) = 0.30
+        // 블룸이 시작되는 밝기(선형). 배경 라이팅이 들어온 뒤 전구/창문 같은 하이라이트에만 걸리도록 머티리얼에서 올린다.
+        // 프리셋(CrtParams)이 다루는 값이 아니라 심박수로 변하지 않는다. 기본값 0.45는 기존 동작과 같다.
+        _BloomThreshold ("Bloom Threshold", Range(0, 2)) = 0.45
         _Aberration ("Chromatic Aberration", Range(0, 0.02)) = 0.002
         _Noise ("Noise", Range(0, 0.4)) = 0.06
         _Flicker ("Flicker", Range(0, 0.3)) = 0.04
@@ -38,16 +41,11 @@ Shader "BlueComplex/CRT/PostProcess"
             #pragma vertex Vert
             #pragma fragment Frag
 
-            // Blit.hlsl references TEXTURE2D_X()/UnpackNormalOctQuadEncode()/_Time etc. from headers it doesn't
-            // include itself, so pull them in first (same order as com.unity.render-pipelines.core's CoreCopy.shader).
-            // UnityInput.hlsl has to come before Blit.hlsl: Blit.hlsl pulls in UnityInstancing.hlsl, which
-            // #defines unity_StereoEyeIndex as a plain "0" outside of stereo builds, and UnityInput.hlsl
-            // declares an actual "int unity_StereoEyeIndex;" variable — if that #define is already active,
-            // the declaration expands to "int 0;" and fails to parse.
-            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
-            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Packing.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/UnityInput.hlsl"
-            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/TextureXR.hlsl"
+            // URP의 Core.hlsl를 먼저 포함한다(URP 자체 CoreBlit.shader와 같은 방식). Blit.hlsl이 쓰는 TEXTURE2D_X()/_Time/unity_StereoEyeIndex 등이
+            // 여기서 정의된다. 예전처럼 core 패키지의 TextureXR.hlsl을 직접 포함하면 D3D11에서 TEXTURE2D_X가 Texture2DArray로 풀려,
+            // Render Graph가 일반 Texture2D로 바인딩한 _BlitTexture와 타입이 어긋나 Unity가 기본 더미(회색) 텍스처로 대체한다 —
+            // 그러면 CRT가 씬을 전혀 읽지 못하고 화면 전체가 균일한 회색이 된다.
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
 
             TEXTURE2D(_UITex);
@@ -61,6 +59,7 @@ Shader "BlueComplex/CRT/PostProcess"
                 float _Curvature;
                 float _Vignette;
                 float _Bloom;
+                float _BloomThreshold;
                 float _Aberration;
                 float _Noise;
                 float _Flicker;
@@ -135,7 +134,7 @@ Shader "BlueComplex/CRT/PostProcess"
                     for (int j = -2; j <= 2; j++)
                     {
                         float3 s = SampleComposited(c + float2(i * px, j * py));
-                        acc += max(s - 0.45, 0.0);
+                        acc += max(s - _BloomThreshold, 0.0);
                     }
                 }
                 col += acc / 25.0 * _Bloom * 5.5;

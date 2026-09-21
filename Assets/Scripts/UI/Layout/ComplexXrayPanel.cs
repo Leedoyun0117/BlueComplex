@@ -8,7 +8,7 @@ using UnityEngine.UI;
 namespace BlueComplex.UI.Layout
 {
     /// <summary>
-    /// 컴플렉스 인터페이스(엑스레이 판넬). 평소엔 구석에 작게 접혀있다가 펼쳐지며 안쪽의
+    /// 컴플렉스 인터페이스(엑스레이 판넬). 평소엔 구석에 접혀 보이지 않다가 펼쳐지며 안쪽의
     /// 컴플렉스 목록(ComplexListView, 4개 Row — 최대 4중첩과 맞춘 슬롯 수)을 드러낸다.
     /// 펼침은 0.3초 내외로 짧게 잡는다 —
     /// 단서를 집는 순간 발동하는데 느리면 드래그하는 동안 뇌가 아직 안 보이는 상태가 된다.
@@ -18,18 +18,22 @@ namespace BlueComplex.UI.Layout
     ///    구현한다. 실제 Open() 트리거는 PortraitView.OnDrop("Yuki Portrait" 인스턴스만)이 쥔다.
     /// 2. 단서를 집어 드래그 시작 — ClueCardTray의 각 카드 ClueCardDragHandler.DragStarted를 구독한다.
     ///
-    /// 반응이 끝나면 Close() — 호출 시점의 제어권은 3단계 CinematicTurnResultPresenter가 쥔다.
-    /// 지금은 아무데서나 수동으로 Open()/Close()를 불러도 확인 가능하다.
+    /// 반응이 끝나면 Close() — 턴 연출이 재생되는 동안은 CinematicTurnResultPresenter가 접는 시점을 쥔다.
+    /// 다만 단서를 집었다가 기억 공간에 안 놓고 놓아버린 경우나 연출이 없는 Presenter(Immediate)에서는
+    /// 아무도 Close()를 부르지 않으므로, 드래그가 끝났는데 연출이 재생 중이 아니면 이 컴포넌트가 스스로 접는다.
     /// </summary>
     public sealed class ComplexXrayPanel : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         private const float RevealDuration = 0.3f;
-        private const float FoldedAlpha = 0.12f;
 
-        /// <summary>접힌 상태의 구석 박스(화면 비율 앵커). 펼친 상태는 Awake 시점의 원래 앵커를 그대로 기억해서 쓴다 —
-        /// PlaceInstance(UiLayoutSetupTool.cs)가 배치를 바꿔도 여기 하드코딩할 필요가 없다.</summary>
-        private static readonly Vector2 FoldedAnchorMin = new(0.90f, 0.02f);
-        private static readonly Vector2 FoldedAnchorMax = new(0.99f, 0.10f);
+        /// <summary>접힌 판넬은 화면에 안 보인다 — 관절 팔 아트가 생기면 이 값을 올려 접힌 기기를 드러낸다.
+        /// (그 전까지는 투명한 채로 드래그 손잡이 역할만 한다.)</summary>
+        private const float FoldedAlpha = 0f;
+
+        /// <summary>접힌 상태의 구석 박스(화면 비율 앵커). 목업에서 관절 팔이 접혀 있는 유키 왼쪽 위 구석이다.
+        /// 펼친 상태는 Awake 시점의 원래 앵커를 그대로 기억해서 쓴다 — MainHud의 배치가 바뀌어도 여기 하드코딩할 필요가 없다.</summary>
+        private static readonly Vector2 FoldedAnchorMin = new(0.03f, 0.62f);
+        private static readonly Vector2 FoldedAnchorMax = new(0.09f, 0.72f);
 
         [SerializeField] private ClueCardTray _clueTray;
 
@@ -46,6 +50,7 @@ namespace BlueComplex.UI.Layout
         private Vector2 _originalAnchoredPosition;
 
         private Tween _revealTween;
+        private ITurnResultPresenter _presenter;
 
         public RectTransform Root => _rect;
         public bool IsOpen { get; private set; }
@@ -91,12 +96,41 @@ namespace BlueComplex.UI.Layout
             UnsubscribeFromClueDrag();
         }
 
-        private void SubscribeToClueDrag() => ForEachCardDragHandler(h => h.DragStarted += OnClueDragStarted);
-        private void UnsubscribeFromClueDrag() => ForEachCardDragHandler(h => h.DragStarted -= OnClueDragStarted);
+        private void SubscribeToClueDrag() => ForEachCardDragHandler(h =>
+        {
+            h.DragStarted += OnClueDragStarted;
+            h.DragEnded += OnClueDragEnded;
+        });
+
+        private void UnsubscribeFromClueDrag() => ForEachCardDragHandler(h =>
+        {
+            h.DragStarted -= OnClueDragStarted;
+            h.DragEnded -= OnClueDragEnded;
+        });
 
         // DragStarted는 Action(반환값 없음)인데 Open()은 이제 Tween을 돌려주므로 메서드 그룹을
         // 바로 못 물린다 — 반환값을 버리는 얇은 래퍼.
-        private void OnClueDragStarted() => Open();
+        // 연출이 재생 중일 때 집은 단서는 어차피 못 낸다(MemorySpaceDropZone) — 그때 펼치면 접어줄 시점이 없다.
+        private void OnClueDragStarted()
+        {
+            if (!IsTurnPresenting) Open();
+        }
+
+        /// <summary>드롭은 OnEndDrag보다 먼저 처리되므로 단서를 냈다면 이 시점에 이미 연출이 시작돼 있다.
+        /// 연출 중이면 접는 시점을 Presenter에게 맡기고, 아니면(허공에 놓았거나 즉시 반영형 Presenter) 지금 접는다.</summary>
+        private void OnClueDragEnded()
+        {
+            if (!IsTurnPresenting) Close();
+        }
+
+        private bool IsTurnPresenting
+        {
+            get
+            {
+                _presenter ??= transform.root.GetComponentInChildren<ITurnResultPresenter>(true);
+                return _presenter != null && _presenter.IsPresenting;
+            }
+        }
 
         private void ForEachCardDragHandler(System.Action<ClueCardDragHandler> apply)
         {
@@ -170,6 +204,9 @@ namespace BlueComplex.UI.Layout
             transform.SetParent(_canvasRect, worldPositionStays: true);
             transform.SetAsLastSibling();
 
+            // 끌고 있는 판넬이 커서 밑을 가리면 유키(PortraitView)가 드롭을 못 받는다 — 놓을 때까지 히트테스트에서 뺀다.
+            _canvasGroup.blocksRaycasts = false;
+
             MoveTo(eventData);
         }
 
@@ -179,6 +216,7 @@ namespace BlueComplex.UI.Layout
         {
             // 드롭이 유키 위에서 성공했으면 PortraitView.OnDrop이 이미 Open()을 불렀다 — 위치만
             // 원래 자리(구석 폴드 위치)로 되돌린다. 실패해도 마찬가지로 제자리 복귀.
+            _canvasGroup.blocksRaycasts = true;
             transform.SetParent(_originalParent, worldPositionStays: true);
             transform.SetSiblingIndex(_originalSiblingIndex);
             _rect.anchoredPosition = _originalAnchoredPosition;

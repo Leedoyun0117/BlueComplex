@@ -1,5 +1,9 @@
 using System;
+using System.Collections;
 using BlueComplex.Core.Items;
+using BlueComplex.UI.Layout;
+using BlueComplex.UI.Motion;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -7,40 +11,202 @@ using UnityEngine.UI;
 
 namespace BlueComplex.UI.Presentation
 {
-    /// <summary>아이템 슬롯 하나의 표시 + 클릭 입력 중계. 사용 판정은 하지 않는다.</summary>
-    public sealed class ItemSlotView : MonoBehaviour, IPointerClickHandler
+    /// <summary>아이템 슬롯 하나(종이 카드 한 장의 자리)의 표시 + 클릭 입력 중계. 사용 판정은 하지 않는다.
+    /// 슬롯에는 아이콘과 이름만 보이고, 설명은 공유 TooltipPopup(ComplexRowView와 동일 패턴)으로 뺐다 —
+    /// 슬롯 자체엔 담기엔 너무 길다. 카드가 없는 자리는 파인 빈 칸(<see cref="SetEmpty"/>)으로 남는다.
+    ///
+    /// 움직임: 사용한 카드는 구겨지며 사라지고(<see cref="PlayUse"/>), 새 카드는 빈 칸에 눌려 끼워진다(<see cref="Render"/>의 insert).
+    /// 슬롯은 세로 레이아웃 그룹의 자식이라 위치는 건드리지 않고 크기·기울기·투명도로만 표현한다.
+    /// 시간은 UiMotionSettings(인스펙터)에서 온다.</summary>
+    public sealed class ItemSlotView : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
     {
+        private const float HoverDelay = 0.25f;
+        private const float EmptyEdgeAlpha = 0.45f;
+
         [SerializeField] private Image _background;
         [SerializeField] private TMP_Text _nameText;
-        [SerializeField] private TMP_Text _descriptionText;
+        [SerializeField] private Image _iconImage;
+        [SerializeField] private TooltipPopup _tooltip;
 
-        private static readonly Color FilledColor = new Color32(120, 120, 130, 200);
-        private static readonly Color EmptyColor = new Color32(60, 60, 65, 100);
+        private static readonly Color FilledColor = MockupStyle.Card;
+
+        /// <summary>카드가 빠진 자리: 종이(패널)보다 살짝 어두운 불투명한 파인 자리. 반투명으로 두면 안 된다 — 테두리(Outline)가 그래픽 모양 그대로 채운 사본을 뒤에 깔아서 속이 찬 어두운 블록으로 보인다.</summary>
+        private static readonly Color EmptyColor = new Color32(226, 222, 212, 255);
+        private static readonly Color CrumpledColor = new Color32(196, 192, 182, 255);
+
+        private Coroutine _hoverRoutine;
+        private Outline _edge;
+        private Color _edgeColor;
+        private CanvasGroup _group;
+        private Tween _motion;
 
         public ItemDefinition Item { get; private set; }
 
         /// <summary>슬롯 클릭을 그대로 중계한다 — TurnRunner.UseItem 호출은 컨트롤러가 한다.</summary>
         public event Action<ItemDefinition> Clicked;
 
-        public void Render(ItemDefinition item)
+        private void Awake()
         {
-            Item = item;
-            _background.color = FilledColor;
-            _nameText.text = item.DisplayName;
-            _descriptionText.text = item.Description;
+            _edge = GetComponent<Outline>();
+            if (_edge != null) _edgeColor = _edge.effectColor;
+            EnsureGroup();
         }
 
+        /// <param name="insert">true면 카드가 빈 칸에 눌려 끼워지는 움직임을 재생한다.</param>
+        public void Render(ItemDefinition item, bool insert = false)
+        {
+            Item = item;
+            gameObject.SetActive(true);
+            ResetPose();
+            _background.color = FilledColor;
+            _background.raycastTarget = true;
+            SetEdgeAlpha(1f);
+            _nameText.text = item.DisplayName;
+
+            if (_iconImage != null)
+            {
+                var icon = UiIcons.Get(item.Id);
+                _iconImage.sprite = icon;
+                _iconImage.enabled = icon != null;
+            }
+
+            if (insert) PlayInsert();
+        }
+
+        /// <summary>카드가 없는 자리 — 파인 빈 칸만 남긴다(다음에 카드가 끼워질 자리).</summary>
         public void SetEmpty()
         {
             Item = null;
+            HideTooltip();
+            gameObject.SetActive(true);
+            ResetPose();
+
+            _nameText.text = string.Empty;
+            if (_iconImage != null) _iconImage.enabled = false;
+
             _background.color = EmptyColor;
-            _nameText.text = "(비어있음)";
-            _descriptionText.text = string.Empty;
+            _background.raycastTarget = false;
+            SetEdgeAlpha(EmptyEdgeAlpha);
+        }
+
+        /// <summary>보유 한도 밖의 자리 — 아예 감춘다(빈 상자를 한도보다 많이 늘어놓지 않는다).</summary>
+        public void Hide()
+        {
+            Item = null;
+            HideTooltip();
+            ResetPose();
+            gameObject.SetActive(false);
+        }
+
+        /// <summary>사용한 카드가 구겨져 던져지듯 사라진다: 꾹 눌려 찌그러지고 → 구겨진 색으로 오그라들며 기울고 → 작아지며 사라진다.
+        /// 끝나면 슬롯은 원래 자세로 돌아가 있고 <paramref name="onDone"/>이 불린다(그때 슬롯을 비운다).</summary>
+        public void PlayUse(Action onDone)
+        {
+            HideTooltip();
+            _motion?.Kill();
+            _background.raycastTarget = false;
+            UiSoundHooks.Play(UiSoundCue.Paper);
+
+            var total = UiMotion.Settings.itemUse;
+            var rect = (RectTransform)transform;
+            var group = EnsureGroup();
+
+            _motion = DOTween.Sequence().SetUpdate(true).SetTarget(this)
+                .Append(rect.DOScale(new Vector3(1.06f, 0.84f, 1f), total * 0.2f).SetEase(Ease.OutQuad))
+                .Join(rect.DOLocalRotate(new Vector3(0f, 0f, 3f), total * 0.2f))
+                .Append(rect.DOScale(0.7f, total * 0.35f).SetEase(Ease.InOutQuad))
+                .Join(rect.DOLocalRotate(new Vector3(0f, 0f, -13f), total * 0.35f))
+                .Join(_background.DOColor(CrumpledColor, total * 0.35f))
+                .Append(rect.DOScale(0.05f, total * 0.45f).SetEase(Ease.InBack))
+                .Join(rect.DOLocalRotate(new Vector3(0f, 0f, -42f), total * 0.45f).SetEase(Ease.InQuad))
+                .Join(group.DOFade(0f, total * 0.45f).SetEase(Ease.InQuad))
+                .OnComplete(() =>
+                {
+                    ResetPose();
+                    onDone?.Invoke();
+                });
+        }
+
+        private void PlayInsert()
+        {
+            _motion?.Kill();
+            var total = UiMotion.Settings.itemInsert;
+            var rect = (RectTransform)transform;
+            var group = EnsureGroup();
+
+            // 크게 들린 채 옅게 시작해서 칸 위에 눌려 앉는다.
+            rect.localScale = Vector3.one * 1.3f;
+            rect.localRotation = Quaternion.Euler(0f, 0f, 7f);
+            group.alpha = 0f;
+
+            _motion = DOTween.Sequence().SetUpdate(true).SetTarget(this)
+                .Append(group.DOFade(1f, total * 0.4f))
+                .Join(rect.DOScale(1f, total).SetEase(Ease.OutBack, 1.6f))
+                .Join(rect.DOLocalRotate(Vector3.zero, total).SetEase(Ease.OutBack))
+                .AppendCallback(() => UiSoundHooks.Play(UiSoundCue.Pin));
+        }
+
+        private void ResetPose()
+        {
+            _motion?.Kill();
+            var rect = (RectTransform)transform;
+            rect.localScale = Vector3.one;
+            rect.localRotation = Quaternion.identity;
+            EnsureGroup().alpha = 1f;
+        }
+
+        private CanvasGroup EnsureGroup()
+        {
+            if (_group != null) return _group;
+
+            _group = GetComponent<CanvasGroup>();
+            if (_group == null) _group = gameObject.AddComponent<CanvasGroup>();
+            return _group;
+        }
+
+        private void SetEdgeAlpha(float factor)
+        {
+            if (_edge == null) return;
+
+            var color = _edgeColor;
+            color.a *= factor;
+            _edge.effectColor = color;
         }
 
         public void OnPointerClick(PointerEventData eventData)
         {
             if (Item != null) Clicked?.Invoke(Item);
+        }
+
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            if (Item == null) return;
+            _hoverRoutine = StartCoroutine(HoverThenShow());
+        }
+
+        public void OnPointerExit(PointerEventData eventData) => HideTooltip();
+
+        private void OnDisable()
+        {
+            _motion?.Kill();
+            HideTooltip();
+        }
+
+        private IEnumerator HoverThenShow()
+        {
+            yield return new WaitForSeconds(HoverDelay);
+            if (Item == null || _tooltip == null) yield break;
+            _tooltip.Show(Item.DisplayName, Item.Description, transform.position);
+        }
+
+        private void HideTooltip()
+        {
+            if (_hoverRoutine != null)
+            {
+                StopCoroutine(_hoverRoutine);
+                _hoverRoutine = null;
+            }
+            _tooltip?.Hide();
         }
     }
 }

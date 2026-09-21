@@ -10,42 +10,39 @@ using BlueComplex.Core.Turn;
 namespace BlueComplex.UI.Debugging
 {
     /// <summary>
-    /// StageSession의 턴 이벤트를 구독해 EditMode의 10턴 통합 테스트와 같은 형식으로 Debug.Log를 남긴다.
+    /// StageSession의 턴 이벤트를 구독해 EditMode의 쿼터 통합 테스트와 같은 형식으로 Debug.Log를 남긴다.
     /// 순수하게 로그 조립만 담당하며 게임 규칙에는 관여하지 않는다.
     /// </summary>
     public sealed class StageTurnLogger : IDisposable
     {
         private readonly StageSession _session;
-        private readonly Dictionary<int, KeyZone> _zoneByTurn = new();
-        private readonly Dictionary<int, string> _judgeByTurn = new();
 
         public StageTurnLogger(StageSession session)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
-
-            _session.Keys.ZoneOpened += OnZoneOpened;
-            _session.Keys.KeyCollected += OnKeyCollected;
-            _session.Keys.ZoneMissed += OnZoneMissed;
             _session.Runner.TurnResolved += OnTurnResolved;
         }
 
         public void Dispose()
         {
-            _session.Keys.ZoneOpened -= OnZoneOpened;
-            _session.Keys.KeyCollected -= OnKeyCollected;
-            _session.Keys.ZoneMissed -= OnZoneMissed;
             _session.Runner.TurnResolved -= OnTurnResolved;
         }
-
-        private void OnZoneOpened(KeyZone zone) => _zoneByTurn[_session.Runner.CurrentTurn] = zone;
-        private void OnKeyCollected(int count) => _judgeByTurn[_session.Runner.CurrentTurn] = $"성공(누적 {count})";
-        private void OnZoneMissed() => _judgeByTurn[_session.Runner.CurrentTurn] = "실패";
 
         private void OnTurnResolved(TurnReport report)
         {
             var log = new StringBuilder();
-            var originalTags = report.Clue.CreateOriginalTagSet();
             var heartbeatBefore = report.HeartbeatValue - report.HeartbeatDelta;
+
+            if (report.IsPass)
+            {
+                log.AppendLine($"[턴 {report.Turn}] 손패 없음 — 넘어감  심박수: {report.HeartbeatValue}");
+                AppendQuarterAndOutcome(log, report);
+                UnityEngine.Debug.Log(log.ToString());
+                LogStageEnd(report);
+                return;
+            }
+
+            var originalTags = report.Clue.CreateOriginalTagSet();
 
             log.AppendLine($"[턴 {report.Turn}] 단서: {report.Clue.DisplayName} ({FormatTags(originalTags)})");
 
@@ -71,22 +68,30 @@ namespace BlueComplex.UI.Debugging
             log.AppendLine($"  최종: {FormatTags(report.FinalTags)}");
             log.AppendLine($"  이동: {report.HeartbeatDelta}  심박수: {heartbeatBefore} → {report.HeartbeatValue}");
 
-            var zoneText = _zoneByTurn.TryGetValue(report.Turn, out var zone)
-                ? $"{zone.StartSlot}~{zone.StartSlot + zone.Width - 1}"
-                : "없음";
-            var judgeText = _judgeByTurn.TryGetValue(report.Turn, out var judge) ? judge : "-";
-            log.AppendLine($"  키 구역: {zoneText}  판정: {judgeText}");
+            AppendQuarterAndOutcome(log, report);
+
+            UnityEngine.Debug.Log(log.ToString());
+            LogStageEnd(report);
+        }
+
+        private void AppendQuarterAndOutcome(StringBuilder log, TurnReport report)
+        {
+            var judgeText = report.KeyResult is { } j
+                ? $"{j.Quarter}쿼터 {(j.Success ? "성공" : "실패")}(구역 {j.Zone.StartSlot}~{j.Zone.StartSlot + j.Zone.Width - 1}, 심박수 {j.Position})"
+                : "-";
+            log.AppendLine($"  쿼터 {report.Quarter} · {report.TurnInQuarter}/{_session.Runner.Schedule.TurnsPerQuarter}턴  키 판정: {judgeText}");
 
             var state = _session.Zone.StateOf(report.HeartbeatValue);
             log.AppendLine($"  상태: {FormatState(state)}  검열: {FormatCensorship(_session.Censorship.Level)}");
 
             log.AppendLine($"  신규 컴플렉스: {(report.SpawnedComplex != null ? report.SpawnedComplex.Definition.DisplayName : "없음")}");
             log.Append($"  결과: {report.Outcome}");
+        }
 
-            UnityEngine.Debug.Log(log.ToString());
-
+        private void LogStageEnd(TurnReport report)
+        {
             if (report.Outcome != StageOutcome.InProgress)
-                UnityEngine.Debug.Log($"=== 종료: {report.Outcome}, 총 {_session.Runner.CurrentTurn}턴, 획득 키 {_session.Keys.Collected} ===");
+                UnityEngine.Debug.Log($"=== 종료: {report.Outcome}, 총 {_session.Runner.CurrentTurn}턴, 획득 키 {_session.Keys.Collected}/{_session.Keys.Required} ===");
         }
 
         private static string FormatState(HeartbeatState state) => state switch
@@ -121,6 +126,7 @@ namespace BlueComplex.UI.Debugging
             PersonTag.Family => "가족",
             PersonTag.Other => "타인",
             PersonTag.Friend => "친구",
+            PersonTag.Lover => "연인",
             _ => "-"
         };
 
