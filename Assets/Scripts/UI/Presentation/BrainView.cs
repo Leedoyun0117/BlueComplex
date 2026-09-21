@@ -10,8 +10,7 @@ namespace BlueComplex.UI.Presentation
     /// 컴플렉스 인터페이스의 뇌(엑스레이 판넬 안). 뇌를 세 부분(엽)으로 나누어 각 부분에 컴플렉스를 하나씩 할당하고, 단서가 들어오면
     /// 우선순위 순서대로 해당 부분이 빛난다(<see cref="PlayGlow"/>) — 발동하지 않은 컴플렉스의 부분은 빛나지 않는다.
     ///
-    /// 코어 <c>ComplexBoard.MaxSlots</c>는 4인데 기획서의 뇌는 3분할이라 4번째 컴플렉스를 놓을 곳이 기획서에 없다. 임시로 도트 뇌의 <b>뇌간</b>
-    /// (뇌 아래 줄기)을 네 번째 영역으로 쓴다 — 최대 중첩을 3으로 줄일지는 기획자 결정이고, 그때는 <see cref="_regions"/>의 마지막 영역만 빼면 된다.
+    /// 뇌의 세 부분과 컴플렉스 슬롯(코어 최대 중첩, <c>StageConfig.MaxComplexSlots</c> — 기본 3)은 1:1이다. 슬롯 수가 영역 수와 다르면 세션이 시작될 때 경고한다.
     ///
     /// 우선순위 순서(<c>InPriorityOrder</c>)의 i번째 컴플렉스가 i번째 영역을 받는다 — 컴플렉스가 만료돼 목록이 줄면 뒤의 컴플렉스가 앞 영역으로 옮겨 온다.
     /// 갱신 시점은 Presenter가 쥔다(<see cref="Refresh"/>). 세션 시작(스냅)과 판넬이 열릴 때만 스스로 코어 상태를 읽는다.
@@ -33,7 +32,14 @@ namespace BlueComplex.UI.Presentation
 
         protected override void Unsubscribe(StageSession session) { }
 
-        protected override void Render() => SyncFromSession();
+        protected override void Render()
+        {
+            if (Session != null && Session.Complexes.MaxSlots != RegionCount)
+                Debug.LogWarning($"[BrainView] 컴플렉스 최대 중첩({Session.Complexes.MaxSlots})과 뇌 영역 수({RegionCount})가 다르다 — " +
+                                 "뇌의 세 부분과 슬롯은 1:1이어야 한다.", this);
+
+            SyncFromSession();
+        }
 
         /// <summary>코어의 현재 컴플렉스 목록으로 다시 그린다 — 턴 연출 밖(세션 시작, 판넬이 그냥 열릴 때)에서만 부른다.</summary>
         public void SyncFromSession()

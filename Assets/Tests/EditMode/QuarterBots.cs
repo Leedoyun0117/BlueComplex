@@ -69,8 +69,7 @@ namespace BlueComplex.Core.Tests
             var hand = session.Hand.Cards;
             var picks = Math.Min(turnsLeft, hand.Count);
 
-            var evaluator = new TraitAwareEmotionEvaluator(
-                new EmotionEvaluator(new DefaultEmotionPolarityTable()), session.Traits);
+            var evaluator = new TraitAwareEmotionEvaluator(new DefaultEmotionPolarityTable(), session.Traits);
 
             ClueInstance best = null;
             (int fatal, int miss, int nextDistance, int distance) bestScore = (int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue);
@@ -102,11 +101,19 @@ namespace BlueComplex.Core.Tests
             var board = CloneBoard(session.Complexes);
             var resolver = new ComplexResolver(board);
             var position = session.Heartbeat.Value;
+            var plain = new EmotionEvaluator(new DefaultEmotionPolarityTable());
 
-            foreach (var card in sequence)
+            for (var i = 0; i < sequence.Count; i++)
             {
-                var interpretation = resolver.Resolve(card.Definition.CreateOriginalTagSet());
-                position = Math.Clamp(position + evaluator.Evaluate(interpretation.Final), Heartbeat.MinValue, Heartbeat.MaxValue);
+                // 지금 붙어 있는 일반 특성과 지속 중인 아이템 효과는 바로 다음 한 턴에만 적용된다(1턴 지속) — 첫 카드만 그걸 반영해 예측한다.
+                var first = i == 0;
+                var original = sequence[i].Definition.CreateOriginalTagSet();
+                var interpretation = resolver.Resolve(first ? session.Traits.ApplyToOriginal(original) : original,
+                    first ? session.ActiveItems : null);
+                if (first) session.ActiveItems.Modify(interpretation.Final);
+
+                var delta = first ? evaluator.Evaluate(interpretation.Final) : plain.Evaluate(interpretation.Final);
+                position = Math.Clamp(position + delta, Heartbeat.MinValue, Heartbeat.MaxValue);
                 if (session.Zone.IsFatal(position)) return (position, true);
                 board.TickDurations();
             }
@@ -116,7 +123,7 @@ namespace BlueComplex.Core.Tests
 
         private static ComplexBoard CloneBoard(ComplexBoard source)
         {
-            var clone = new ComplexBoard();
+            var clone = new ComplexBoard(source.MaxSlots);
             foreach (var slot in source.Slots)
                 clone.TryAttach(new ComplexInstance(slot.Definition, slot.Priority, slot.RemainingTurns));
             return clone;

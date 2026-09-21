@@ -18,13 +18,20 @@ namespace BlueComplex.UI.Presentation
             foreach (var row in _rows) row.Init(_tooltip);
         }
 
-        public void Refresh(IReadOnlyList<ComplexInstance> complexes)
+        /// <param name="fresh">이번에 새로 발현된 컴플렉스(있으면 그 행에 "NEW" 표시가 준비된다). null이면 표시 없음.</param>
+        public void Refresh(IReadOnlyList<ComplexInstance> complexes, ICollection<ComplexInstance> fresh = null)
         {
             for (var i = 0; i < _rows.Length; i++)
             {
-                if (i < complexes.Count) _rows[i].Render(complexes[i]);
+                if (i < complexes.Count) _rows[i].Render(complexes[i], fresh != null && fresh.Contains(complexes[i]));
                 else _rows[i].SetEmpty();
             }
+        }
+
+        /// <summary>준비된 "NEW" 표시를 드러낸다 — 포스트잇이 다 붙은 뒤 Presenter가 부른다.</summary>
+        public void RevealNewMarks()
+        {
+            foreach (var row in _rows) row.RevealNewMark();
         }
 
         /// <summary>

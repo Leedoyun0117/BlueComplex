@@ -324,6 +324,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.CinematicTurnResultPresenter
   _bootstrapper: {fileID: 0}
   _brain: {fileID: 0}
+  _portrait: {fileID: 0}
   _dialogue: {fileID: 0}
   _clueTray: {fileID: 0}
   _heartRate: {fileID: 0}
@@ -334,6 +335,9 @@ MonoBehaviour:
   _clock: {fileID: 0}
   _items: {fileID: 0}
   _eventLinePause: 0.25
+  _keyTurnMonologue: "\uC774\uBC88 \uB300\uD654\uC5D0\uC11C \uD0A4\uB97C \uC5BB\uC5B4\uC57C
+    \uD574."
+  _monologueSpeaker: "\uB098\uCE20"
 --- !u!1 &3006617684896619200
 GameObject:
   m_ObjectHideFlags: 0
@@ -1621,14 +1625,6 @@ PrefabInstance:
       propertyPath: _tooltip
       value: 
       objectReference: {fileID: 2366005522172711746}
-    - target: {fileID: 4603454995947727056, guid: 0f31d72b5dfe257419dd268c7cf7b514, type: 3}
-      propertyPath: m_Layer
-      value: 5
-      objectReference: {fileID: 0}
-    - target: {fileID: 5119042799849669855, guid: 0f31d72b5dfe257419dd268c7cf7b514, type: 3}
-      propertyPath: m_Layer
-      value: 5
-      objectReference: {fileID: 0}
     - target: {fileID: 5373490110273269204, guid: 0f31d72b5dfe257419dd268c7cf7b514, type: 3}
       propertyPath: m_Layer
       value: 5
@@ -1654,10 +1650,6 @@ PrefabInstance:
       value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 6117908824423869564, guid: 0f31d72b5dfe257419dd268c7cf7b514, type: 3}
-      propertyPath: m_Layer
-      value: 5
-      objectReference: {fileID: 0}
-    - target: {fileID: 6656822432825982597, guid: 0f31d72b5dfe257419dd268c7cf7b514, type: 3}
       propertyPath: m_Layer
       value: 5
       objectReference: {fileID: 0}
@@ -1763,6 +1755,18 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 7729867270312956113}
     m_Modifications:
+    - target: {fileID: 1434347496895862129, guid: 57425b3e9f43bc641a2c93fce1dea631, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1434347496895862129, guid: 57425b3e9f43bc641a2c93fce1dea631, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1434347496895862129, guid: 57425b3e9f43bc641a2c93fce1dea631, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2032766217834081580, guid: 57425b3e9f43bc641a2c93fce1dea631, type: 3}
       propertyPath: _tooltip
       value: 
@@ -1853,6 +1857,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5914759763594657406, guid: 57425b3e9f43bc641a2c93fce1dea631, type: 3}
       propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5914759763594657406, guid: 57425b3e9f43bc641a2c93fce1dea631, type: 3}
+      propertyPath: m_SizeDelta.x
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5914759763594657406, guid: 57425b3e9f43bc641a2c93fce1dea631, type: 3}

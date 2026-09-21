@@ -20,7 +20,11 @@ namespace BlueComplex.UI.Background
     public sealed class ClockController : SessionBoundView
     {
         private const float MinuteHandDegreesPerMinute = 6f;
-        private const float HourHandDegreesPerMinute = 0.5f;
+        // 분침이 한 바퀴(360°) 도는 데 걸리는 경과 시간(분) = 360 / 6 = 60분.
+        private const float MinutesPerMinuteHandLap = 360f / MinuteHandDegreesPerMinute;
+        // 시침은 부드럽게 돌지 않는다 — 분침이 한 바퀴 돌 때마다 시계판의 한 칸(12칸 기준 30°)씩 딱 넘어간다.
+        private const int HourNotchCount = 12;
+        private const float HourNotchDegrees = 360f / HourNotchCount;
 
         [Header("손 (회전축이 시계 중심에 있는 피벗 Transform)")]
         [SerializeField] private Transform _minuteHand;
@@ -88,8 +92,13 @@ namespace BlueComplex.UI.Background
             // 카메라가 +Z를 바라볼 때 시계방향 = Z축 음의 회전.
             if (_minuteHand != null)
                 _minuteHand.localRotation = _minuteRest * Quaternion.Euler(0f, 0f, -minutes * MinuteHandDegreesPerMinute);
+
             if (_hourHand != null)
-                _hourHand.localRotation = _hourRest * Quaternion.Euler(0f, 0f, -minutes * HourHandDegreesPerMinute);
+            {
+                // 분침이 완주한 바퀴 수만큼만 칸을 넘긴다 — 애니메이션 도중 분침이 12시를 지나는 그 순간 시침이 한 칸 딱 넘어간다.
+                var laps = Mathf.Floor(minutes / MinutesPerMinuteHandLap);
+                _hourHand.localRotation = _hourRest * Quaternion.Euler(0f, 0f, -laps * HourNotchDegrees);
+            }
         }
     }
 }

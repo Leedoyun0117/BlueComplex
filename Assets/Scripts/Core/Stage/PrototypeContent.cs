@@ -3,6 +3,7 @@ using BlueComplex.Core.Clues;
 using BlueComplex.Core.Complexes;
 using BlueComplex.Core.Items;
 using BlueComplex.Core.Tags;
+using BlueComplex.Core.Traits;
 
 namespace BlueComplex.Core.Stage
 {
@@ -253,29 +254,77 @@ namespace BlueComplex.Core.Stage
             Avoidance()
         };
 
-        public static IReadOnlyList<ItemDefinition> Items(IEmotionPolarityTable polarityTable)
+        // ------------------------------------------------------------------
+        // 특성 (데이터) — 효과는 TraitDefinition의 숫자 필드로만 적는다. 계산 순서는 TurnRunner.PlayClue 주석.
+        // ------------------------------------------------------------------
+
+        public const string TraitSensitive = "trait_sensitive";
+        public const string TraitHallucination = "trait_hallucination";
+        public const string TraitGrandiosity = "trait_grandiosity";
+        public const string TraitLethargy = "trait_lethargy";
+        public const string TraitHighFunctioningDepression = "trait_high_functioning_depression";
+        public const string TraitHyperexcitement = "trait_hyperexcitement";
+
+        public static IReadOnlyList<TraitDefinition> Traits() => new[]
         {
-            // 침체 감정에 관여하는 컴플렉스를 저작 단계에서 명시한다.
-            var depressionTagger = new IdListDepressionTagger("complex_anti_past");
+            // 일반 특성 — 아이템 사용으로 발현, 1턴.
+            new TraitDefinition(TraitSensitive, "예민", "한 턴간 심박수가 3배로 변화합니다.", TraitKind.Normal)
+                { DefaultDuration = 1, HeartbeatMultiplier = 3.0 },
+            new TraitDefinition(TraitHallucination, "환각", "최종 결과에서, 침체 감정과 흥분 감정을 반대로 받아들입니다. 심박수가 원래와 반대로 변화합니다.", TraitKind.Normal)
+                { DefaultDuration = 1, InvertsPolarity = true },
+            new TraitDefinition(TraitGrandiosity, "과대 망상", "단서의 감정을 두배로 느낍니다. 단서의 원래 감정 수 * 2가 전달됩니다.", TraitKind.Normal)
+                { DefaultDuration = 1, EmotionCountMultiplier = 2 },
+            new TraitDefinition(TraitLethargy, "무력", "한 턴간 심박수가 1/2배로 변화합니다.", TraitKind.Normal)
+                { DefaultDuration = 1, HeartbeatMultiplier = 0.5 },
 
-            return new[]
-            {
-                new ItemDefinition("item_persuasion", "감정적 설득",
-                    "'침체' 감정에 영향을 주는 컴플렉스를 무시합니다.",
-                    duration: 2,
-                    new EmotionalPersuasion(depressionTagger)),
+            // 특수 특성 — 컴플렉스가 최대 중첩을 넘쳐 발현될 때 붙고, 안정 구간에 들어서면 치유된다.
+            new TraitDefinition(TraitHighFunctioningDepression, "고기능 우울증", "흥분 감정의 영향이 1/2가 됩니다. 침체 상태에서 컴플렉스가 넘치면 부여되고, 안정 상태에 들어서면 사라집니다.", TraitKind.Special)
+                { ExcitedInfluence = 0.5, OverflowSide = Polarity.Depressed },
+            new TraitDefinition(TraitHyperexcitement, "과흥분", "침체 감정의 영향이 1/2가 됩니다. 흥분 상태에서 컴플렉스가 넘치면 부여되고, 안정되면 치유됩니다.", TraitKind.Special)
+                { DepressedInfluence = 0.5, OverflowSide = Polarity.Excited },
+        };
 
-                new ItemDefinition("item_empathy", "기억 공감",
-                    "'공포', '슬픔' 감정을 결과에서 1씩 제거합니다. 예민 특성을 부여합니다.",
-                    duration: 1,
-                    new MemoryEmpathy(sensitiveDuration: 3)),
+        // ------------------------------------------------------------------
+        // 아이템 7종 (데이터). 행동 조각(PrototypeItemBehaviours)에 숫자·감정·파라미터 키를 넘겨 조합한다.
+        // ------------------------------------------------------------------
 
-                new ItemDefinition("item_recollection", "회상",
-                    "모든 단서를 풀에 넣고 다시 랜덤으로 부여합니다.",
-                    duration: 0,
-                    new Recollection())
-            };
-        }
+        /// <summary>StageConfig.ItemParameters에서 감정적 설득이 무시할 컴플렉스 id 목록을 찾는 키.</summary>
+        public const string PersuasionTargetsKey = "persuasion.ignored_complexes";
+
+        public static IReadOnlyList<ItemDefinition> Items() => new[]
+        {
+            new ItemDefinition("item_overcome", "극복",
+                "지정한 컴플렉스의 지속 시간을 절반으로 줄인다.",
+                duration: 0, new HalveComplexDuration(), ItemTargetKind.Complex),
+
+            // 지속 시간 2턴은 기획서에 없어 프로토타입 값을 그대로 유지했다.
+            new ItemDefinition("item_persuasion", "감정적 설득",
+                "'침체' 감정에 영향을 주는 컴플렉스를 무시합니다.",
+                duration: 2, new IgnoreStageComplexes(PersuasionTargetsKey)),
+
+            new ItemDefinition("item_empathy", "기억 공감",
+                "'공포', '슬픔' 감정을 결과에서 1씩 제거합니다. 환각 특성을 부여합니다.",
+                duration: 1, new RemoveEmotions(1, EmotionTag.Fear, EmotionTag.Sadness),
+                grantedTraitId: TraitHallucination),
+
+            new ItemDefinition("item_recollection", "회상",
+                "모든 단서를 풀에 넣고 다시 랜덤으로 부여합니다. 과대 망상 특성을 부여합니다.",
+                duration: 0, new RedrawHand(),
+                grantedTraitId: TraitGrandiosity),
+
+            new ItemDefinition("item_logic", "논리적 설득",
+                "결과에서 중복되는 감정을 하나씩 남기고 지웁니다.",
+                duration: 1, new CollapseDuplicateEmotions()),
+
+            new ItemDefinition("item_samaritan", "착한 사마리아인",
+                "현재 심박수가 침체에 머물고 있다면, 심박수를 10 올립니다. 무력 특성을 부여합니다.",
+                duration: 0, new RaiseHeartbeatInZone(Polarity.Depressed, 10),
+                grantedTraitId: TraitLethargy),
+
+            new ItemDefinition("item_selective_memory", "선택적 기억",
+                "보유한 단서 중 선택한 하나를 랜덤으로 교체합니다.",
+                duration: 0, new ReplaceClue(), ItemTargetKind.Clue),
+        };
 
         /// <summary>구간 확률에 곱해지는 컴플렉스 발현 배율. 기획자 피드백으로 1.0에서 12.5% 올렸다 — 침체/흥분 30% → 33.75%, 매우 침체/흥분 50% → 56.25%, 안정 0% 유지.
         /// 스테이지 설정(<see cref="StageConfig.ComplexWeight"/>)의 값이라 스테이지마다 다르게 줄 수 있다.</summary>
@@ -292,7 +341,15 @@ namespace BlueComplex.Core.Stage
             clues: Clues(),
             complexPool: Complexes(polarityTable),
             startingComplex: AntiPast(polarityTable),
-            itemPool: Items(polarityTable),
-            keyWidth: 36);
+            itemPool: Items(),
+            keyWidth: 36,
+            maxComplexSlots: ComplexBoard.DefaultMaxSlots,
+            traits: Traits(),
+            itemSlots: ItemInventory.DefaultCapacity,
+            itemParameters: new Dictionary<string, IReadOnlyList<string>>
+            {
+                // 스테이지 1에서 '침체' 감정에 영향을 주는 컴플렉스 — 스톡홀름, 의존, 회피.
+                [PersuasionTargetsKey] = new[] { "complex_stockholm", "complex_dependence", "complex_avoidance" }
+            });
     }
 }

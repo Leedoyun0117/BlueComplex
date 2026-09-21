@@ -210,6 +210,9 @@ namespace BlueComplex.UI.Layout
         /// <summary>칸 테두리(알파 0이면 없음).</summary>
         public Color CellOutline;
 
+        /// <summary>알파가 0보다 크면 이미 지난 턴의 칸을 이 색으로 칠한다(마지막 칸은 항상 LastCell). 0이면 안 지난 칸과 같다.</summary>
+        public Color PastCell;
+
         /// <summary>어두운 배경 위: 회색 칸, 노란 마지막 칸, 하얀 점.</summary>
         public static readonly TurnTrackStyle Dark = new TurnTrackStyle
         {
@@ -228,6 +231,7 @@ namespace BlueComplex.UI.Layout
             Dot = Color.white,
             CurrentCell = new Color32(44, 44, 46, 255),
             CellOutline = new Color32(78, 72, 64, 255),
+            PastCell = new Color32(196, 192, 176, 255),
         };
     }
 
@@ -313,11 +317,16 @@ namespace BlueComplex.UI.Layout
         private void PaintCells(int turn)
         {
             var paintCurrent = _style.CurrentCell.a > 0f;
+            var paintPast = _style.PastCell.a > 0f;
             for (var i = 0; i < _cells.Length; i++)
             {
                 var isLast = i == _cells.Length - 1;
                 var isCurrent = i + 1 == turn;
-                _cells[i].color = paintCurrent && isCurrent ? _style.CurrentCell : isLast ? _style.LastCell : _style.Cell;
+                var isPast = i + 1 < turn;
+                _cells[i].color = paintCurrent && isCurrent ? _style.CurrentCell
+                    : isLast ? _style.LastCell
+                    : paintPast && isPast ? _style.PastCell
+                    : _style.Cell;
             }
 
             var currentIsLast = turn == _cells.Length;

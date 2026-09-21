@@ -1,3 +1,4 @@
+using BlueComplex.Core.Items;
 using BlueComplex.Core.Stability;
 using BlueComplex.Core.Stage;
 using BlueComplex.Core.Turn;
@@ -36,12 +37,14 @@ namespace BlueComplex.UI.Presentation
         {
             session.Runner.TurnBegan += OnTurnBegan;
             session.Runner.StageEnded += OnStageEnded;
+            session.Items.Used += OnItemUsed;
         }
 
         protected override void Unsubscribe(StageSession session)
         {
             session.Runner.TurnBegan -= OnTurnBegan;
             session.Runner.StageEnded -= OnStageEnded;
+            session.Items.Used -= OnItemUsed;
         }
 
         protected override void Render()
@@ -107,6 +110,15 @@ namespace BlueComplex.UI.Presentation
             if (_presenter != null && _presenter.IsPresenting) return;
 
             SyncTurnState();
+        }
+
+        /// <summary>아이템이 심박수를 직접 바꿀 수 있다(착한 사마리아인 +10). 사용은 플레이어의 클릭이라 턴 해석 밖에서 일어나므로 바로 반영한다.</summary>
+        private void OnItemUsed(ItemDefinition item)
+        {
+            _presenter ??= transform.root.GetComponentInChildren<ITurnResultPresenter>(true);
+            if (_presenter != null && _presenter.IsPresenting) return;
+
+            ShowBpm(Session.Heartbeat.Value, snap: false);
         }
 
         private void OnStageEnded(StageOutcome outcome) => Hud.CloseOverview();

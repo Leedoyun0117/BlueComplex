@@ -54,7 +54,8 @@ namespace BlueComplex.UI.Presentation
 
         public void OnBeginDrag(PointerEventData eventData)
         {
-            if (_view.IsEmpty || _motion.IsBusy || !TryGetCanvasPoint(eventData, out var point))
+            // 아이템 대상 선택 중에는 카드를 끌 수 없다 — 카드 클릭이 대상 선택이다.
+            if (_view.IsEmpty || _motion.IsBusy || ItemTargetSelector.Active != null || !TryGetCanvasPoint(eventData, out var point))
             {
                 eventData.pointerDrag = null;
                 return;
@@ -97,6 +98,9 @@ namespace BlueComplex.UI.Presentation
         public void OnPointerClick(PointerEventData eventData)
         {
             if (_view.IsEmpty) return;
+
+            // 아이템 대상 선택 중이면 클릭은 대상 선택이다(단서 정보 책을 열지 않는다).
+            if (ItemTargetSelector.TryPick(_view.Card)) return;
 
             var font = _canvasRect.GetComponentInChildren<TMP_Text>(true)?.font;
             var book = ClueBookPanel.GetOrCreate(_canvasRect, font);
