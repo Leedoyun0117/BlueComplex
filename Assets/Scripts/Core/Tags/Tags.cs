@@ -13,7 +13,8 @@ namespace BlueComplex.Core.Tags
         None,
         Family,
         Other,
-        Friend
+        Friend,
+        Lover
     }
 
     public enum EmotionTag

@@ -46,7 +46,10 @@ namespace BlueComplex.Core.Clues
         public void Return(ClueDefinition definition) => _available.Add(definition);
     }
 
-    /// <summary>플레이어가 보유한 단서 4장.</summary>
+    /// <summary>
+    /// 플레이어가 보유한 단서. 낸 카드는 영구 소멸하고, 빈 칸은 <see cref="Refill"/> 이 불릴 때만 채워진다 —
+    /// 호출 시점은 TurnRunner가 쿼터 시작마다 쥔다(쿼터 중에는 손패가 줄어든 채로 진행된다).
+    /// </summary>
     public sealed class ClueHand
     {
         public const int HandSize = 4;
@@ -71,13 +74,12 @@ namespace BlueComplex.Core.Clues
             }
         }
 
+        /// <summary>단서를 낸다. 손패에서 빠지고 풀로 돌아가지 않는다(영구 소멸). 자동으로 채우지 않는다.</summary>
         public void Use(ClueInstance card)
         {
-            card.ConsumeUse();
-            if (!card.IsExhausted) return;
-
-            // 뽑는 순간 풀에서 빠지므로, 소멸한 단서는 그대로 돌려놓지 않는 것으로 영구 삭제가 된다.
-            _cards.Remove(card);
+            // 뽑는 순간 풀에서 빠지므로, 낸 단서를 그대로 돌려놓지 않는 것으로 영구 삭제가 된다.
+            if (!_cards.Remove(card))
+                throw new InvalidOperationException($"{card.Definition.Id} 는 손패에 없습니다.");
             CardDestroyed?.Invoke(card);
         }
 

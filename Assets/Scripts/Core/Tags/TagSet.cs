@@ -36,6 +36,13 @@ namespace BlueComplex.Core.Tags
         public bool HasEmotion(EmotionTag emotion) => _emotions.ContainsKey(emotion);
         public int CountOf(EmotionTag emotion) => _emotions.TryGetValue(emotion, out var n) ? n : 0;
 
+        /// <summary>인물 태그를 다른 인물 태그로 바꾼다. 이미 to가 있으면 하나로 합쳐진다.</summary>
+        public void ReplacePerson(PersonTag from, PersonTag to)
+        {
+            if (!_persons.Remove(from)) return;
+            _persons.Add(to);
+        }
+
         public void AddEmotion(EmotionTag emotion, int amount = 1)
         {
             if (amount <= 0) return;
