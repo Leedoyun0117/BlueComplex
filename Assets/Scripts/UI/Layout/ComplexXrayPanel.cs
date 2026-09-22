@@ -9,8 +9,10 @@ using UnityEngine.UI;
 namespace BlueComplex.UI.Layout
 {
     /// <summary>
-    /// 컴플렉스 인터페이스의 엑스레이 판넬 — 화면 왼쪽 위 구석에 관절 팔에 매달려 <b>접혀</b> 있다가, 작동하면 팔이 펴지며 판넬이 나와 뇌(<see cref="BrainView"/>)를 드러낸다.
-    /// 컴플렉스 반응이 끝나면 다시 접혀 들어간다. 접힌 상태에서도 작은 판넬과 "엑스레이" 손잡이가 보인다 — 그걸 끌 수 있다.
+    /// 컴플렉스 인터페이스의 엑스레이 판넬 — 화면 왼쪽 위 구석에 관절 팔에 매달려 작게 <b>접혀</b> 있다가, 작동하면 팔이 펴지며 유키의 실제 화면
+    /// 위치(머리 쪽)까지 뻗어 손으로 그린 원(<see cref="HandDrawnStrokeGraphic"/>, 기억 풍선과 같은 클래스)이 커지며 뇌(<see cref="BrainView"/>)를 드러낸다.
+    /// 원 자체는 접힌 동안에도 계속 그려져 있다(작게) — 커지고 작아지는 느낌은 원의 그리기 진행이 아니라 판넬 스케일 트윈이 낸다.
+    /// 열 때마다 기억 풍선처럼 모양을 새로 뽑아 매번 살짝 다르다. 컴플렉스 반응이 끝나면 다시 접혀 들어간다.
     ///
     /// 작동 조건 두 가지(UI 디자인 가이드):
     /// 1. 판넬을 마우스로 끌어 유키 위에 놓기 — 이 컴포넌트가 IBeginDrag/IDrag/IEndDrag를 직접 구현한다(판넬·손잡이를 잡으면 이벤트가 이 루트까지 올라온다).
@@ -26,17 +28,21 @@ namespace BlueComplex.UI.Layout
     /// </summary>
     public sealed class ComplexXrayPanel : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
-        /// <summary>컨테이너를 1080p 기준으로 환산한 크기(참조 픽셀). 위치·길이 상수는 전부 이 좌표계(왼쪽 위 원점, y 아래로 +)다.</summary>
-        private static readonly Vector2 ReferenceSize = new(422f, 529f);
+        /// <summary>컨테이너를 1080p 기준으로 환산한 크기(참조 픽셀). 위치·길이 상수는 전부 이 좌표계(왼쪽 위 원점, y 아래로 +)다.
+        /// 컨테이너 자체(Anchors.Xray, UiLayoutCleanupTool.cs)는 화면 왼쪽을 덮는 투명 영역이라 이 값과 항상 같이 맞춘다.</summary>
+        private static readonly Vector2 ReferenceSize = new(960f, 918f);
 
-        private static readonly Vector2 TabletSize = new(346f, 400f);
-        /// <summary>접힌 위치는 왼쪽 위 "STAGE 01" 표기(컨테이너 위 끝에서 위쪽 0.085 이내)보다 확실히 아래에 둔다 — 접힌 판넬 윗변이 컨테이너 y 39(캔버스 131)라 표기 밑 끝(83)과 48px 떨어진다.</summary>
-        private static readonly Vector2 ShoulderPoint = new(52f, 90f);
-        private const float ArmLength = 220f;
+        /// <summary>펼친 원의 지름(=내용물이 들어갈 정사각 판의 한 변). 사용자가 에디터에서 Tablet RectTransform을 직접 맞춘 값
+        /// (Pos 462,-437, Size 500.6) — 그 Pos는 Tablet의 중심을 이 클래스의 참조 좌표(왼쪽 위 원점, y 아래로 +)로 바로 옮긴 값이다.</summary>
+        private static readonly Vector2 TabletSize = new(500.6f, 500.6f);
+        /// <summary>접힌 위치는 왼쪽 위 "STAGE 01" 표기보다 확실히 아래에 둔다(렌더로 확인).</summary>
+        private static readonly Vector2 ShoulderPoint = new(118f, 156f);
+        private const float ArmLength = 260f;
 
-        /// <summary>접힌 손목(어깨 바로 옆 — 두 선분이 포개진다)과 펼친 손목(판넬 왼쪽 가장자리 중앙).</summary>
-        private static readonly Vector2 FoldedWrist = new(33f, 91f);
-        private static readonly Vector2 OpenWrist = new(50f, 296f);
+        /// <summary>접힌 손목(어깨 바로 옆 — 두 선분이 포개진다)과 펼친 손목(원 왼쪽 가장자리 중앙). 펼친 손목은 사용자가 지정한 원 중심
+        /// (462, 437)에서 역산했다: center = wrist + (TabletSize.x*0.5 + HingeGap, 0) → wrist = (462 - 250.3 - 6, 437).</summary>
+        private static readonly Vector2 FoldedWrist = new(88f, 160f);
+        private static readonly Vector2 OpenWrist = new(205.7f, 437f);
 
         private const float FoldedScale = 0.26f;
         private const float OpenScale = 1f;
@@ -49,7 +55,7 @@ namespace BlueComplex.UI.Layout
         [SerializeField] private RectTransform _tablet;
         [SerializeField] private RectTransform _basePlate;
         [SerializeField] private RectTransform _handleTag;
-        [SerializeField] private Image _frame;
+        [SerializeField] private HandDrawnStrokeGraphic _frame;
         [SerializeField] private Image _glass;
         [SerializeField] private XrayArm _arm;
         [SerializeField] private CanvasGroup _contentGroup;
@@ -97,14 +103,6 @@ namespace BlueComplex.UI.Layout
                 Debug.LogError("[ComplexXrayPanel] 프리팹 참조가 끊겼다(Tablet/XrayArm/BrainView) — ComplexXrayPanel.prefab의 스크립트 GUID를 확인하고 " +
                                "BlueComplex/UI/Apply Layout Cleanup을 다시 돌려라.", this);
 
-            // 둥근 모서리 스프라이트는 프리팹에 굽지 않고 런타임에 입힌다(RuntimeUi.RoundedRect).
-            foreach (var image in new[] { _frame, _glass })
-            {
-                if (image == null) continue;
-                image.sprite = RuntimeUi.RoundedRect;
-                image.type = Image.Type.Sliced;
-            }
-
             _tabletGroup = _tablet.GetComponent<CanvasGroup>();
             if (_tabletGroup == null) _tabletGroup = _tablet.gameObject.AddComponent<CanvasGroup>();
 
@@ -112,6 +110,10 @@ namespace BlueComplex.UI.Layout
             _raycaster = canvas.GetComponent<DistortionCorrectedGraphicRaycaster>();
 
             if (_foldButton != null) _foldButton.onClick.AddListener(OnFoldButton);
+
+            // 원은 접혔을 때도(작게) 계속 보인다 — 팔이 쥔 게 빈 손이 아니라 접힌 원이라는 걸 알 수 있게. 자라나는 느낌은
+            // 원 자체의 그리기 진행이 아니라 _tablet의 스케일 트윈(FoldedScale→OpenScale)이 담당한다.
+            _frame?.Draw(0f);
 
             // _clueTray가 인스펙터에 안 물려 있을 수 있다 — 먼저 같은 루트 아래에서 찾고, 계층이 다르면 씬 전체에서 한 번 더 찾는다.
             if (_clueTray == null) _clueTray = transform.root.GetComponentInChildren<ClueCardTray>(true);
@@ -151,6 +153,10 @@ namespace BlueComplex.UI.Layout
 
             // 턴 연출 밖에서 그냥 열릴 때만 코어 상태로 뇌를 채운다 — 연출 중에는 Presenter가 자기 타이밍에 Refresh한다(결과를 앞질러 보여 주지 않게).
             if (!IsTurnPresenting && _brain != null) _brain.SyncFromSession();
+
+            // 열 때마다 모양을 새로 뽑는다(기억 풍선처럼 매번 살짝 다르게) — 이미 다 그려진 상태라 모양만 바뀌고,
+            // 커지는 느낌은 아래 _tablet 스케일 트윈이 담당한다.
+            _frame?.Regenerate(0);
 
             _foldTween?.Kill();
             _foldTween = DOTween.To(() => _fold, v =>
