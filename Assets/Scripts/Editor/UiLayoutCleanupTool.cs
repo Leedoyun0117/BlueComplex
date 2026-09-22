@@ -46,15 +46,27 @@ namespace BlueComplex.EditorTools
             public static readonly (Vector2 Min, Vector2 Max) Dialogue = Box(0.01f, 0.77f, 0.47f, 0.19f);
             public static readonly (Vector2 Min, Vector2 Max) Clues = Box(0.50f, 0.74f, 0.46f, 0.21f);
 
-            // 기억 풍선: 목업 표의 T는 0.17~0.20(슬라이드마다 다르다). 가운데 값.
-            public static readonly (Vector2 Min, Vector2 Max) Memory = Box(0.21f, 0.19f, 0.23f, 0.39f);
+            // 기억 풍선: 목업 표의 T는 0.17~0.20(슬라이드마다 다르다). 원래 이 가운데 값을 썼는데, 엑스레이 뇌/얼굴 자리(YukiDrop)와 정면으로
+            // 겹쳐서(뇌를 가로지르는 흰 선) 뇌 오른쪽 빈 공간으로 옮겼다. 그 옆 좁은 자리엔 쿼터 진행 포스트잇(T 0.115~0.235)과 키 카드(T 0.562~0.712,
+            // L 0.61~0.85)가 더 있어서 그 사이 틈에 맞춰 넣었다. 원(Tablet)이 사용자 지시로 왼쪽 위로 옮겨가면서(오른쪽 끝이 L 0.371로 줄었다)
+            // 다시 멀어져서, 원 테두리에 딱 붙게 왼쪽으로 당기고 "조금 크게"(0.26×0.28 → 0.28×0.30) 키웠다. L 0.375로 처음 당겼을 때 렌더로 보니
+            // 손그림 선의 삐뚤빼뚤함 때문에 국지적으로 틈이 남아 있어서 0.357로 더 당겼다.
+            public static readonly (Vector2 Min, Vector2 Max) Memory = Box(0.357f, 0.255f, 0.28f, 0.30f);
 
-            /// <summary>엑스레이 판넬 컨테이너 — 접힌 위치(스테이지 표기 바로 밑 왼쪽 구석)부터 펼친 판넬 자리까지를 덮는 투명 영역이다. 목업에는 없는 일시적 요소라
-            /// 어떤 상시 요소(스테이지 표기·기억 풍선·컴플렉스 포스트잇)와도 안 겹치는 왼쪽 위 빈 자리에 둔다. 안의 배치는 ComplexXrayPanel이 이 크기(1080p에서 422×529)를 기준으로 계산한다.</summary>
-            public static readonly (Vector2 Min, Vector2 Max) Xray = Box(0.00f, 0.085f, 0.22f, 0.49f);
+            /// <summary>엑스레이 판넬 컨테이너 — 접힌 위치(스테이지 표기 바로 밑 왼쪽 구석)부터, 펼쳤을 때 화면에 실제로 보이는 유키 초상화(<see cref="YukiDrop"/>)
+            /// 위로 뻗는 원 자리까지를 덮는 투명 영역이다. 목업에는 없는 일시적 요소다. 안의 배치는 ComplexXrayPanel이 이 크기(1080p에서 960×918)를
+            /// 기준으로 계산한다 — 컨테이너 크기를 바꾸면 그쪽 ReferenceSize도 같이 맞춘다.</summary>
+            public static readonly (Vector2 Min, Vector2 Max) Xray = Box(0.00f, 0.02f, 0.50f, 0.85f);
 
-            /// <summary>보이지 않는 드롭 영역 — 엑스레이 판넬을 끌어다 유키 위에 놓는 조건(작동 조건 1)에 쓴다. 목업의 유키 초상화 자리(왼쪽)다.</summary>
-            public static readonly (Vector2 Min, Vector2 Max) YukiDrop = Box(0.08f, 0.34f, 0.14f, 0.34f);
+            /// <summary>유키 초상화 — 실제로 보인다(CleanPortrait) + 엑스레이 판넬을 끌어다 놓는 드롭 영역(작동 조건 1)도 겸한다.
+            /// <b>기준은 엑스레이 원이다</b>(배경의 3D 캐릭터가 아니라 — 그쪽은 아직 플레이스홀더라 기준으로 쓰지 않는다).
+            /// 사용자가 에디터에서 Tablet(원)을 직접 옮겨 크기·위치를 지정했다(ComplexXrayPanel.TabletSize/OpenWrist 참고) — 원은 이제
+            /// 화면 (462, 458.6)을 중심으로 지름 500.6(1920×1080 기준)이다. 머리 채움 비율(원 지름의 72%, 직전 정정에서 정한 값)은
+            /// 그대로 유지하고 새 원 중심·크기에 맞춰 다시 역산했다: 머리 폭 360.4px(스프라이트 스케일 2.403배).
+            /// 스프라이트(163×201) 안에서 머리(머리카락 위~턱)는 (9,3)~(159,147) = 150×144, 머리 중심은 (84,75)다.
+            /// 스프라이트 전체는 392×483이 되고, 머리 중심이 원 중심에 오려면 스프라이트 중심을 (456, 520)에 둬야 한다 → 아래 박스.
+            /// 크기를 바꿀 땐 ComplexXrayPanel.OpenWrist/TabletSize(원)와 BrainArea(뇌, 판 대비 fraction이라 안 건드려도 됨)도 같이 맞춘다.</summary>
+            public static readonly (Vector2 Min, Vector2 Max) YukiDrop = Box(0.1355f, 0.2578f, 0.2040f, 0.4472f);
         }
 
         // 심박수 모니터 안의 구역(모니터 폭·높이 대비, 아래쪽 원점). 스크린샷에서 잰 값.
@@ -254,13 +266,24 @@ namespace BlueComplex.EditorTools
             SetRef(panelView, "_foldLabel", tabLabel);
         }
 
-        /// <summary>Portrait 아트가 없으므로 아무것도 그리지 않는다(배경의 인물 스프라이트가 이미 유키·나츠를 그린다 — 목업의 초상화는 방향 제시용).
-        /// 이미지 컴포넌트는 남겨 둔다 — 유키 쪽은 엑스레이 판넬 드롭 영역으로 쓰이고, 투명해도 레이캐스트는 받는다.</summary>
+        /// <summary>유키 초상화 — 실제로 보인다(사용자 지시: 캐릭터가 화면에 보이게 하고, 그 위치에 뇌를 맞춘다). 나츠 쪽 인스턴스는
+        /// CleanMainHud가 통째로 지우므로 이 프리팹은 사실상 유키 전용이다. 엑스레이 판넬을 여기로 끌어다 놓는 드롭 판정은 그대로 유지한다.
+        /// 좌우 반전해 엑스레이 원 안의 뇌와 같은 방향(오른쪽)을 보게 한다(사용자 지시).
+        /// 컴플렉스가 발동해 뇌가 빛날 때마다 CinematicTurnResultPresenter가 PortraitXrayView.Flash()를 불러 잠깐 반응 표정으로 바뀐다
+        /// (예전엔 엑스레이 판 안의 작은 사진에 붙어 있었는데, 그 사진을 없애면서 실제로 보이는 이 초상화로 옮겼다 — CleanMainHud가 연결한다).</summary>
         private static void CleanPortrait(GameObject root)
         {
             var image = root.GetComponentInChildren<Image>(true);
-            image.color = Color.clear;
+            image.sprite = LoadPortraitSprite("yuki_neutral.png");
+            image.color = Color.white;
+            image.preserveAspect = true;
             image.raycastTarget = true;
+            image.transform.localScale = new Vector3(-1f, 1f, 1f);
+
+            var portraitView = GetOrAdd<PortraitXrayView>(image.gameObject);
+            SetRef(portraitView, "_image", image);
+            SetRef(portraitView, "_neutral", LoadPortraitSprite("yuki_neutral.png"));
+            SetRef(portraitView, "_reactive", LoadPortraitSprite("yuki_reactive.png"));
         }
 
         // ---------------------------------------------------------------
@@ -334,63 +357,64 @@ namespace BlueComplex.EditorTools
                 Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, FontStyles.Bold);
             handleText.textWrappingMode = TextWrappingModes.NoWrap;
 
-            // 판넬.
+            // 판넬 — 금속 틀 대신 손으로 그린 원(기억 풍선과 같은 클래스) 하나가 유키 머리 위에 나타난다. 안쪽은 거의 투명해서 배경(그녀의 실제
+            // 3D 스프라이트)이 그대로 비친다 — 목업의 "동그라미가 캐릭터에 생기는" 느낌 그대로. Glass는 손잡이 드래그 판정만 남기고 안 보이게 한다.
             var tablet = Ensure(root.transform, "Tablet");
             TopLeft(tablet, new Vector2(0.5f, 0.5f));
-            tablet.sizeDelta = new Vector2(346f, 400f);
-            var frame = EnsureImage(tablet, "Frame", XrayMetal, Vector2.zero, Vector2.one, raycast: true);
-            MockupStyle.AddPaperEdge(frame.gameObject);
-            var glass = EnsureImage(tablet, "Glass", XrayGlass, new Vector2(0.035f, 0.03f), new Vector2(0.965f, 0.97f), raycast: true);
+            tablet.sizeDelta = new Vector2(460f, 460f);
+            var frameRect = Ensure(tablet, "Frame");
+            SetRect(frameRect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            // 예전에 구운 프리팹은 이 자리에 금속 틀 Image(+ Outline/Shadow 테두리)가 있다 — 손그림 원으로 바꾸려면 먼저 걷어낸다.
+            RemoveIfPresent<Image>(frameRect.gameObject);
+            RemoveIfPresent<Outline>(frameRect.gameObject);
+            RemoveIfPresent<Shadow>(frameRect.gameObject);
+            var frame = GetOrAdd<HandDrawnStrokeGraphic>(frameRect.gameObject);
+            frame.color = XrayCyan;
+            var glass = EnsureImage(tablet, "Glass", Color.clear, new Vector2(0.035f, 0.03f), new Vector2(0.965f, 0.97f), raycast: true);
 
             var content = Ensure(tablet, "Content");
             SetRect(content, new Vector2(0.035f, 0.03f), new Vector2(0.965f, 0.97f), Vector2.zero, Vector2.zero);
             var contentGroup = GetOrAdd<CanvasGroup>(content.gameObject);
 
+            // 타이틀·접기 버튼은 원 <b>바깥 위쪽</b>에 둔다(1.0 넘는 앵커) — 원 안은 이제 그녀의 머리와 뇌가 꽉 채우고 있어서
+            // 안에 글자를 얹으면 얼굴 위에 겹친다. Content의 CanvasGroup 자식이라 펼침/접힘에 따라 같이 나타나고 사라진다.
             EnsureText(content, "Title", "엑스레이", font, 22f, XrayCyan, TextAlignmentOptions.MidlineLeft,
-                new Vector2(0.05f, 0.90f), new Vector2(0.5f, 0.99f), Vector2.zero, Vector2.zero, FontStyles.Bold);
+                new Vector2(0.05f, 1.03f), new Vector2(0.5f, 1.12f), Vector2.zero, Vector2.zero, FontStyles.Bold);
 
-            var foldButtonImage = EnsureImage(content, "FoldButton", new Color32(30, 72, 84, 255), new Vector2(0.72f, 0.91f), new Vector2(0.96f, 0.985f), raycast: true);
+            var foldButtonImage = EnsureImage(content, "FoldButton", new Color32(30, 72, 84, 255), new Vector2(0.74f, 1.03f), new Vector2(0.98f, 1.115f), raycast: true);
             var foldButton = GetOrAdd<Button>(foldButtonImage.gameObject);
             foldButton.targetGraphic = foldButtonImage;
             MockupStyle.AddPaperEdge(foldButtonImage.gameObject, shadow: false);
             EnsureText(foldButtonImage.transform, "Label", "접기", font, 18f, XrayCyan, TextAlignmentOptions.Center,
                 Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, FontStyles.Bold);
 
-            // 초상화: "엑스레이" 타이틀 밑, 뇌 위에 유키의 얼굴을 작은 사진처럼 붙인다 — 판정에 관여하지 않는 장식이다.
-            // 컴플렉스가 발동해 뇌가 빛날 때마다 CinematicTurnResultPresenter가 PortraitXrayView.Flash()를 불러 잠깐 반응 표정으로 바뀐다.
-            // 뇌 영역(BrainArea)이 이 자리만큼 위에서 시작 지점을 내준다(0.88 → 0.70) — 나머지 배치는 그대로다.
-            var portraitSlot = EnsureImage(content, "PortraitSlot", XrayGlass, new Vector2(0.05f, 0.72f), new Vector2(0.32f, 0.885f));
-            MockupStyle.AddPaperEdge(portraitSlot.gameObject, shadow: false);
+            // 판정에 관여하지 않는 작은 사진 초상화는 걷어냈다(사용자 지시: 뇌가 실제 보이는 유키 머리 크기·자리에 딱 맞아야 한다 —
+            // 별도로 작게 떠 있는 사진과 뇌가 서로 다른 크기·위치라 어긋나 보였다). 반응 표정(PortraitXrayView.Flash)은 이제
+            // 화면에 실제로 보이는 큰 유키 초상화(CleanPortrait, MainHud의 "Yuki Portrait") 쪽에 붙인다 — CleanMainHud가 연결한다.
+            // 예전에 구운 프리팹엔 그 사진 자리(PortraitSlot)가 남아 있을 수 있어 걷어낸다(멱등 — 없으면 아무 일도 안 한다).
+            Remove(content, "PortraitSlot");
 
-            var portraitArea = Ensure(portraitSlot.transform, "PortraitArea");
-            SetRect(portraitArea, new Vector2(0.08f, 0.06f), new Vector2(0.92f, 0.94f), Vector2.zero, Vector2.zero);
-            var portraitFitter = GetOrAdd<AspectRatioFitter>(portraitArea.gameObject);
-            portraitFitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-            portraitFitter.aspectRatio = PortraitAspect;
-
-            var portraitImage = GetOrAdd<Image>(portraitArea.gameObject);
-            portraitImage.preserveAspect = true;
-
-            var portraitView = GetOrAdd<PortraitXrayView>(portraitSlot.gameObject);
-            SetRef(portraitView, "_image", portraitImage);
-            SetRef(portraitView, "_neutral", LoadPortraitSprite("yuki_neutral.png"));
-            SetRef(portraitView, "_reactive", LoadPortraitSprite("yuki_reactive.png"));
-            SetRef(panel, "_portrait", portraitView);
-
-            // 뇌: 영역이 정확히 겹치도록 비율(63:54)을 고정한 판 안에 기본 아트와 오버레이를 같은 크기로 쌓는다.
+            // 뇌 크기·자리: 초상화(Anchors.YukiDrop)의 머리 중심이 곧 이 판(Tablet)의 중심이므로, 뇌를 머리와 같은 비율로 줄여서 판 한가운데
+            // 놓으면 머리에 그대로 겹친다. 88%→65%→50%로 줄여 왔다가, 사용자가 키운 캐릭터 크기(약 72%)에 맞춰 뇌도 판의 0.722×0.694로
+            // 다시 키웠다(63:54 대비 원래 비율 그대로 유지).
+            // 뇌 아트 비율(63:54)이 머리보다 납작해서 AspectRatioFitter가 폭을 채우고 위아래로 조금 남긴다 — 머리카락 끝이
+            // 뇌 위아래로 살짝 보이는 게 자연스럽다.
+            // 아트(Brain)는 좌우 반전해 뇌가 오른쪽을 보게 한다(사용자 지시) — 글자(Labels)는 반전하면 거울상이 되어 못 읽으므로
+            // 별도 형제로 빼서 안 뒤집힌 채로 두고, 위치 fraction만 좌우로 뒤집어(1-x) 뒤집힌 아트와 자리를 맞춘다.
             var area = Ensure(content, "BrainArea");
-            SetRect(area, new Vector2(0.05f, 0.14f), new Vector2(0.95f, 0.70f), Vector2.zero, Vector2.zero);
+            SetRect(area, new Vector2(0.1118f, 0.1311f), new Vector2(0.8882f, 0.8689f), Vector2.zero, Vector2.zero);
             var brainRect = Ensure(area, "Brain");
             SetRect(brainRect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var fitter = GetOrAdd<AspectRatioFitter>(brainRect.gameObject);
             fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
             fitter.aspectRatio = 63f / 54f;
+            brainRect.localScale = new Vector3(-1f, 1f, 1f);
 
             var baseImage = EnsureImage(brainRect, "Base", Color.white, Vector2.zero, Vector2.one);
             baseImage.sprite = LoadBrainSprite("brain_base.png");
 
             var regions = new BrainRegionView[BrainLabelCenters.Length];
-            var labelsRoot = Ensure(brainRect, "Labels");
+            var labelsRoot = Ensure(area, "Labels");
 
             // 예전에 네 번째 영역(뇌간)이 있던 프리팹이면 그 오버레이와 글자를 걷어낸다(최대 중첩 4 → 3).
             for (var stale = regions.Length; stale < regions.Length + 4; stale++)
@@ -399,7 +423,12 @@ namespace BlueComplex.EditorTools
                 Remove(labelsRoot, $"Label {stale}");
             }
 
+            // Labels는 Brain의 형제라 Brain과 똑같은 비율 고정(63:54, FitInParent)을 따로 걸어야 같은 크기·자리에 온다.
             SetRect(labelsRoot, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var labelsFitter = GetOrAdd<AspectRatioFitter>(labelsRoot.gameObject);
+            labelsFitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            labelsFitter.aspectRatio = 63f / 54f;
+
             for (var i = 0; i < regions.Length; i++)
             {
                 var lit = EnsureImage(brainRect, $"Lobe {i}", Color.white, Vector2.zero, Vector2.one);
@@ -407,9 +436,10 @@ namespace BlueComplex.EditorTools
                 lit.transform.SetSiblingIndex(1 + i); // 기본 아트 위, 글자 밑.
 
                 var center = BrainLabelCenters[i];
+                var mirroredCenter = new Vector2(1f - center.x, center.y);
                 var label = EnsureText(labelsRoot, $"Label {i}", string.Empty, font, 19f, BrainLabelInk,
-                    TextAlignmentOptions.Center, center - new Vector2(0.21f, 0.09f), center + new Vector2(0.21f, 0.09f), Vector2.zero, Vector2.zero,
-                    FontStyles.Bold);
+                    TextAlignmentOptions.Center, mirroredCenter - new Vector2(0.21f, 0.09f), mirroredCenter + new Vector2(0.21f, 0.09f),
+                    Vector2.zero, Vector2.zero, FontStyles.Bold);
                 label.textWrappingMode = TextWrappingModes.Normal;
                 label.lineSpacing = -14f;
 
@@ -692,9 +722,17 @@ namespace BlueComplex.EditorTools
             Remove(hud, "Complex Duration Display");
             Remove(hud, "Natsu Portrait");
 
-            // 유키 드롭 영역은 맨 밑에 깐다 — 투명하지만 레이캐스트를 받으므로 위에 있으면 엑스레이 판넬/카드 입력을 가로챈다.
+            // 유키 초상화는 맨 밑에 깐다 — 위에 있으면 엑스레이 판넬/카드 입력을 가로채고, 엑스레이가 펼쳐질 때 그 위로 뇌가 겹쳐야 한다.
             var yuki = Place(hud, "Yuki Portrait", Anchors.YukiDrop);
-            if (yuki != null) yuki.SetAsFirstSibling();
+            if (yuki != null)
+            {
+                yuki.SetAsFirstSibling();
+
+                // 엑스레이 판 안의 작은 사진을 없애면서, 반응 표정(Flash)은 이 실제 초상화로 옮겼다 — 여기서 둘을 연결한다.
+                var yukiPortraitView = yuki.GetComponentInChildren<PortraitXrayView>(true);
+                var xrayPanel = root.GetComponentInChildren<ComplexXrayPanel>(true);
+                if (yukiPortraitView != null && xrayPanel != null) SetRef(xrayPanel, "_portrait", yukiPortraitView);
+            }
 
             // 요소 프리팹은 기본 레이어라, MainHud가 UI 레이어(UI 카메라가 그리는 유일한 레이어)를 인스턴스 오버라이드로 입혀 둔다.
             // 새로 만든 슬롯에도 같은 오버라이드가 필요하다 — 없으면 화면에 안 나온다.
@@ -854,6 +892,14 @@ namespace BlueComplex.EditorTools
         {
             var component = go.GetComponent<T>();
             return component != null ? component : go.AddComponent<T>();
+        }
+
+        /// <summary>있으면 정확히 그 타입의 컴포넌트를 지운다(예전 모양을 새 모양으로 바꿀 때). <typeparamref name="T"/>가 상위 타입이면
+        /// 하위 타입 인스턴스는 안 지운다 — 예를 들어 Outline(Shadow의 하위 타입)이 있어도 <c>RemoveIfPresent&lt;Shadow&gt;</c>는 그건 안 건드린다.</summary>
+        private static void RemoveIfPresent<T>(GameObject go) where T : Component
+        {
+            foreach (var component in go.GetComponents<T>())
+                if (component.GetType() == typeof(T)) Object.DestroyImmediate(component);
         }
 
         /// <summary>이름으로 자식을 찾고 없으면 RectTransform만 든 빈 오브젝트를 만든다(비활성 자식도 찾는다).</summary>

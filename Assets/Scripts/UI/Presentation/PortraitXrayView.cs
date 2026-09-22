@@ -19,9 +19,14 @@ namespace BlueComplex.UI.Presentation
 
         private Tween _flashTween;
 
+        /// <summary>프리팹에 구워진 스케일. 초상화는 좌우 반전(x = -1)돼 있을 수 있어서, 반응 연출이 끝나고 돌아갈 자리를
+        /// <c>Vector3.one</c>으로 잡으면 반전이 풀려 버린다 — 시작할 때 원래 값을 기억해 두고 항상 이 값으로 돌아간다.</summary>
+        private Vector3 _baseScale = Vector3.one;
+
         private void Awake()
         {
             if (_image == null) _image = GetComponent<Image>();
+            _baseScale = transform.localScale;
             ResetToNeutral();
         }
 
@@ -30,7 +35,7 @@ namespace BlueComplex.UI.Presentation
         {
             _flashTween?.Kill();
             if (_image != null && _neutral != null) _image.sprite = _neutral;
-            transform.localScale = Vector3.one;
+            transform.localScale = _baseScale;
         }
 
         /// <summary>컴플렉스가 발동한 순간 잠깐 반응 표정으로 바뀌었다가(살짝 커지며) 무표정으로 돌아온다. 이미지·반응 스프라이트가 없으면 조용히 아무것도 안 한다.</summary>
@@ -42,11 +47,11 @@ namespace BlueComplex.UI.Presentation
             var half = Mathf.Max(0.05f, UiMotion.Settings.portraitFlash * 0.5f);
 
             _image.sprite = _reactive;
-            transform.localScale = Vector3.one * 1.05f;
+            transform.localScale = _baseScale * 1.05f;
             _flashTween = DOTween.Sequence().SetUpdate(true).SetTarget(this)
                 .AppendInterval(half)
                 .AppendCallback(() => { if (_image != null) _image.sprite = _neutral; })
-                .Append(transform.DOScale(1f, half).SetEase(Ease.OutQuad));
+                .Append(transform.DOScale(_baseScale, half).SetEase(Ease.OutQuad));
         }
 
         private void OnDisable() => DOTween.Kill(this);
