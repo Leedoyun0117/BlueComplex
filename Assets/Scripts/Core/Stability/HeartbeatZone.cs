@@ -94,5 +94,15 @@ namespace BlueComplex.Core.Stability
         public CensorshipLevel CensorshipOf(int heartbeatValue) => Resolve(heartbeatValue).Censorship;
         public double ComplexSpawnChanceOf(int heartbeatValue) => Resolve(heartbeatValue).ComplexSpawnChance;
         public bool IsFatal(int heartbeatValue) => StateOf(heartbeatValue) == HeartbeatState.Fatal;
+
+        /// <summary>심박수가 침체 쪽(침체·매우 침체)이면 Depressed, 흥분 쪽이면 Excited. 안정·즉사 구간은 어느 쪽도 아니라 null.</summary>
+        public Tags.Polarity? PolarityOf(int heartbeatValue) => StateOf(heartbeatValue) switch
+        {
+            HeartbeatState.VeryDepressed or HeartbeatState.Depressed => Tags.Polarity.Depressed,
+            HeartbeatState.Excited or HeartbeatState.VeryExcited => Tags.Polarity.Excited,
+            _ => null
+        };
+
+        public bool IsStable(int heartbeatValue) => StateOf(heartbeatValue) == HeartbeatState.Stable;
     }
 }

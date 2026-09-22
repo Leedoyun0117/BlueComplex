@@ -39,6 +39,9 @@ namespace BlueComplex.UI.Presentation
         private Color _edgeColor;
         private CanvasGroup _group;
         private Tween _motion;
+        private Tween _selectTween;
+        private bool _selected;
+        private static readonly Color SelectedEdge = new Color32(255, 200, 60, 255);
 
         public ItemDefinition Item { get; private set; }
 
@@ -73,6 +76,30 @@ namespace BlueComplex.UI.Presentation
             if (insert) PlayInsert();
         }
 
+        /// <summary>아이템 대상 선택 모드에서 이 카드가 "지금 쓰려는 카드"임을 보인다 — 살짝 들리고 테두리가 금빛이 된다. 끄면 원래대로.</summary>
+        public void SetSelected(bool selected)
+        {
+            _selected = selected;
+            _selectTween?.Kill();
+            if (Item == null) return;
+
+            var rect = (RectTransform)transform;
+            _selectTween = rect.DOScale(selected ? 1.06f : 1f, 0.12f).SetEase(Ease.OutQuad).SetUpdate(true).SetTarget(this);
+            if (_edge != null) _edge.effectColor = selected ? SelectedEdge : _edgeColor;
+        }
+
+        /// <summary>쓸 수 없는 아이템을 눌렀을 때 카드가 좌우로 짧게 떨린다(대상이 없거나 스테이지가 끝난 경우).</summary>
+        public void PlayRejected()
+        {
+            if (Item == null) return;
+
+            _selectTween?.Kill();
+            var rect = (RectTransform)transform;
+            rect.localRotation = Quaternion.identity;
+            _selectTween = rect.DOPunchRotation(new Vector3(0f, 0f, 4f), 0.3f, 14, 0.6f).SetUpdate(true).SetTarget(this)
+                .OnComplete(() => rect.localRotation = Quaternion.identity);
+        }
+
         /// <summary>카드가 없는 자리 — 파인 빈 칸만 남긴다(다음에 카드가 끼워질 자리).</summary>
         public void SetEmpty()
         {
@@ -104,6 +131,7 @@ namespace BlueComplex.UI.Presentation
         {
             HideTooltip();
             _motion?.Kill();
+            _selectTween?.Kill();
             _background.raycastTarget = false;
             UiSoundHooks.Play(UiSoundCue.Paper);
 
@@ -149,6 +177,9 @@ namespace BlueComplex.UI.Presentation
         private void ResetPose()
         {
             _motion?.Kill();
+            _selectTween?.Kill();
+            _selected = false;
+            if (_edge != null) _edge.effectColor = _edgeColor;
             var rect = (RectTransform)transform;
             rect.localScale = Vector3.one;
             rect.localRotation = Quaternion.identity;
@@ -168,13 +199,15 @@ namespace BlueComplex.UI.Presentation
         {
             if (_edge == null) return;
 
-            var color = _edgeColor;
+            var color = _selected ? SelectedEdge : _edgeColor;
             color.a *= factor;
             _edge.effectColor = color;
         }
 
         public void OnPointerClick(PointerEventData eventData)
         {
+            // 오른쪽 클릭은 대상 선택 취소용이라 아이템 사용으로 치지 않는다.
+            if (eventData.button != PointerEventData.InputButton.Left) return;
             if (Item != null) Clicked?.Invoke(Item);
         }
 
@@ -189,6 +222,7 @@ namespace BlueComplex.UI.Presentation
         private void OnDisable()
         {
             _motion?.Kill();
+            _selectTween?.Kill();
             HideTooltip();
         }
 

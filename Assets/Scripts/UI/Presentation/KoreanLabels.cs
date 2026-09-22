@@ -50,11 +50,11 @@ namespace BlueComplex.UI.Presentation
             _ => "-"
         };
 
-        public static string Trait(TraitType trait) => trait switch
-        {
-            TraitType.Sensitive => "예민",
-            _ => trait.ToString()
-        };
+        /// <summary>특성 이름은 특성 데이터(TraitDefinition.DisplayName)가 쥔다 — 남은 지속 표시만 여기서 만든다:
+        /// 일반 특성은 "환각 1턴", 특수 특성은 턴으로 줄지 않으므로 "고기능 우울증 (안정까지)".</summary>
+        public static string Trait(TraitInstance trait) => trait.Definition.Kind == TraitKind.Special
+            ? $"{trait.Definition.DisplayName} (안정까지)"
+            : $"{trait.Definition.DisplayName} {trait.RemainingTurns}턴";
 
         public static string Censorship(CensorshipLevel level) => level switch
         {

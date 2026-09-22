@@ -23,6 +23,7 @@ namespace BlueComplex.Core.Stage
         public KeyProgress Keys { get; init; }
         public ClueKnowledgeLedger Ledger { get; init; }
         public CensorshipState Censorship { get; init; }
+        public ActiveItemBoard ActiveItems { get; init; }
     }
 
     public static class StageFactory
@@ -39,19 +40,19 @@ namespace BlueComplex.Core.Stage
             var pool = new CluePool(config.Clues, random);
             var hand = new ClueHand(pool);
 
-            var complexBoard = new ComplexBoard();
+            var complexBoard = new ComplexBoard(config.MaxComplexSlots);
             if (config.StartingComplex != null)
                 complexBoard.TryAttach(new ComplexInstance(config.StartingComplex, priority: 0));
 
-            var traits = new TraitBoard();
+            var traits = new TraitBoard(config.Traits);
             var heartbeat = new Heartbeat(heartbeatStartValue);
             var zone = new HeartbeatZone();
-            var evaluator = new TraitAwareEmotionEvaluator(new EmotionEvaluator(polarityTable), traits);
+            var evaluator = new TraitAwareEmotionEvaluator(polarityTable, traits);
 
             var censorship = new CensorshipState(heartbeat, zone);
 
             var activeItems = new ActiveItemBoard();
-            var items = new ItemInventory(config.ItemPool, random);
+            var items = new ItemInventory(config.ItemPool, random, config.ItemSlots);
 
             var keys = new KeyProgress(config.RequiredKeys, config.Quarters);
             keyPlacer ??= CreateKeyPlacer(config, random, zone, polarityTable);
@@ -70,7 +71,8 @@ namespace BlueComplex.Core.Stage
                 traits,
                 keys,
                 keyPlacer,
-                ledger);
+                ledger,
+                config.ItemParameters);
 
             return new StageSession
             {
@@ -83,7 +85,8 @@ namespace BlueComplex.Core.Stage
                 Traits = traits,
                 Keys = keys,
                 Ledger = ledger,
-                Censorship = censorship
+                Censorship = censorship,
+                ActiveItems = activeItems
             };
         }
 
@@ -107,7 +110,7 @@ namespace BlueComplex.Core.Stage
             var reach = new CardPoolReachModel(
                 config.Clues.Select(clue => (
                     Best: evaluator.Evaluate(clue.CreateOriginalTagSet()),
-                    Worst: WorstCaseDelta(clue, complexes, evaluator, ComplexBoard.MaxSlots))),
+                    Worst: WorstCaseDelta(clue, complexes, evaluator, config.MaxComplexSlots))),
                 ReachabilityKeyZonePlacer.DefaultMaxMovePerTurn,
                 ReachabilityKeyZonePlacer.DefaultMaxDropPerTurn);
 

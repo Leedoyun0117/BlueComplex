@@ -9,10 +9,10 @@ namespace BlueComplex.UI.Presentation
     /// <summary>턴 결과를 대사창 한 줄 요약으로 바꾼다. Immediate/Cinematic 두 Presenter가 같이 쓴다.</summary>
     public static class TurnSummaryFormatter
     {
-        /// <summary>컴플렉스가 발동하는 순간 대사창에 뜨는 짧은 이벤트 대사. 컴플렉스별 대사 원고가 아직 없어서 이름만 넣은 공통 문구다 —
-        /// 원고가 생기면 이 메서드 한 곳에서 컴플렉스 id로 갈라 쓰면 된다. 표시 이름에 이미 "컴플렉스"가 들어 있다("죄책감 컴플렉스").</summary>
+        /// <summary>컴플렉스가 발동하는 순간 대사창에 뜨는 짧은 이벤트 대사 — 컴플렉스 id로 <see cref="ComplexReactionLines"/> 표에서 뽑는다
+        /// (대사가 여럿이면 무작위). 표에 대사가 없는 컴플렉스는 이름만 넣은 공통 문구로 대신한다. 표시 이름에 이미 "컴플렉스"가 들어 있다("죄책감 컴플렉스").</summary>
         public static string BuildComplexEventLine(ComplexInstance complex) =>
-            $"\"{complex.Definition.DisplayName}\"이(가) 반응했다!";
+            ComplexReactions.Pick(complex.Definition.Id) ?? $"\"{complex.Definition.DisplayName}\"이(가) 반응했다!";
 
         public static string Build(TurnReport report)
         {
@@ -36,6 +36,10 @@ namespace BlueComplex.UI.Presentation
 
             if (report.SpawnedComplex != null)
                 sb.Append($" 새로운 컴플렉스 \"{report.SpawnedComplex.Definition.DisplayName}\"이(가) 나타났다.");
+
+            // 컴플렉스가 최대 중첩을 넘쳐 발현했다면 그 결과로 특수 특성이 붙는다(새 컴플렉스는 붙지 않는다).
+            if (report.SpecialTraitGranted != null)
+                sb.Append($" 컴플렉스가 넘쳐 \"{report.SpecialTraitGranted.DisplayName}\" 특성이 발현했다.");
 
             if (report.KeyResult is { } key)
                 sb.Append(key.Success ? $" {key.Quarter}쿼터 키를 얻었다!" : $" {key.Quarter}쿼터 키를 놓쳤다.");
