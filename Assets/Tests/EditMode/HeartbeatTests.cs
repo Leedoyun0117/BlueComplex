@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using BlueComplex.Core.Stability;
+using BlueComplex.Core.Stage;
 using BlueComplex.Core.Tags;
 using BlueComplex.Core.Traits;
 
@@ -55,7 +56,7 @@ namespace BlueComplex.Core.Tests
         public void TraitAwareEvaluator_WithoutSensitive_MultiplierIsOne()
         {
             var traits = new TraitBoard();
-            var evaluator = new TraitAwareEmotionEvaluator(new EmotionEvaluator(Polarity), traits);
+            var evaluator = new TraitAwareEmotionEvaluator(Polarity, traits);
 
             var tags = new TagSet();
             tags.AddEmotion(EmotionTag.Disgust, 1); // base -10
@@ -66,9 +67,9 @@ namespace BlueComplex.Core.Tests
         [Test]
         public void TraitAwareEvaluator_WithSensitive_MultipliesByThree()
         {
-            var traits = new TraitBoard();
-            traits.Grant(TraitType.Sensitive, duration: 3);
-            var evaluator = new TraitAwareEmotionEvaluator(new EmotionEvaluator(Polarity), traits);
+            var traits = new TraitBoard(PrototypeContent.Traits());
+            traits.Grant(PrototypeContent.TraitSensitive);
+            var evaluator = new TraitAwareEmotionEvaluator(Polarity, traits);
 
             var tags = new TagSet();
             tags.AddEmotion(EmotionTag.Disgust, 1); // base -10

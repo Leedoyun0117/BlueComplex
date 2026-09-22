@@ -49,7 +49,7 @@ namespace BlueComplex.UI.Presentation
             var traits = Session.Traits.Traits;
             _label.text = traits.Count == 0
                 ? NoTraitText
-                : string.Join(", ", traits.Select(t => $"{KoreanLabels.Trait(t.Type)} {t.RemainingTurns}턴"));
+                : string.Join(", ", traits.Select(KoreanLabels.Trait));
         }
 
         private void OnBoardChanged(TraitInstance trait) => _dirty = true;

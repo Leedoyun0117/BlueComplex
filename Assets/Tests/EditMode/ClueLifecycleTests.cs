@@ -116,11 +116,12 @@ namespace BlueComplex.Core.Tests
             var activeItems = new ActiveItemBoard();
             var itemPool = new[]
             {
-                new ItemDefinition("item_recollection", "회상", "", duration: 0, new Recollection())
+                new ItemDefinition("item_recollection", "회상", "", duration: 0, new RedrawHand())
             };
-            var inventory = new ItemInventory(itemPool, new SystemRandomSource(9));
+            var inventory = new ItemInventory(itemPool, new SystemRandomSource(9), capacity: 1);
 
-            Assert.IsTrue(inventory.TryGainRandom(out var gained), "풀에 아이템이 하나뿐이므로 반드시 획득해야 한다.");
+            Assert.AreEqual(1, inventory.Refill(), "풀에 아이템이 하나뿐이므로 반드시 채워야 한다.");
+            var gained = inventory.Held[0];
             Assert.AreEqual("item_recollection", gained.Id);
 
             inventory.Use(gained, new ItemActivationContext(hand, traits, activeItems));
