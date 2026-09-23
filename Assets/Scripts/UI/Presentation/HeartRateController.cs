@@ -32,6 +32,9 @@ namespace BlueComplex.UI.Presentation
         private ITurnResultPresenter _presenter;
         private QuarterHud _quarterHud;
 
+        /// <summary>DLJ: 화면에 심박수를 반영하는 시점. 상태 이펙트도 태그/파형 연출과 동기화한다.</summary>
+        public event System.Action<int, bool> HeartbeatPresented;
+
         private QuarterHud Hud => _quarterHud != null ? _quarterHud : _quarterHud = QuarterHud.GetOrCreate(transform.root);
 
         /// <summary>나츠 초상화. "Natsu Portrait"는 유키와 달리 정지 사진 카드였던 자리라 컴포넌트가 프리팹에 안 구워져 있을 수 있다 —
@@ -107,6 +110,7 @@ namespace BlueComplex.UI.Presentation
 
             _bpm.SetValue(value, color, KoreanLabels.State(state), animate: !snap);
             _bar.SetPulse(value, color, irregular, snap);
+            HeartbeatPresented?.Invoke(value, snap);
             Natsu?.ReactToHeartbeat(state);
         }
 
