@@ -1,4 +1,5 @@
 using BlueComplex.Core.Stage;
+using BlueComplex.UI.Motion;
 using BlueComplex.UI.Presentation;
 using DG.Tweening;
 using UnityEngine;
@@ -64,9 +65,15 @@ namespace BlueComplex.UI.Background
         protected override void Render() => SetElapsedMinutes(0f, animate: false);
 
         /// <summary>turn번째 턴이 끝난 시각으로 시계를 옮긴다(스테이지 시작 후 turn × 턴당 분).
-        /// 호출 시점은 Presenter가 쥔다. 재생 중인 트윈을 돌려주므로 필요하면 기다릴 수 있다.</summary>
-        public Tween AdvanceTo(int turn, bool animate = true) =>
-            SetElapsedMinutes(Mathf.Max(0, turn) * _minutesPerTurn, animate);
+        /// 호출 시점은 Presenter가 쥔다. 재생 중인 트윈을 돌려주므로 필요하면 기다릴 수 있다.
+        /// 시계 소리는 매 턴이 아니라 쿼터가 넘어가는 턴에서만 난다(기획서).</summary>
+        public Tween AdvanceTo(int turn, bool animate = true)
+        {
+            if (animate && Session != null && Session.Runner.Schedule.IsQuarterEnd(turn))
+                UiSoundHooks.Play(UiSoundCue.ClockTick);
+
+            return SetElapsedMinutes(Mathf.Max(0, turn) * _minutesPerTurn, animate);
+        }
 
         private Tween SetElapsedMinutes(float minutes, bool animate)
         {

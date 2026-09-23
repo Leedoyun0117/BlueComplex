@@ -15,8 +15,10 @@ namespace BlueComplex.UI.Presentation
     /// 슬롯에는 아이콘과 이름만 보이고, 설명은 공유 TooltipPopup(ComplexRowView와 동일 패턴)으로 뺐다 —
     /// 슬롯 자체엔 담기엔 너무 길다. 카드가 없는 자리는 파인 빈 칸(<see cref="SetEmpty"/>)으로 남는다.
     ///
-    /// 움직임: 사용한 카드는 구겨지며 사라지고(<see cref="PlayUse"/>), 새 카드는 빈 칸에 눌려 끼워진다(<see cref="Render"/>의 insert).
-    /// 슬롯은 세로 레이아웃 그룹의 자식이라 위치는 건드리지 않고 크기·기울기·투명도로만 표현한다.
+    /// 움직임: 사용한 카드는 구겨지며 사라지고(<see cref="PlayUse"/>), 새 카드는 빈 칸 옆에서 매우 작게 튀어나와 빠르게 커진 뒤
+    /// 그 상태로 빈 칸 쪽으로 움직여 빠르게 끼워진다(<see cref="Render"/>의 insert → <see cref="PlayInsert"/>).
+    /// 슬롯은 세로 레이아웃 그룹의 자식이라 위치는 기본적으로 건드리지 않고 크기·기울기·투명도로만 표현하지만,
+    /// 끼워지는 움직임만은 <see cref="LayoutSafeOffset"/>으로 가로 오프셋을 잠깐 준다(레이아웃이 다시 계산돼도 어긋나지 않는다).
     /// 시간은 UiMotionSettings(인스펙터)에서 온다.</summary>
     public sealed class ItemSlotView : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
     {
@@ -41,6 +43,7 @@ namespace BlueComplex.UI.Presentation
         private Tween _motion;
         private Tween _selectTween;
         private bool _selected;
+        private LayoutSafeOffset _popOffset;
         private static readonly Color SelectedEdge = new Color32(255, 200, 60, 255);
 
         public ItemDefinition Item { get; private set; }
@@ -52,6 +55,7 @@ namespace BlueComplex.UI.Presentation
         {
             _edge = GetComponent<Outline>();
             if (_edge != null) _edgeColor = _edge.effectColor;
+            _popOffset = new LayoutSafeOffset((RectTransform)transform);
             EnsureGroup();
         }
 
@@ -133,7 +137,7 @@ namespace BlueComplex.UI.Presentation
             _motion?.Kill();
             _selectTween?.Kill();
             _background.raycastTarget = false;
-            UiSoundHooks.Play(UiSoundCue.Paper);
+            UiSoundHooks.Play(UiSoundCue.ItemUse);
 
             var total = UiMotion.Settings.itemUse;
             var rect = (RectTransform)transform;
@@ -155,22 +159,35 @@ namespace BlueComplex.UI.Presentation
                 });
         }
 
+        /// <summary>빈 칸 옆에서 매우 작게 튀어나와 빠르게 커지고(1) → 커진 채로 빈 칸 쪽으로 움직이고(2) →
+        /// 빠르게 끼워지며 찰칵 소리가 난다(3).</summary>
         private void PlayInsert()
         {
             _motion?.Kill();
-            var total = UiMotion.Settings.itemInsert;
+            var motion = UiMotion.Settings;
             var rect = (RectTransform)transform;
             var group = EnsureGroup();
 
-            // 크게 들린 채 옅게 시작해서 칸 위에 눌려 앉는다.
-            rect.localScale = Vector3.one * 1.3f;
-            rect.localRotation = Quaternion.Euler(0f, 0f, 7f);
+            const float PopScale = 1.2f;
+
+            // 1) 빈 칸 옆자리에서, 매우 작고 옅은 채로 시작한다.
+            rect.localScale = Vector3.one * 0.05f;
+            rect.localRotation = Quaternion.Euler(0f, 0f, 9f);
             group.alpha = 0f;
+            _popOffset.Set(new Vector2(motion.itemPopOffset, 0f));
+
+            var moveTime = motion.itemInsert * 0.7f;
+            var snapTime = motion.itemInsert - moveTime;
 
             _motion = DOTween.Sequence().SetUpdate(true).SetTarget(this)
-                .Append(group.DOFade(1f, total * 0.4f))
-                .Join(rect.DOScale(1f, total).SetEase(Ease.OutBack, 1.6f))
-                .Join(rect.DOLocalRotate(Vector3.zero, total).SetEase(Ease.OutBack))
+                // 1) 빠르게 커진다.
+                .Append(group.DOFade(1f, motion.itemPop * 0.6f))
+                .Join(rect.DOScale(PopScale, motion.itemPop).SetEase(Ease.OutQuad))
+                .Join(rect.DOLocalRotate(Vector3.zero, motion.itemPop).SetEase(Ease.OutQuad))
+                // 2) 커진 채로 빈 칸 쪽으로 움직인다.
+                .Append(DOTween.To(() => _popOffset.Value.x, x => _popOffset.SetX(x), 0f, moveTime).SetEase(Ease.InCubic))
+                // 3) 빠르게 끼워지며 찰칵 소리.
+                .Append(rect.DOScale(1f, snapTime).SetEase(Ease.OutBack, 1.8f))
                 .AppendCallback(() => UiSoundHooks.Play(UiSoundCue.Pin));
         }
 
@@ -183,6 +200,7 @@ namespace BlueComplex.UI.Presentation
             var rect = (RectTransform)transform;
             rect.localScale = Vector3.one;
             rect.localRotation = Quaternion.identity;
+            _popOffset?.Set(Vector2.zero);
             EnsureGroup().alpha = 1f;
         }
 

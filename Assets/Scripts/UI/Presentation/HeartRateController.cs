@@ -1,3 +1,4 @@
+using System.Linq;
 using BlueComplex.Core.Items;
 using BlueComplex.Core.Stability;
 using BlueComplex.Core.Stage;
@@ -32,6 +33,28 @@ namespace BlueComplex.UI.Presentation
         private QuarterHud _quarterHud;
 
         private QuarterHud Hud => _quarterHud != null ? _quarterHud : _quarterHud = QuarterHud.GetOrCreate(transform.root);
+
+        /// <summary>나츠 초상화. "Natsu Portrait"는 유키와 달리 정지 사진 카드였던 자리라 컴포넌트가 프리팹에 안 구워져 있을 수 있다 —
+        /// 이름으로 찾아 없으면 그 자리에 바로 붙인다(런타임 자동 부착, 프리팹 편집 불필요). 없으면(그 오브젝트 자체가 없으면) null.</summary>
+        private NatsuPortraitView _natsu;
+        private bool _natsuResolved;
+
+        private NatsuPortraitView Natsu
+        {
+            get
+            {
+                if (_natsuResolved) return _natsu;
+                _natsuResolved = true;
+
+                var rect = transform.root.GetComponentsInChildren<RectTransform>(true)
+                    .FirstOrDefault(t => t.name == "Natsu Portrait");
+                if (rect == null) return null;
+
+                _natsu = rect.GetComponent<NatsuPortraitView>();
+                if (_natsu == null) _natsu = rect.gameObject.AddComponent<NatsuPortraitView>();
+                return _natsu;
+            }
+        }
 
         protected override void Subscribe(StageSession session)
         {
@@ -84,6 +107,7 @@ namespace BlueComplex.UI.Presentation
 
             _bpm.SetValue(value, color, KoreanLabels.State(state), animate: !snap);
             _bar.SetPulse(value, color, irregular, snap);
+            Natsu?.ReactToHeartbeat(state);
         }
 
         /// <summary>코어의 현재 턴 상태(현재 쿼터의 목표 구역, 쿼터 내 턴 위치)를 바와 쿼터 HUD에 반영한다.
@@ -98,8 +122,10 @@ namespace BlueComplex.UI.Presentation
             if (quarter > 0 && Session.Keys.Zones.TryGetValue(Session.Keys.Schedule.LastTurnOf(quarter), out var found))
                 zone = found;
 
+            var isKeyTurn = quarter > 0 && runner.CurrentTurnInQuarter == Session.Keys.Schedule.TurnsPerQuarter;
             _bar.SetTargetZone(quarter, zone);
-            _bar.SetKeyTurn(quarter > 0 && runner.CurrentTurnInQuarter == Session.Keys.Schedule.TurnsPerQuarter);
+            _bar.SetKeyTurn(isKeyTurn);
+            Natsu?.SetFocused(isKeyTurn);
             Hud.Sync(quarter, runner.CurrentTurnInQuarter);
         }
 
