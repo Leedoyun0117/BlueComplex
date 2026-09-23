@@ -3,6 +3,7 @@ using BlueComplex.Core.Stage;
 using BlueComplex.Core.Turn;
 using BlueComplex.UI.Layout;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace BlueComplex.UI.Presentation
 {
@@ -111,6 +112,13 @@ namespace BlueComplex.UI.Presentation
                 else if (i < held.Count) slot.Render(held[i], insert: i >= firstNew);
                 else slot.SetEmpty();
             }
+
+            // 슬롯을 한 프레임 안에 여럿 SetActive/내용 변경하면 VerticalLayoutGroup이 한 번의 자동 리빌드로 전부
+            // 수렴하지 못하고 마지막 슬롯(들)의 가로 위치가 이전 프레임 값으로 남는 경우가 있다(배치모드 진단으로 재현·확인함:
+            // 강제 리빌드를 두 번 연달아 불러야 안정적으로 고쳐졌다 — 한 번은 그대로 어긋난 값을 냈다).
+            // 그래서 매 Refresh마다 명시적으로 두 번 강제 리빌드한다.
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_panel.Root);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_panel.Root);
 
             _shownCount = held.Count;
         }

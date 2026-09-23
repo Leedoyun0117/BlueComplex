@@ -1,0 +1,208 @@
+using System.Collections;
+using BlueComplex.UI.Layout;
+using BlueComplex.UI.Motion;
+using DG.Tweening;
+using TMPro;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+
+namespace BlueComplex.UI.Presentation
+{
+    /// <summary>
+    /// 스테이지 시작/쿼터 분기/스테이지 클리어 대화의 암전 막 + 여러 줄 대사. <see cref="KeyTurnOverlay"/>(키 턴 나츠 독백)와 같은 뼈대지만
+    /// 한 줄이 아니라 <see cref="DialogueVariant"/>(여러 줄)를 차례로 재생하고, 줄마다 화자(플레이어/유키)에 따라 이름표 색이 바뀐다.
+    /// 각 줄은 클릭으로 다음 줄로 넘어간다(타이핑 중 클릭하면 그 줄만 즉시 완성). 막이 떠 있는 동안은 뒤 UI의 클릭을 막는다.
+    /// </summary>
+    public sealed class StageDialogueOverlay : MonoBehaviour, IPointerClickHandler
+    {
+        private static readonly Color YukiInk = new Color32(146, 168, 204, 255);
+        private static readonly Color PlayerInk = new Color32(214, 178, 128, 255);
+        private static readonly Color LineInk = new Color32(238, 240, 246, 255);
+
+        private CanvasGroup _group;
+        private CanvasGroup _textGroup;
+        private Image _dim;
+        private TMP_Text _speaker;
+        private TMP_Text _line;
+        private CanvasGroup _nextIndicator;
+        private Tween _blink;
+        private Tween _typing;
+        private bool _skip;
+
+        public static StageDialogueOverlay Create(Transform canvasRoot, TMP_FontAsset font)
+        {
+            var rect = new GameObject("Stage Dialogue Overlay", typeof(RectTransform), typeof(CanvasGroup), typeof(Image)) { layer = canvasRoot.gameObject.layer }
+                .GetComponent<RectTransform>();
+            rect.SetParent(canvasRoot, false);
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            var overlay = rect.gameObject.AddComponent<StageDialogueOverlay>();
+            overlay.Build(font);
+            return overlay;
+        }
+
+        /// <summary>막을 어둡게 하고 변형의 줄을 순서대로 재생한 뒤 다시 밝아진다. 줄이 없으면 아무것도 안 한다.</summary>
+        public IEnumerator PlaySequence(DialogueVariant variant)
+        {
+            if (variant.lines == null || variant.lines.Length == 0) yield break;
+
+            var settings = UiMotion.Settings;
+            gameObject.SetActive(true);
+            transform.SetAsLastSibling(); // 그 사이에 생긴 다른 패널 위로.
+            _dim.color = new Color(0.016f, 0.024f, 0.05f, settings.keyTurnDim);
+            _group.blocksRaycasts = true;
+            _textGroup.alpha = 0f;
+
+            _group.DOKill();
+            yield return _group.DOFade(1f, settings.keyTurnFade).SetEase(Ease.InOutSine).SetUpdate(true).SetTarget(_group).WaitForCompletion(true);
+
+            _textGroup.DOKill();
+            yield return _textGroup.DOFade(1f, 0.2f).SetUpdate(true).SetTarget(_textGroup).WaitForCompletion(true);
+
+            foreach (var line in variant.lines)
+                yield return PlayLine(line);
+
+            yield return _textGroup.DOFade(0f, 0.2f).SetUpdate(true).SetTarget(_textGroup).WaitForCompletion(true);
+
+            _group.DOKill();
+            _group.blocksRaycasts = false;
+            yield return _group.DOFade(0f, settings.keyTurnFade).SetEase(Ease.InOutSine).SetUpdate(true).SetTarget(_group).WaitForCompletion(true);
+            gameObject.SetActive(false);
+        }
+
+        /// <summary>한 줄: 화자 이름표 색 → 한 글자씩(글자마다 타자 소리, 클릭하면 즉시 완성) → "다음" 표시가 뜨고 클릭을 기다린다.</summary>
+        private IEnumerator PlayLine(DialogueLine line)
+        {
+            var settings = UiMotion.Settings;
+            _speaker.text = SpeakerName(line.speaker);
+            _speaker.color = line.speaker == DialogueSpeaker.Yuki ? YukiInk : PlayerInk;
+            _line.text = string.Empty;
+            ShowNextIndicator(false);
+            _skip = false;
+
+            var text = line.text ?? string.Empty;
+            var count = text.Length;
+            var shown = 0;
+            var typing = count > 0;
+            if (typing)
+            {
+                _typing = DOTween.To(() => 0f, v =>
+                    {
+                        var visible = Mathf.Min(count, Mathf.FloorToInt(v) + 1);
+                        if (visible == shown) return;
+
+                        shown = visible;
+                        _line.text = text.Substring(0, shown);
+                        if (!char.IsWhiteSpace(text[shown - 1])) UiSoundHooks.Play(UiSoundCue.Type);
+                    }, count, count * settings.keyTurnSecondsPerChar)
+                    .SetEase(Ease.Linear).SetUpdate(true).SetTarget(this)
+                    .OnComplete(() => typing = false);
+            }
+
+            while (typing && !_skip) yield return null;
+
+            _typing?.Kill();
+            _typing = null;
+            _line.text = text;
+
+            ShowNextIndicator(true);
+            _skip = false;
+            yield return new WaitUntil(() => _skip);
+            ShowNextIndicator(false);
+        }
+
+        private static string SpeakerName(DialogueSpeaker speaker) => speaker == DialogueSpeaker.Yuki ? "유키" : "나";
+
+        public void OnPointerClick(PointerEventData eventData) => _skip = true;
+
+        /// <summary>진행 중인 연출을 멈추고 막을 치운다(재시작).</summary>
+        public void ResetNow()
+        {
+            _typing?.Kill();
+            _typing = null;
+            _blink?.Kill();
+            _group.DOKill();
+            _textGroup.DOKill();
+            _group.alpha = 0f;
+            _group.blocksRaycasts = false;
+            gameObject.SetActive(false);
+        }
+
+        private void ShowNextIndicator(bool visible)
+        {
+            _blink?.Kill();
+            if (!visible)
+            {
+                _nextIndicator.alpha = 0f;
+                return;
+            }
+
+            _nextIndicator.alpha = 1f;
+            _blink = _nextIndicator.DOFade(0.2f, UiMotion.Settings.dialogueNextBlink).SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine).SetUpdate(true);
+        }
+
+        private void Build(TMP_FontAsset font)
+        {
+            _group = GetComponent<CanvasGroup>();
+            _group.alpha = 0f;
+            _group.blocksRaycasts = false;
+
+            _dim = GetComponent<Image>();
+            _dim.raycastTarget = true;
+
+            var text = new GameObject("Dialogue", typeof(RectTransform), typeof(CanvasGroup)) { layer = gameObject.layer };
+            text.transform.SetParent(transform, false);
+            var textRect = (RectTransform)text.transform;
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+            _textGroup = text.GetComponent<CanvasGroup>();
+            _textGroup.alpha = 0f;
+            _textGroup.blocksRaycasts = false;
+
+            _speaker = CreateText(textRect, "Speaker", font, 26f, YukiInk, new Vector2(0.2f, 0.53f), new Vector2(0.8f, 0.6f));
+            _line = CreateText(textRect, "Line", font, 38f, LineInk, new Vector2(0.1f, 0.4f), new Vector2(0.9f, 0.53f));
+
+            var indicatorGo = new GameObject("Next Indicator", typeof(RectTransform), typeof(CanvasGroup), typeof(Image)) { layer = gameObject.layer };
+            indicatorGo.transform.SetParent(textRect, false);
+            var indicatorRect = (RectTransform)indicatorGo.transform;
+            indicatorRect.anchorMin = indicatorRect.anchorMax = indicatorRect.pivot = new Vector2(0.5f, 0.4f);
+            indicatorRect.sizeDelta = new Vector2(28f, 22f);
+            indicatorRect.anchoredPosition = Vector2.zero;
+
+            var indicatorImage = indicatorGo.GetComponent<Image>();
+            indicatorImage.sprite = RuntimeUi.TriangleDown;
+            indicatorImage.color = LineInk;
+            indicatorImage.raycastTarget = false;
+
+            _nextIndicator = indicatorGo.GetComponent<CanvasGroup>();
+            _nextIndicator.alpha = 0f;
+
+            gameObject.SetActive(false);
+        }
+
+        private static TMP_Text CreateText(Transform parent, string name, TMP_FontAsset font, float size, Color color, Vector2 min, Vector2 max)
+        {
+            var rect = new GameObject(name, typeof(RectTransform)) { layer = parent.gameObject.layer }.GetComponent<RectTransform>();
+            rect.SetParent(parent, false);
+            rect.anchorMin = min;
+            rect.anchorMax = max;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            var label = rect.gameObject.AddComponent<TextMeshProUGUI>();
+            if (font != null) label.font = font;
+            label.fontSize = size;
+            label.color = color;
+            label.alignment = TextAlignmentOptions.Center;
+            label.textWrappingMode = TextWrappingModes.Normal;
+            label.raycastTarget = false;
+            return label;
+        }
+    }
+}
