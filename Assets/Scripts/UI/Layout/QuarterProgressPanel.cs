@@ -1,4 +1,5 @@
 using System;
+using BlueComplex.UI.Motion;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -55,7 +56,10 @@ namespace BlueComplex.UI.Layout
 
         public void OnPointerClick(PointerEventData eventData)
         {
-            if (eventData.button == PointerEventData.InputButton.Left) Clicked?.Invoke();
+            if (eventData.button != PointerEventData.InputButton.Left) return;
+
+            UiSoundHooks.Play(UiSoundCue.ButtonClick);
+            Clicked?.Invoke();
         }
 
         private void Build(int turnsPerQuarter, TMP_FontAsset font)

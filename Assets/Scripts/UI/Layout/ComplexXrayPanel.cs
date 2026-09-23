@@ -10,9 +10,9 @@ namespace BlueComplex.UI.Layout
 {
     /// <summary>
     /// 컴플렉스 인터페이스의 엑스레이 판넬 — 화면 왼쪽 위 구석에 관절 팔에 매달려 작게 <b>접혀</b> 있다가, 작동하면 팔이 펴지며 유키의 실제 화면
-    /// 위치(머리 쪽)까지 뻗어 손으로 그린 원(<see cref="HandDrawnStrokeGraphic"/>, 기억 풍선과 같은 클래스)이 커지며 뇌(<see cref="BrainView"/>)를 드러낸다.
-    /// 원 자체는 접힌 동안에도 계속 그려져 있다(작게) — 커지고 작아지는 느낌은 원의 그리기 진행이 아니라 판넬 스케일 트윈이 낸다.
-    /// 열 때마다 기억 풍선처럼 모양을 새로 뽑아 매번 살짝 다르다. 컴플렉스 반응이 끝나면 다시 접혀 들어간다.
+    /// 위치(머리 쪽)까지 뻗어 금속 틀 모니터가 커지며 뇌(<see cref="BrainView"/>)를 드러낸다 — 테두리는 UI 예시 그대로 모니터 형태다
+    /// (손그림 원으로 바꿨던 적이 있었지만 되돌렸다). 틀은 꽉 찬 사각형이 아니라 얇은 막대 네 개(상하좌우)라 가운데(유리 자리)는 아예
+    /// 그래픽이 없어서, 그 안으로 유키의 실제 초상화·뇌가 그대로 비친다. 컴플렉스 반응이 끝나면 다시 접혀 들어간다.
     ///
     /// 작동 조건 두 가지(UI 디자인 가이드):
     /// 1. 판넬을 마우스로 끌어 유키 위에 놓기 — 이 컴포넌트가 IBeginDrag/IDrag/IEndDrag를 직접 구현한다(판넬·손잡이를 잡으면 이벤트가 이 루트까지 올라온다).
@@ -32,17 +32,17 @@ namespace BlueComplex.UI.Layout
         /// 컨테이너 자체(Anchors.Xray, UiLayoutCleanupTool.cs)는 화면 왼쪽을 덮는 투명 영역이라 이 값과 항상 같이 맞춘다.</summary>
         private static readonly Vector2 ReferenceSize = new(960f, 918f);
 
-        /// <summary>펼친 원의 지름(=내용물이 들어갈 정사각 판의 한 변). 사용자가 에디터에서 Tablet RectTransform을 직접 맞춘 값
-        /// (Pos 462,-437, Size 500.6) — 그 Pos는 Tablet의 중심을 이 클래스의 참조 좌표(왼쪽 위 원점, y 아래로 +)로 바로 옮긴 값이다.</summary>
-        private static readonly Vector2 TabletSize = new(500.6f, 500.6f);
+        /// <summary>펼친 원의 지름(=내용물이 들어갈 정사각 판의 한 변). 사용자가 에디터에서 지정한 500.6이 "상자가 너무 크다"는 지적을
+        /// 받아 425로 15% 줄였다(중심 좌표는 그대로 유지, 지름만 축소) — 뇌 채움 비율도 72%→78%로 같이 키워서 상자 안 여백이 준다.</summary>
+        private static readonly Vector2 TabletSize = new(425f, 425f);
         /// <summary>접힌 위치는 왼쪽 위 "STAGE 01" 표기보다 확실히 아래에 둔다(렌더로 확인).</summary>
         private static readonly Vector2 ShoulderPoint = new(118f, 156f);
         private const float ArmLength = 260f;
 
-        /// <summary>접힌 손목(어깨 바로 옆 — 두 선분이 포개진다)과 펼친 손목(원 왼쪽 가장자리 중앙). 펼친 손목은 사용자가 지정한 원 중심
-        /// (462, 437)에서 역산했다: center = wrist + (TabletSize.x*0.5 + HingeGap, 0) → wrist = (462 - 250.3 - 6, 437).</summary>
+        /// <summary>접힌 손목(어깨 바로 옆 — 두 선분이 포개진다)과 펼친 손목(원 왼쪽 가장자리 중앙). 펼친 손목은 원 중심을 (462, 437)로
+        /// 고정한 채 역산했다: center = wrist + (TabletSize.x*0.5 + HingeGap, 0) → wrist = (462 - 212.5 - 6, 437).</summary>
         private static readonly Vector2 FoldedWrist = new(88f, 160f);
-        private static readonly Vector2 OpenWrist = new(205.7f, 437f);
+        private static readonly Vector2 OpenWrist = new(243.5f, 437f);
 
         private const float FoldedScale = 0.26f;
         private const float OpenScale = 1f;
@@ -55,7 +55,7 @@ namespace BlueComplex.UI.Layout
         [SerializeField] private RectTransform _tablet;
         [SerializeField] private RectTransform _basePlate;
         [SerializeField] private RectTransform _handleTag;
-        [SerializeField] private HandDrawnStrokeGraphic _frame;
+        [SerializeField] private Image _frame;
         [SerializeField] private Image _glass;
         [SerializeField] private XrayArm _arm;
         [SerializeField] private CanvasGroup _contentGroup;
@@ -111,10 +111,6 @@ namespace BlueComplex.UI.Layout
 
             if (_foldButton != null) _foldButton.onClick.AddListener(OnFoldButton);
 
-            // 원은 접혔을 때도(작게) 계속 보인다 — 팔이 쥔 게 빈 손이 아니라 접힌 원이라는 걸 알 수 있게. 자라나는 느낌은
-            // 원 자체의 그리기 진행이 아니라 _tablet의 스케일 트윈(FoldedScale→OpenScale)이 담당한다.
-            _frame?.Draw(0f);
-
             // _clueTray가 인스펙터에 안 물려 있을 수 있다 — 먼저 같은 루트 아래에서 찾고, 계층이 다르면 씬 전체에서 한 번 더 찾는다.
             if (_clueTray == null) _clueTray = transform.root.GetComponentInChildren<ClueCardTray>(true);
             if (_clueTray == null) _clueTray = FindFirstObjectByType<ClueCardTray>(FindObjectsInactive.Include);
@@ -147,16 +143,13 @@ namespace BlueComplex.UI.Layout
         {
             if (IsOpen) return null;
             IsOpen = true;
+            UiSoundHooks.Play(UiSoundCue.MechanicalJointOpen);
 
             // 초상화는 열릴 때마다 무표정으로 되돌린다 — 지난 반응 표정이 이번 판에 남아 있지 않게(연출 유무와 무관).
             _portrait?.ResetToNeutral();
 
             // 턴 연출 밖에서 그냥 열릴 때만 코어 상태로 뇌를 채운다 — 연출 중에는 Presenter가 자기 타이밍에 Refresh한다(결과를 앞질러 보여 주지 않게).
             if (!IsTurnPresenting && _brain != null) _brain.SyncFromSession();
-
-            // 열 때마다 모양을 새로 뽑는다(기억 풍선처럼 매번 살짝 다르게) — 이미 다 그려진 상태라 모양만 바뀌고,
-            // 커지는 느낌은 아래 _tablet 스케일 트윈이 담당한다.
-            _frame?.Regenerate(0);
 
             _foldTween?.Kill();
             _foldTween = DOTween.To(() => _fold, v =>
@@ -173,6 +166,7 @@ namespace BlueComplex.UI.Layout
         {
             if (!IsOpen) return null;
             IsOpen = false;
+            UiSoundHooks.Play(UiSoundCue.MechanicalJointClose);
 
             _foldTween?.Kill();
             _foldTween = DOTween.To(() => _fold, v =>
@@ -186,7 +180,10 @@ namespace BlueComplex.UI.Layout
 
         private void OnFoldButton()
         {
-            if (!IsTurnPresenting) Close();
+            if (IsTurnPresenting) return;
+
+            UiSoundHooks.Play(UiSoundCue.ButtonClick);
+            Close();
         }
 
         /// <summary>팔과 판넬의 자세를 <see cref="_fold"/>(와 끄는 중이면 드래그 위치)로 계산해 놓는다.</summary>

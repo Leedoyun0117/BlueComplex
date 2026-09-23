@@ -88,7 +88,11 @@ namespace BlueComplex.UI.Motion
         [Header("아이템 패널")]
         [Tooltip("사용한 카드가 구겨져 사라지는 시간.")]
         public float itemUse = 0.5f;
-        [Tooltip("새 카드가 빈 칸에 끼워지는 시간.")]
+        [Tooltip("빈 칸 옆에서 튀어나온 카드가 매우 작은 상태에서 빠르게 커지는 시간.")]
+        public float itemPop = 0.14f;
+        [Tooltip("커진 카드가 튀어나오는 옆자리(캔버스 픽셀, 가로 오프셋) — 이 자리에서 시작해 빈 칸 쪽으로 움직인다.")]
+        public float itemPopOffset = 70f;
+        [Tooltip("커진 카드가 빈 칸 쪽으로 움직여 빠르게 끼워지는 시간(찰칵 소리는 이 끝에서 난다).")]
         public float itemInsert = 0.42f;
         [Tooltip("대상 선택 모드에서 고를 수 있는 대상의 강조 테두리가 한 번 깜박이는(밝았다 어두워지는) 시간.")]
         public float targetPulse = 0.7f;

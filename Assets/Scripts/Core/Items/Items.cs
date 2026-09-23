@@ -201,8 +201,9 @@ namespace BlueComplex.Core.Items
     }
 
     /// <summary>
-    /// 보유 아이템. 스테이지 시작 때 <see cref="Capacity"/>개를 채우고(<see cref="Refill"/>), 쓴 칸은 다음 쿼터가 시작될 때만 다시 채운다 —
-    /// 안 쓴 아이템은 그대로 남고 쿼터 중에는 채우지 않는다. 언제 채울지는 TurnRunner(쿼터 시작)가 쥔다.
+    /// 보유 아이템. 스테이지 시작 때(TurnRunner.StartStage)와 이후 매 쿼터 경계(TurnRunner.BeginTurn)마다
+    /// <see cref="Refill"/>로 빈 칸만 <see cref="Capacity"/>개까지 채운다. 쓴 칸만 다른 아이템으로 채워지고,
+    /// 안 쓴 아이템은 그대로 유지된다(손패처럼 전체를 새로 뽑지 않는다 — ClueHand.RefillForNewQuarter와 다름).
     /// </summary>
     public sealed class ItemInventory
     {

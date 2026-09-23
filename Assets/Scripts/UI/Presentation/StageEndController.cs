@@ -1,6 +1,7 @@
 using BlueComplex.Core.Stage;
 using BlueComplex.Core.Turn;
 using BlueComplex.UI.Layout;
+using BlueComplex.UI.Motion;
 using UnityEngine;
 
 namespace BlueComplex.UI.Presentation
@@ -15,8 +16,16 @@ namespace BlueComplex.UI.Presentation
 
         protected override void Awake()
         {
-            _panel.RestartSameSeedButton.onClick.AddListener(() => Bootstrapper.RestartWithSameSeed());
-            _panel.RestartNewSeedButton.onClick.AddListener(() => Bootstrapper.RestartWithNewSeed());
+            _panel.RestartSameSeedButton.onClick.AddListener(() =>
+            {
+                UiSoundHooks.Play(UiSoundCue.ButtonClick);
+                Bootstrapper.RestartWithSameSeed();
+            });
+            _panel.RestartNewSeedButton.onClick.AddListener(() =>
+            {
+                UiSoundHooks.Play(UiSoundCue.ButtonClick);
+                Bootstrapper.RestartWithNewSeed();
+            });
             base.Awake();
         }
 

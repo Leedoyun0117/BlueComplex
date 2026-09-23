@@ -14,8 +14,9 @@ using BlueComplex.Core.Turn;
 namespace BlueComplex.Core.Tests
 {
     /// <summary>
-    /// 기획서 "아이템과 특성": 아이템 보유/충전 규칙(시작 4개, 쿼터 시작에만 채움), 아이템 7종 효과, 특성 6종 효과와 계산 순서,
-    /// 컴플렉스 최대 중첩 초과 → 특수 특성 발현·치유.
+    /// 기획서 "아이템과 특성": 아이템 보유/충전 규칙(스테이지 시작 때 4개 지급, 이후 쿼터가 바뀔 때마다 쓴 칸만 다른 아이템으로
+    /// 채워지고 안 쓴 아이템은 그대로 유지됨 — 매 쿼터 전체를 새로 뽑는 손패와는 "쓴 칸만" 채운다는 점이 다르다),
+    /// 아이템 7종 효과, 특성 6종 효과와 계산 순서, 컴플렉스 최대 중첩 초과 → 특수 특성 발현·치유.
     /// </summary>
     public class ItemAndTraitRulesTests
     {
@@ -81,8 +82,10 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void UsedSlots_AreRefilledOnlyAtNextQuarterStart_AndUnusedItemsStay()
+        public void UsedSlot_IsRefilledAtNextQuarterStart_AndUnusedItemsStay()
         {
+            // 쓴 칸은 쿼터가 바뀌는 순간(다음 쿼터 시작) 다른 아이템으로 채워진다 — 안 쓴 아이템은 그대로 유지된다.
+            // 매 쿼터 전체를 새로 뽑는 손패(ClueHand.RefillForNewQuarter)와 달리, 여기선 "쓴 칸만" 채운다.
             var session = Start(PrototypeContent.PrototypeStage(Polarity), seed: 5);
             var runner = session.Runner;
 
@@ -91,25 +94,28 @@ namespace BlueComplex.Core.Tests
             runner.UseItem(used);
             Assert.AreEqual(3, session.Items.Held.Count);
 
-            var gained = 0;
-            session.Items.Gained += _ => gained++;
+            var gained = new List<ItemDefinition>();
+            session.Items.Gained += gained.Add;
 
-            for (var turn = 1; turn <= 3; turn++)
+            for (var turn = 1; turn <= 3; turn++) // 1쿼터 남은 턴 진행 — 4번째(마지막) 카드가 2쿼터 경계를 넘긴다
             {
                 runner.PlayClue(session.Hand.Cards[0]);
-                Assert.AreEqual(3, session.Items.Held.Count, $"쿼터 중(턴 {turn} 뒤)에는 아이템을 채우지 않는다.");
+                Assert.AreEqual(3, session.Items.Held.Count, $"턴 {turn} 뒤에는 아직 같은 쿼터라 채워지지 않는다.");
             }
 
-            Assert.AreEqual(0, gained, "매 턴 지급은 없다.");
-
-            runner.PlayClue(session.Hand.Cards[0]); // 4턴 = 1쿼터 마지막 턴 → 다음 턴이 2쿼터 시작
-
+            runner.PlayClue(session.Hand.Cards[0]); // 1쿼터 마지막 턴 → 2쿼터 시작으로 넘어가며 쓴 칸이 채워진다
             Assert.AreEqual(2, runner.CurrentQuarter);
-            Assert.AreEqual(4, session.Items.Held.Count, "쓴 칸은 다음 쿼터 시작에 채워진다.");
-            Assert.AreEqual(1, gained);
-            CollectionAssert.IsSubsetOf(unused, session.Items.Held.ToList(), "쓰지 않은 아이템은 그대로 유지된다.");
-            CollectionAssert.DoesNotContain(session.Items.Held.Where(i => !unused.Contains(i)).ToList(), used,
-                "채워지는 아이템은 방금 쓴 것과 '다른' 아이템이다.");
+            Assert.AreEqual(4, session.Items.Held.Count, "쿼터가 바뀌면 쓴 칸이 다시 채워진다.");
+            Assert.AreEqual(1, gained.Count, "쓴 칸 하나만큼만 채워진다.");
+            Assert.AreNotEqual(used, gained[0], "직전에 쓴 종류는 되도록 피한다.");
+            CollectionAssert.IsSubsetOf(unused, session.Items.Held.ToList());
+
+            gained.Clear();
+            for (var turn = 5; turn <= 8; turn++) session.Runner.PlayClue(session.Hand.Cards[0]); // 2쿼터 전체(아무것도 안 씀)
+
+            Assert.AreEqual(3, runner.CurrentQuarter);
+            Assert.AreEqual(4, session.Items.Held.Count);
+            Assert.AreEqual(0, gained.Count, "이미 가득 찬 칸은 쿼터가 바뀌어도 다시 채워지지 않는다.");
         }
 
         [Test]
@@ -120,7 +126,8 @@ namespace BlueComplex.Core.Tests
 
             for (var turn = 1; turn <= 4; turn++) session.Runner.PlayClue(session.Hand.Cards[0]);
 
-            CollectionAssert.AreEqual(before, session.Items.Held.ToList());
+            Assert.AreEqual(2, session.Runner.CurrentQuarter, "4턴 뒤에는 2쿼터가 시작되어 있어야 한다.");
+            CollectionAssert.AreEqual(before, session.Items.Held.ToList(), "칸이 이미 가득 차 있으면 쿼터가 바뀌어도 바뀌는 게 없다.");
         }
 
         // ------------------------------------------------------------------
