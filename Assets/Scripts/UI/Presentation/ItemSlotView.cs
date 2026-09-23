@@ -80,6 +80,11 @@ namespace BlueComplex.UI.Presentation
             if (insert) PlayInsert();
         }
 
+        /// <summary>레이아웃 그룹이 강제로 리빌드돼 이 슬롯의 anchoredPosition이 오프셋 없는 기본 자리로 덮어써진 직후 부른다.
+        /// PlayInsert의 가로 오프셋 트윈이 아직 도는 중이었다면, 다음 트윈 틱이 이 "리셋된" 자리를 기준으로 다시 델타를 쌓게 해
+        /// 트윈이 끝난 뒤 카드가 레이아웃이 계산한 자리에서 엉뚱하게 어긋나는 것을 막는다(ItemController.Refresh 참고).</summary>
+        public void ForgetLayoutOffset() => _popOffset?.Forget();
+
         /// <summary>아이템 대상 선택 모드에서 이 카드가 "지금 쓰려는 카드"임을 보인다 — 살짝 들리고 테두리가 금빛이 된다. 끄면 원래대로.</summary>
         public void SetSelected(bool selected)
         {
