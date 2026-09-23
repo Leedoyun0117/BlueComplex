@@ -204,38 +204,49 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void ExhaustedPool_PassesTheClueLessTurn_AndStillJudgesTheQuarter()
+        public void ExhaustedPool_PassesCluelessTurnEveryQuarter_AndStillJudgesEachQuarter()
         {
-            // 단서 11개로 12턴 = 마지막 턴에는 손패가 비어 있다. 그 턴은 넘어가되 쿼터 판정은 그대로 이뤄져야 한다.
+            // 단서 정의가 손패 크기(4)보다 적은 3개뿐 — 쿼터 시작마다 ClueHand.RefillForNewQuarter가 지난 쿼터에
+            // 낸 단서를 전부 되돌려도 3장만 채워지므로, 매 쿼터의 마지막 턴(4/8/12)은 손패가 비어 자동으로
+            // 넘어간다. 그 턴에도 쿼터 판정은 그대로 이뤄져야 한다.
             var keys = new KeyProgress(required: 3, Prototype);
-            var (runner, hand, _) = BuildRunner(keys, new AlwaysHitPlacer(201), clueCount: 11);
+            var (runner, hand, _) = BuildRunner(keys, new AlwaysHitPlacer(201), clueCount: 3);
             var reports = new List<TurnReport>();
             runner.TurnResolved += reports.Add;
 
             runner.StartStage();
-            for (var i = 0; i < 11; i++) runner.PlayClue(hand.Cards[0]);
+            for (var quarter = 0; quarter < 3; quarter++)
+                for (var i = 0; i < 3; i++) runner.PlayClue(hand.Cards[0]); // 쿼터당 3장 — 4번째 턴은 자동으로 넘어간다.
 
-            Assert.AreEqual(12, reports.Count, "11장을 낸 뒤 12번째 턴은 자동으로 넘어가 보고서가 나온다.");
+            Assert.AreEqual(12, reports.Count, "쿼터마다 3장을 낸 뒤 4번째 턴은 자동으로 넘어가 보고서가 나온다.");
+
+            var passes = reports.Where(r => r.IsPass).ToList();
+            Assert.AreEqual(3, passes.Count, "매 쿼터의 마지막 턴이 넘어간다.");
+            foreach (var pass in passes)
+            {
+                Assert.IsNull(pass.Clue);
+                Assert.AreEqual(0, pass.HeartbeatDelta);
+                Assert.IsNotNull(pass.KeyResult, "넘어간 턴이 쿼터의 마지막 턴이면 그 쿼터의 키를 판정한다.");
+            }
+
             var last = reports[^1];
             Assert.IsTrue(last.IsPass);
-            Assert.IsNull(last.Clue);
-            Assert.AreEqual(0, last.HeartbeatDelta);
-            Assert.IsNotNull(last.KeyResult, "넘어간 턴이 쿼터의 마지막 턴이면 그 쿼터의 키를 판정한다.");
             Assert.AreEqual(3, last.KeyResult.Value.Quarter);
             Assert.AreEqual(StageOutcome.Cleared, runner.Outcome);
             Assert.AreEqual(3, keys.Collected);
         }
 
         [Test]
-        public void ExhaustedPool_WithoutEnoughKeys_ResultsInFailedAfterPassedTurn()
+        public void ExhaustedPool_WithoutEnoughKeys_ResultsInFailedAfterPassedTurns()
         {
             var keys = new KeyProgress(required: 2, Prototype);
-            var (runner, hand, _) = BuildRunner(keys, new NeverHitPlacer(), clueCount: 11);
+            var (runner, hand, _) = BuildRunner(keys, new NeverHitPlacer(), clueCount: 3);
             var endedOutcomes = new List<StageOutcome>();
             runner.StageEnded += endedOutcomes.Add;
 
             runner.StartStage();
-            for (var i = 0; i < 11; i++) runner.PlayClue(hand.Cards[0]);
+            for (var quarter = 0; quarter < 3; quarter++)
+                for (var i = 0; i < 3; i++) runner.PlayClue(hand.Cards[0]);
 
             Assert.AreEqual(StageOutcome.Failed, runner.Outcome);
             Assert.AreEqual(12, runner.CurrentTurn);

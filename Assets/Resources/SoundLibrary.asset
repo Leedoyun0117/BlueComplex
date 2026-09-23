@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 59191ebe23d764a49ac582cfe4885614, type: 3}
+  m_Name: SoundLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.Audio.SoundLibrary
+  _entries:
+  - cue: 9
+    clips:
+    - {fileID: 8300000, guid: d9eba9ab8d68b424fb48ee0fd47b29e9, type: 3}
+    volume: 1
+    pitchRange: {x: 1, y: 1.05}
+  - cue: 10
+    clips:
+    - {fileID: 8300000, guid: d9eba9ab8d68b424fb48ee0fd47b29e9, type: 3}
+    volume: 1
+    pitchRange: {x: 0.85, y: 0.92}
+  - cue: 6
+    clips:
+    - {fileID: 8300000, guid: e785906c072178f41b3f723effce4d11, type: 3}
+    volume: 1
+    pitchRange: {x: 0.97, y: 1.03}
+  - cue: 7
+    clips:
+    - {fileID: 8300000, guid: 1f0f9c568c7f3e241b1fff20408aa55d, type: 3}
+    volume: 1
+    pitchRange: {x: 0.97, y: 1.03}
+  - cue: 12
+    clips:
+    - {fileID: 8300000, guid: bf70aaddc863e5b4aadb1f6af6035ae4, type: 3}
+    volume: 1
+    pitchRange: {x: 0.97, y: 1.03}
+  - cue: 11
+    clips:
+    - {fileID: 8300000, guid: babdb331464db794aa4a7a31388a951c, type: 3}
+    volume: 1
+    pitchRange: {x: 0.97, y: 1.03}
+  - cue: 8
+    clips:
+    - {fileID: 8300000, guid: 609cbd7760aa72249a81b372795995d3, type: 3}
+    volume: 1
+    pitchRange: {x: 0.97, y: 1.03}
+  - cue: 5
+    clips:
+    - {fileID: 8300000, guid: 78d8a0a85eec98c4694bc436cf5c6c96, type: 3}
+    volume: 1
+    pitchRange: {x: 0.97, y: 1.03}

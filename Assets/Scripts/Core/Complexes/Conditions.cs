@@ -22,6 +22,20 @@ namespace BlueComplex.Core.Complexes
         }
     }
 
+    /// <summary>지정된 시간 중 하나와 일치하면 성립. (예: 회피 — '현재 또는 미래')</summary>
+    public sealed class TimeIsAnyOf : IComplexCondition
+    {
+        private readonly IReadOnlyList<TimeTag> _candidates;
+        public TimeIsAnyOf(params TimeTag[] candidates) => _candidates = candidates;
+
+        public bool Evaluate(ComplexContext context)
+        {
+            if (!_candidates.Contains(context.Tags.Time)) return false;
+            context.MarkTime(context.Tags.Time);
+            return true;
+        }
+    }
+
     public sealed class HasAnyPerson : IComplexCondition
     {
         public bool Evaluate(ComplexContext context)
