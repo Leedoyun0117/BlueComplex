@@ -50,6 +50,12 @@ namespace BlueComplex.UI.Presentation
             return sb.ToString();
         }
 
+        /// <summary>"대화와 반응" 표 "2. 결과에 따른 대사" — 그 턴의 최종 감정 태그 조합(종류만, 개수 무시)에 붙는
+        /// 유키의 결과 대사. <see cref="Build"/>(사건 요약)와는 별개로, 그 뒤에 이어 재생하는 별도의 대사 한 줄이다.
+        /// 표에 없는 조합(태그 없음, 침체/흥분 감정이 섞인 경우 등)은 null — 호출자가 그 턴엔 건너뛴다.</summary>
+        public static string BuildResultTagLine(TurnReport report) =>
+            report.IsPass ? null : ResultTagReactions.Pick(report.FinalTags);
+
         /// <summary>MemorySpaceBubble의 고정 표시용 — "혐오 ×2, 슬픔  ▲ 흥분" 형태.
         /// 침체/흥분 구분은 이번 턴 심박수 변화 방향(HeartbeatDelta)으로 색을 입힌다.</summary>
         public static string BuildFinalEmotionSummary(TurnReport report)

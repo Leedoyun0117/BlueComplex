@@ -116,7 +116,7 @@ namespace BlueComplex.Core.Tests
                 guard++;
                 Assert.Greater(session.Hand.Cards.Count, 0, $"턴 {session.Runner.CurrentTurn} 시작 시 손패가 비어 있으면 안 된다.");
 
-                // 저작된 단서 수(10)가 스테이지 전체 턴 수(12)보다 적으므로, 쿼터 시작마다 지난 쿼터에
+                // 저작된 단서 수(12)가 스테이지 전체 턴 수(12)와 같으므로, 쿼터 시작마다 지난 쿼터에
                 // 낸 단서가 되돌아와 손패가 항상 가득 차야 한다(ClueHand.RefillForNewQuarter).
                 if (config.Quarters.IsQuarterStart(session.Runner.CurrentTurn))
                     Assert.AreEqual(ClueHand.HandSize, session.Hand.Cards.Count,

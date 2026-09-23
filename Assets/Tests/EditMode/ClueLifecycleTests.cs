@@ -103,7 +103,7 @@ namespace BlueComplex.Core.Tests
         public void RefillForNewQuarter_RecyclesClueUsedInEarlierQuarter_SoNextQuarterStartsFull()
         {
             // 풀 크기를 손패 크기와 똑같이 맞춰, 1쿼터를 다 쓰고 나면 풀이 완전히 마르는 상황을 만든다 —
-            // 실제 프로토타입도 저작된 단서 수(10)가 스테이지 전체 턴 수(12)보다 적어 같은 상황이 벌어진다.
+            // 실제 프로토타입도 저작된 단서 수(12)가 스테이지 전체 턴 수(12)와 같아, 매 턴 새 단서를 낸다면 같은 상황이 벌어진다.
             var defs = Enumerable.Range(0, ClueHand.HandSize).Select(i => NeutralClue($"c{i}")).ToList();
             var pool = new CluePool(defs, new SystemRandomSource(11));
             var hand = new ClueHand(pool);
