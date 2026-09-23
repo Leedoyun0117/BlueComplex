@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 89115536fbb9bae4ba054145fca9add8, type: 3}
+  m_Name: UiIconCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.UiIconCatalog
+  _entries:
+  - Id: item_empathy
+    Sprite: {fileID: 21300000, guid: 79599b254bf9e0f4699ec64d5829d1fc, type: 3}
+  - Id: item_logic
+    Sprite: {fileID: 21300000, guid: 6389f73f20b406a459b6cc8b9e5fb0ae, type: 3}
+  - Id: item_overcome
+    Sprite: {fileID: 21300000, guid: bc331a3864246a7419c87dc587366e02, type: 3}
+  - Id: item_persuasion
+    Sprite: {fileID: 21300000, guid: c1a4d258711842d45987fac3f1f3159f, type: 3}
+  - Id: item_recollection
+    Sprite: {fileID: 21300000, guid: 56e4ecc8b115a5a47b166d2e985b132e, type: 3}
+  - Id: item_samaritan
+    Sprite: {fileID: 21300000, guid: c50bda6e6947f0541ba6bb70260b5280, type: 3}
+  - Id: item_selective_memory
+    Sprite: {fileID: 21300000, guid: 207f7e11d196cff439341ef28179c45d, type: 3}
+  - Id: key
+    Sprite: {fileID: 21300000, guid: 29abbbc6c47f26c4eadbafad4c0a5423, type: 3}
+  - Id: placeholder
+    Sprite: {fileID: 21300000, guid: 039018f5d1d77aa42ae73ab4ecfa73b4, type: 3}
+  - Id: s1_family_photo
+    Sprite: {fileID: 21300000, guid: 9317387f21f419e4d893fc0893f75fa1, type: 3}
+  - Id: s1_flower
+    Sprite: {fileID: 21300000, guid: 5b8e6d7ef3cf19a46ab12526072e7288, type: 3}
+  - Id: s1_old_rabbit
+    Sprite: {fileID: 21300000, guid: 65e866f310802384cbeb9974af967068, type: 3}
+  - Id: s1_school_calendar
+    Sprite: {fileID: 21300000, guid: 081899f1e7654424da654f79114c6248, type: 3}

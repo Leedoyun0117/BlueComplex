@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5be4f9a33ba87d4da3118ca9f0d42df, type: 3}
+  m_Name: CrtEffectPreset
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.CrtEffectPreset
+  Neutral:
+    ScanIntensity: 0.35
+    ScanCount: 420
+    ScanThickness: 1
+    ScanSpeed: 0
+    Curvature: 0.12
+    Vignette: 0.55
+    Bloom: 0.3
+    Aberration: 0.002
+    Noise: 0.06
+    Flicker: 0.04
+    Shake: 0
+    TintR: 0
+    Pastel: 0
+    Brightness: 1
+  DepressedMax:
+    ScanIntensity: 0.45
+    ScanCount: 360
+    ScanThickness: 1
+    ScanSpeed: 0.15
+    Curvature: 0.16
+    Vignette: 1.05
+    Bloom: 0.18
+    Aberration: 0.004
+    Noise: 0.14
+    Flicker: 0.1
+    Shake: 0.004
+    TintR: 0.55
+    Pastel: 0
+    Brightness: 0.62
+  ExcitedMax:
+    ScanIntensity: 0.28
+    ScanCount: 500
+    ScanThickness: 1
+    ScanSpeed: 0.8
+    Curvature: 0.13333334
+    Vignette: 0.4
+    Bloom: 0.62
+    Aberration: 0.012
+    Noise: 0.09
+    Flicker: 0.07
+    Shake: 0.012
+    TintR: 0
+    Pastel: 0.75
+    Brightness: 1.22
