@@ -29,8 +29,8 @@ namespace BlueComplex.UI.Background
         [SerializeField] private int _burstCount = 10;
 
         [Header("정렬")]
-        [Tooltip("배경 레이어(BaseRenderQueue+i, Lamp=3005, Things=3006) 사이에 끼워 넣는 큐. " +
-                 "램프 아트보다 앞, 테이블 위 사물/인물보다는 뒤에 그려지게 Things와 같은 값을 쓴다.")]
+        [Tooltip("배경 레이어(BaseRenderQueue+i, Lamp=3005, Things=3006) 사이에 끼워 넣는 큐. Things와 같은 값을 쓴다. " +
+                 "다만 실제 앞뒤는 렌더러 sortingOrder(Things 순번)가 먼저 정한다 — Configure 참고.")]
         [SerializeField] private int _renderQueue = 3006;
 
         private static Material _cachedMaterial;
@@ -128,6 +128,9 @@ namespace BlueComplex.UI.Background
             psRenderer.material = GetSmokeMaterial(_renderQueue);
             psRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             psRenderer.receiveShadows = false;
+            // 레이어 quad는 sortingOrder가 렌더 큐보다 우선한다 — 0으로 두면 모든 레이어 뒤로 가려진다(BackgroundSorting 참고).
+            // Things와 같은 순번이면 램프 아트(5)보다 앞, 인물(7·8)·그림자 오버레이(9)보다는 뒤에 그려진다.
+            psRenderer.sortingOrder = BackgroundSorting.ThingsLayerOrder(this);
         }
 
         private static Material GetSmokeMaterial(int renderQueue)
