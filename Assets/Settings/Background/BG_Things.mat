@@ -29,7 +29,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AlphaPower: 1.8
+    - _AlphaPower: 1
     - _LightClamp: 0.6
     - _LightGain: 1
     - _ShadowAlphaCutoff: 0.5
