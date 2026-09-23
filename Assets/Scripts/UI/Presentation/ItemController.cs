@@ -3,6 +3,7 @@ using BlueComplex.Core.Stage;
 using BlueComplex.Core.Turn;
 using BlueComplex.UI.Layout;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace BlueComplex.UI.Presentation
 {
@@ -21,6 +22,7 @@ namespace BlueComplex.UI.Presentation
         private int _shownCount;
         private int _crumpling;
         private bool _insertPending;
+        private ItemTargetSelector _selector;
 
         protected override void Awake()
         {
@@ -34,12 +36,6 @@ namespace BlueComplex.UI.Presentation
         {
             session.Items.Gained += OnGained;
             session.Items.Used += OnUsed;
-        }
-
-        protected override void Unsubscribe(StageSession session)
-        {
-            session.Items.Gained -= OnGained;
-            session.Items.Used -= OnUsed;
         }
 
         /// <summary>세션 시작(재시작 포함): 애니메이션 없이 현재 보유 상태를 그대로 놓는다.</summary>
@@ -119,13 +115,71 @@ namespace BlueComplex.UI.Presentation
                 else slot.SetEmpty();
             }
 
+            // 슬롯을 한 프레임 안에 여럿 SetActive/내용 변경하면 VerticalLayoutGroup이 한 번의 자동 리빌드로 전부
+            // 수렴하지 못하고 마지막 슬롯(들)의 가로 위치가 이전 프레임 값으로 남는 경우가 있다(배치모드 진단으로 재현·확인함:
+            // 강제 리빌드를 두 번 연달아 불러야 안정적으로 고쳐졌다 — 한 번은 그대로 어긋난 값을 냈다).
+            // 그래서 매 Refresh마다 명시적으로 두 번 강제 리빌드한다.
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_panel.Root);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_panel.Root);
+
             _shownCount = held.Count;
         }
 
+        /// <summary>
+        /// 아이템 클릭. 대상이 필요 없는 아이템은 바로 쓰고, 대상이 필요한 아이템은 대상 선택 모드로 들어간다 —
+        /// 고를 수 있는 대상(코어의 GetItemTargets)이 강조되고, 하나를 누르면 그 대상에 사용한다. 같은 아이템을 다시 누르거나 Esc/우클릭이면 취소.
+        /// 대상 선택 중에 다른 아이템을 누르면 그 아이템으로 갈아탄다. 턴 연출이 재생 중이면 아이템은 쓸 수 없다(카드를 낼 수 없는 것과 같은 규칙).
+        /// </summary>
         private void OnSlotClicked(ItemDefinition item)
         {
             if (Session == null || Session.Runner.Outcome != StageOutcome.InProgress) return;
-            Session.Runner.UseItem(item);
+
+            var selector = Selector;
+            if (selector.IsSelecting && selector.Item == item)
+            {
+                selector.Cancel();
+                return;
+            }
+
+            selector.Cancel();
+
+            _presenter ??= transform.root.GetComponentInChildren<ITurnResultPresenter>(true);
+            if (_presenter != null && _presenter.IsPresenting) return;
+
+            var runner = Session.Runner;
+            var slot = FindSlot(item);
+
+            if (!runner.CanUseItem(item))
+            {
+                slot?.PlayRejected();
+                selector.ShowMessage(item.TargetKind == ItemTargetKind.None
+                    ? "지금은 쓸 수 없는 아이템입니다"
+                    : $"\"{item.DisplayName}\" — 쓸 수 있는 대상이 없습니다");
+                return;
+            }
+
+            if (item.TargetKind == ItemTargetKind.None)
+            {
+                runner.UseItem(item);
+                return;
+            }
+
+            selector.Begin(item, runner.GetItemTargets(item), slot, target =>
+            {
+                if (Session != null && Session.Runner.Outcome == StageOutcome.InProgress && Session.Runner.CanUseItem(item))
+                    Session.Runner.UseItem(item, target);
+            });
+        }
+
+        private ItemTargetSelector Selector => _selector != null
+            ? _selector
+            : _selector = GetComponent<ItemTargetSelector>() ?? gameObject.AddComponent<ItemTargetSelector>();
+
+        protected override void Unsubscribe(StageSession session)
+        {
+            _selector?.Cancel();
+            session.Items.Gained -= OnGained;
+            session.Items.Used -= OnUsed;
         }
     }
 }

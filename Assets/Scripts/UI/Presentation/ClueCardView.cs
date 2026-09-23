@@ -8,7 +8,7 @@ namespace BlueComplex.UI.Presentation
 {
     /// <summary>단서 카드 한 장의 표시 — 아이콘 + 이름만 보인다(목업). 태그와 스토리는 카드를 클릭하면 뜨는 단서 정보 책 UI(ClueBookPanel)가
     /// <see cref="ViewModel"/>로 보여 준다. 드래그 입력은 별도 ClueCardDragHandler가 맡는다.</summary>
-    public sealed class ClueCardView : MonoBehaviour
+    public sealed class ClueCardView : MonoBehaviour, ITargetHighlight
     {
         [SerializeField] private Image _background;
         [SerializeField] private TMP_Text _titleText;
@@ -50,9 +50,13 @@ namespace BlueComplex.UI.Presentation
 
         /// <summary>손패에서 빠진 슬롯. 글자만 지우면 카드 배경이 빈 상자로 남아 손패가 그대로인 것처럼 보이므로 슬롯 자체를 감춘다.
         /// 오브젝트를 끄지 않고 투명하게만 두는 건 트레이 레이아웃에서 남은 카드의 폭과 자리가 흔들리지 않게 하려는 것이다.</summary>
+        /// <summary>아이템 대상 선택 모드에서 고를 수 있는 카드면 테두리가 깜박인다(선택적 기억).</summary>
+        public void SetTargetable(bool on) => TargetPulse.Set(this, on && !IsEmpty);
+
         public void SetEmpty()
         {
             Card = null;
+            TargetPulse.Set(this, false);
             _titleText.text = string.Empty;
             if (_attributesText != null) _attributesText.text = string.Empty;
             if (_storyText != null) _storyText.text = string.Empty;

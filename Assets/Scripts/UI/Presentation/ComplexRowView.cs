@@ -1,5 +1,7 @@
 using System.Collections;
 using BlueComplex.Core.Complexes;
+using BlueComplex.UI.Layout;
+using BlueComplex.UI.Motion;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -10,7 +12,7 @@ namespace BlueComplex.UI.Presentation
 {
     /// <summary>컴플렉스 목록의 행 하나. 이름/남은 턴 막대 + 상세 팝업(호버 0.25초 또는 클릭 — 설명은 여기에만 뜬다) + 발동 시 순차 발광.
     /// 엑스레이 판넬의 목록과 상시 표시(UI 가이드 8번)가 같은 행을 쓴다.</summary>
-    public sealed class ComplexRowView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
+    public sealed class ComplexRowView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler, ITargetHighlight
     {
         private const float HoverDelay = 0.25f;
 
@@ -36,6 +38,9 @@ namespace BlueComplex.UI.Presentation
         private Color _baseColor;
         private Tween _glowTween;
         private Tween _barTween;
+        private TMP_Text _newMark;
+        private Tween _newMarkTween;
+        private bool _newMarkShown;
 
         public ComplexInstance Complex => _complex;
 
@@ -49,7 +54,8 @@ namespace BlueComplex.UI.Presentation
             if (_background != null) _baseColor = _background.color;
         }
 
-        public void Render(ComplexInstance complex)
+        /// <param name="isNew">이번에 새로 발현된 컴플렉스 — 이름 옆에 빨간 펜 "NEW"를 쓴다(기획서에 없는 구분 표시). 실제로 보이는 건 <see cref="RevealNewMark"/>가 부른 뒤다.</param>
+        public void Render(ComplexInstance complex, bool isNew = false)
         {
             var previous = _complex;
             _complex = complex;
@@ -79,6 +85,71 @@ namespace BlueComplex.UI.Presentation
             }
 
             _durationText.text = $"{complex.RemainingTurns}턴";
+            SetNewMark(isNew);
+        }
+
+        /// <summary>새 컴플렉스 표시를 준비한다(숨긴 채로). 이름 글자 바로 뒤에 놓인다.</summary>
+        private void SetNewMark(bool isNew)
+        {
+            if (!isNew)
+            {
+                _newMarkTween?.Kill();
+                _newMarkShown = false;
+                if (_newMark != null) _newMark.gameObject.SetActive(false);
+                return;
+            }
+
+            if (_newMark == null) _newMark = BuildNewMark();
+
+            _nameText.ForceMeshUpdate();
+            var nameRect = _nameText.rectTransform;
+            var textWidth = Mathf.Min(_nameText.preferredWidth, nameRect.rect.width);
+            _newMark.rectTransform.anchoredPosition = new Vector2(nameRect.offsetMin.x + textWidth + 4f, 9f);
+
+            // 이미 드러난 표시는 그대로 둔다(글자만 다시 그려질 때마다 다시 찍히면 안 된다).
+            if (_newMarkShown) return;
+
+            _newMarkTween?.Kill();
+            _newMark.alpha = 0f;
+            _newMark.gameObject.SetActive(true);
+        }
+
+        /// <summary>빨간 펜으로 휘갈겨 쓴 듯 "NEW"가 눌려 찍힌다. 포스트잇이 다 붙은 뒤에 부른다.</summary>
+        public void RevealNewMark()
+        {
+            if (_newMark == null || !_newMark.gameObject.activeSelf || _newMarkShown) return;
+
+            _newMarkShown = true;
+            _newMarkTween?.Kill();
+            var mark = _newMark.rectTransform;
+            mark.localScale = Vector3.one * 1.6f;
+            _newMark.alpha = 0f;
+            _newMarkTween = DOTween.Sequence().SetUpdate(true).SetTarget(this)
+                .Append(DOTween.To(() => _newMark.alpha, value => _newMark.alpha = value, 1f, 0.12f))
+                .Join(mark.DOScale(1f, 0.22f).SetEase(Ease.OutBack, 2f));
+        }
+
+        private TMP_Text BuildNewMark()
+        {
+            var go = new GameObject("New Mark", typeof(RectTransform)) { layer = gameObject.layer };
+            go.transform.SetParent(transform, false);
+
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, 0.5f);
+            rect.pivot = new Vector2(0f, 0.5f);
+            rect.sizeDelta = new Vector2(52f, 24f);
+            rect.localRotation = Quaternion.Euler(0f, 0f, 9f);
+
+            var label = go.AddComponent<TextMeshProUGUI>();
+            var hand = PostitStyle.HandFont;
+            if (hand != null) label.font = hand;
+            label.text = "NEW";
+            label.fontSize = 22f;
+            label.color = PostitStyle.RedPen;
+            label.alignment = TextAlignmentOptions.MidlineLeft;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.raycastTarget = false;
+            return label;
         }
 
         private static string TrimSuffix(string displayName)
@@ -87,9 +158,14 @@ namespace BlueComplex.UI.Presentation
             return displayName.EndsWith(suffix) ? displayName.Substring(0, displayName.Length - suffix.Length).TrimEnd() : displayName;
         }
 
+        /// <summary>아이템 대상 선택 모드에서 고를 수 있는 대상이면 테두리가 깜박인다.</summary>
+        public void SetTargetable(bool on) => TargetPulse.Set(this, on, _trimComplexSuffix ? TargetPulse.InkBlue : TargetPulse.Gold);
+
         public void SetEmpty()
         {
             _complex = null;
+            SetNewMark(false);
+            TargetPulse.Set(this, false);
             HideTooltip();
             gameObject.SetActive(false);
         }
@@ -107,6 +183,10 @@ namespace BlueComplex.UI.Presentation
         {
             if (_complex == null) return;
 
+            // 아이템 대상 선택 중이면 클릭은 대상 선택이다(상세 팝업을 띄우지 않는다).
+            if (ItemTargetSelector.TryPick(_complex)) return;
+
+            UiSoundHooks.Play(UiSoundCue.ButtonClick);
             StopHoverRoutine();
             ShowTooltip();
         }
@@ -128,6 +208,7 @@ namespace BlueComplex.UI.Presentation
             HideTooltip();
             _glowTween?.Kill();
             _barTween?.Kill();
+            _newMarkTween?.Kill();
             if (_background != null) _background.color = _baseColor;
         }
 

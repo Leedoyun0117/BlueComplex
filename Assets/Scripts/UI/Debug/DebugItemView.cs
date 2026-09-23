@@ -1,3 +1,4 @@
+using System.Linq;
 using BlueComplex.Core.Items;
 using BlueComplex.Core.Stage;
 using BlueComplex.Core.Turn;
@@ -51,8 +52,14 @@ namespace BlueComplex.UI.DebugPlay
                     new UnityEngine.Color(0.22f, 0.3f, 0.22f));
                 DebugUIFactory.AddLayoutElement(button.gameObject, minWidth: 160, minHeight: 60);
                 label.text = $"{item.DisplayName}\n{item.Description}";
-                button.interactable = inProgress;
-                button.onClick.AddListener(() => Bootstrapper.Session.Runner.UseItem(item));
+                button.interactable = inProgress && Session.Runner.CanUseItem(item);
+                // 디버그 뷰에는 대상 선택 UI가 없다 — 대상이 필요한 아이템은 고를 수 있는 첫 대상에 쓴다.
+                button.onClick.AddListener(() =>
+                {
+                    var runner = Bootstrapper.Session.Runner;
+                    var targets = runner.GetItemTargets(item);
+                    runner.UseItem(item, item.TargetKind == ItemTargetKind.None ? null : targets.FirstOrDefault());
+                });
             }
         }
     }

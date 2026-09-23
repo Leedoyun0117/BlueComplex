@@ -10,7 +10,8 @@ using BlueComplex.Core.Stage;
 
 namespace BlueComplex.Core.Tests
 {
-    /// <summary>E. 단서 수명 — 한 번 내면 영구 소멸, 손패는 Refill을 부를 때만 채워짐, 회상.</summary>
+    /// <summary>E. 단서 수명 — 한 번 내면 그 쿼터 안에서는 영구 소멸, 손패는 Refill을 부를 때만 채워짐, 회상,
+    /// 쿼터 경계에서의 재활용(RefillForNewQuarter).</summary>
     public class ClueLifecycleTests
     {
         private static ClueDefinition NeutralClue(string id) =>
@@ -99,6 +100,31 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
+        public void RefillForNewQuarter_RecyclesClueUsedInEarlierQuarter_SoNextQuarterStartsFull()
+        {
+            // 풀 크기를 손패 크기와 똑같이 맞춰, 1쿼터를 다 쓰고 나면 풀이 완전히 마르는 상황을 만든다 —
+            // 실제 프로토타입도 저작된 단서 수(12)가 스테이지 전체 턴 수(12)와 같아, 매 턴 새 단서를 낸다면 같은 상황이 벌어진다.
+            var defs = Enumerable.Range(0, ClueHand.HandSize).Select(i => NeutralClue($"c{i}")).ToList();
+            var pool = new CluePool(defs, new SystemRandomSource(11));
+            var hand = new ClueHand(pool);
+
+            hand.RefillForNewQuarter(); // 1쿼터 시작
+            Assert.AreEqual(ClueHand.HandSize, hand.Cards.Count);
+            Assert.AreEqual(0, pool.Count, "풀 크기와 손패 크기가 같으므로 1쿼터 시작 refill로 풀이 빈다.");
+
+            foreach (var card in hand.Cards.ToList()) hand.Use(card);
+            Assert.AreEqual(0, hand.Cards.Count);
+
+            // 쿼터 중간의 일반 Refill()은 무덤을 건드리지 않는다 — 이미 낸 단서는 같은 쿼터 안에서 돌아오지 않는다.
+            hand.Refill();
+            Assert.AreEqual(0, hand.Cards.Count, "일반 Refill()은 무덤을 풀로 되돌리지 않는다.");
+
+            hand.RefillForNewQuarter(); // 2쿼터 시작
+            Assert.AreEqual(ClueHand.HandSize, hand.Cards.Count,
+                "정의된 단서 수가 손패 크기와 같아도, 지난 쿼터에 낸 단서가 돌아와 다음 쿼터 손패는 가득 차야 한다.");
+        }
+
+        [Test]
         public void RecollectionItem_RefillsHandBackToFour_WithoutBringingBackUsedClues()
         {
             var clueDefs = PrototypeContent.Clues();
@@ -116,11 +142,12 @@ namespace BlueComplex.Core.Tests
             var activeItems = new ActiveItemBoard();
             var itemPool = new[]
             {
-                new ItemDefinition("item_recollection", "회상", "", duration: 0, new Recollection())
+                new ItemDefinition("item_recollection", "회상", "", duration: 0, new RedrawHand())
             };
-            var inventory = new ItemInventory(itemPool, new SystemRandomSource(9));
+            var inventory = new ItemInventory(itemPool, new SystemRandomSource(9), capacity: 1);
 
-            Assert.IsTrue(inventory.TryGainRandom(out var gained), "풀에 아이템이 하나뿐이므로 반드시 획득해야 한다.");
+            Assert.AreEqual(1, inventory.Refill(), "풀에 아이템이 하나뿐이므로 반드시 채워야 한다.");
+            var gained = inventory.Held[0];
             Assert.AreEqual("item_recollection", gained.Id);
 
             inventory.Use(gained, new ItemActivationContext(hand, traits, activeItems));

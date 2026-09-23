@@ -1,4 +1,5 @@
 using BlueComplex.Core.Stage;
+using BlueComplex.UI.Motion;
 using BlueComplex.UI.Presentation;
 using DG.Tweening;
 using UnityEngine;
@@ -20,7 +21,11 @@ namespace BlueComplex.UI.Background
     public sealed class ClockController : SessionBoundView
     {
         private const float MinuteHandDegreesPerMinute = 6f;
-        private const float HourHandDegreesPerMinute = 0.5f;
+        // 분침이 한 바퀴(360°) 도는 데 걸리는 경과 시간(분) = 360 / 6 = 60분.
+        private const float MinutesPerMinuteHandLap = 360f / MinuteHandDegreesPerMinute;
+        // 시침은 부드럽게 돌지 않는다 — 분침이 한 바퀴 돌 때마다 시계판의 한 칸(12칸 기준 30°)씩 딱 넘어간다.
+        private const int HourNotchCount = 12;
+        private const float HourNotchDegrees = 360f / HourNotchCount;
 
         [Header("손 (회전축이 시계 중심에 있는 피벗 Transform)")]
         [SerializeField] private Transform _minuteHand;
@@ -60,9 +65,15 @@ namespace BlueComplex.UI.Background
         protected override void Render() => SetElapsedMinutes(0f, animate: false);
 
         /// <summary>turn번째 턴이 끝난 시각으로 시계를 옮긴다(스테이지 시작 후 turn × 턴당 분).
-        /// 호출 시점은 Presenter가 쥔다. 재생 중인 트윈을 돌려주므로 필요하면 기다릴 수 있다.</summary>
-        public Tween AdvanceTo(int turn, bool animate = true) =>
-            SetElapsedMinutes(Mathf.Max(0, turn) * _minutesPerTurn, animate);
+        /// 호출 시점은 Presenter가 쥔다. 재생 중인 트윈을 돌려주므로 필요하면 기다릴 수 있다.
+        /// 시계 소리는 매 턴이 아니라 쿼터가 넘어가는 턴에서만 난다(기획서).</summary>
+        public Tween AdvanceTo(int turn, bool animate = true)
+        {
+            if (animate && Session != null && Session.Runner.Schedule.IsQuarterEnd(turn))
+                UiSoundHooks.Play(UiSoundCue.ClockTick);
+
+            return SetElapsedMinutes(Mathf.Max(0, turn) * _minutesPerTurn, animate);
+        }
 
         private Tween SetElapsedMinutes(float minutes, bool animate)
         {
@@ -88,8 +99,13 @@ namespace BlueComplex.UI.Background
             // 카메라가 +Z를 바라볼 때 시계방향 = Z축 음의 회전.
             if (_minuteHand != null)
                 _minuteHand.localRotation = _minuteRest * Quaternion.Euler(0f, 0f, -minutes * MinuteHandDegreesPerMinute);
+
             if (_hourHand != null)
-                _hourHand.localRotation = _hourRest * Quaternion.Euler(0f, 0f, -minutes * HourHandDegreesPerMinute);
+            {
+                // 분침이 완주한 바퀴 수만큼만 칸을 넘긴다 — 애니메이션 도중 분침이 12시를 지나는 그 순간 시침이 한 칸 딱 넘어간다.
+                var laps = Mathf.Floor(minutes / MinutesPerMinuteHandLap);
+                _hourHand.localRotation = _hourRest * Quaternion.Euler(0f, 0f, -laps * HourNotchDegrees);
+            }
         }
     }
 }

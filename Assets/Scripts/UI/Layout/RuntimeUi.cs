@@ -109,6 +109,47 @@ namespace BlueComplex.UI.Layout
             }
         }
 
+        private static Sprite _roundedRect;
+
+        /// <summary>안티앨리어싱된 흰 둥근 사각형(9-슬라이스). 결과 태그 칩처럼 크기가 제각각인 알약형 배경에 쓴다 — Image.Type.Sliced로 늘리고 틴트로 색을 입힌다.</summary>
+        public static Sprite RoundedRect
+        {
+            get
+            {
+                if (_roundedRect != null) return _roundedRect;
+
+                const int size = 64;
+                const float radius = 22f;
+                var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+                {
+                    wrapMode = TextureWrapMode.Clamp,
+                    filterMode = FilterMode.Bilinear,
+                    hideFlags = HideFlags.HideAndDontSave,
+                };
+
+                var pixels = new Color32[size * size];
+                for (var y = 0; y < size; y++)
+                {
+                    for (var x = 0; x < size; x++)
+                    {
+                        // 가장 가까운 "안쪽 사각형" 점까지의 거리로 모서리 둥글기를 만든다.
+                        var dx = Mathf.Max(radius - (x + 0.5f), 0f, (x + 0.5f) - (size - radius));
+                        var dy = Mathf.Max(radius - (y + 0.5f), 0f, (y + 0.5f) - (size - radius));
+                        var alpha = Mathf.Clamp01(radius - Mathf.Sqrt(dx * dx + dy * dy) + 0.5f);
+                        pixels[y * size + x] = new Color32(255, 255, 255, (byte)(alpha * 255f));
+                    }
+                }
+
+                texture.SetPixels32(pixels);
+                texture.Apply(false, true);
+
+                _roundedRect = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), 100f, 0,
+                    SpriteMeshType.FullRect, new Vector4(radius, radius, radius, radius));
+                _roundedRect.hideFlags = HideFlags.HideAndDontSave;
+                return _roundedRect;
+            }
+        }
+
         public static TMP_FontAsset FindFont(Transform canvasRoot) =>
             canvasRoot.GetComponentInChildren<TMP_Text>(true)?.font;
 
@@ -169,6 +210,9 @@ namespace BlueComplex.UI.Layout
         /// <summary>칸 테두리(알파 0이면 없음).</summary>
         public Color CellOutline;
 
+        /// <summary>알파가 0보다 크면 이미 지난 턴의 칸을 이 색으로 칠한다(마지막 칸은 항상 LastCell). 0이면 안 지난 칸과 같다.</summary>
+        public Color PastCell;
+
         /// <summary>어두운 배경 위: 회색 칸, 노란 마지막 칸, 하얀 점.</summary>
         public static readonly TurnTrackStyle Dark = new TurnTrackStyle
         {
@@ -187,6 +231,7 @@ namespace BlueComplex.UI.Layout
             Dot = Color.white,
             CurrentCell = new Color32(44, 44, 46, 255),
             CellOutline = new Color32(78, 72, 64, 255),
+            PastCell = new Color32(196, 192, 176, 255),
         };
     }
 
@@ -272,11 +317,16 @@ namespace BlueComplex.UI.Layout
         private void PaintCells(int turn)
         {
             var paintCurrent = _style.CurrentCell.a > 0f;
+            var paintPast = _style.PastCell.a > 0f;
             for (var i = 0; i < _cells.Length; i++)
             {
                 var isLast = i == _cells.Length - 1;
                 var isCurrent = i + 1 == turn;
-                _cells[i].color = paintCurrent && isCurrent ? _style.CurrentCell : isLast ? _style.LastCell : _style.Cell;
+                var isPast = i + 1 < turn;
+                _cells[i].color = paintCurrent && isCurrent ? _style.CurrentCell
+                    : isLast ? _style.LastCell
+                    : paintPast && isPast ? _style.PastCell
+                    : _style.Cell;
             }
 
             var currentIsLast = turn == _cells.Length;

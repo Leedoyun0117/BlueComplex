@@ -64,5 +64,15 @@ namespace BlueComplex.Core.Complexes
         }
 
         public void Tick() => RemainingTurns--;
+
+        /// <summary>남은 지속 시간을 절반으로 줄인다(올림 — 3턴이면 2턴). 남은 턴이 1이면 그대로다: 절반으로 줄이다 0이 되어 곧바로 사라지는 일은 없다. 줄었는지를 돌려준다.</summary>
+        public bool HalveRemainingTurns()
+        {
+            var halved = (RemainingTurns + 1) / 2;
+            if (halved >= RemainingTurns) return false;
+
+            RemainingTurns = halved;
+            return true;
+        }
     }
 }

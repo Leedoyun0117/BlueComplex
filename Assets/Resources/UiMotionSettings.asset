@@ -37,3 +37,12 @@ MonoBehaviour:
   dialogueNextBlink: 0.9
   itemUse: 0.5
   itemInsert: 0.42
+  postitPeel: 0.5
+  postitPinPopAt: 0.6
+  postitStick: 0.55
+  postitStagger: 0.1
+  postitWrite: 0.55
+  keyTurnFade: 0.6
+  keyTurnDim: 0.86
+  keyTurnSecondsPerChar: 0.06
+  keyTurnHold: 1.1
