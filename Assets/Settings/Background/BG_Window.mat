@@ -33,7 +33,7 @@ Material:
     - _LightClamp: 0.6
     - _LightGain: 1
     - _ShadowAlphaCutoff: 0.5
-    - _SurfaceGlow: 0
+    - _SurfaceGlow: 0.08
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []

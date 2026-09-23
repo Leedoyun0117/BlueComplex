@@ -30,6 +30,42 @@ namespace BlueComplex.EditorTools
             "Assets/Settings/Mobile_Renderer.asset",
         };
 
+        /// <summary>
+        /// PC_Renderer.asset의 CRT passMaterial이 빈 채로 커밋되면(사고 기록: 2026-09-23) 패스가 조용히
+        /// 아무 일도 안 해서 CRT 연출이 통째로 빠진 걸 한동안 아무도 못 알아챌 수 있다. 에디터를 열 때와
+        /// Play에 들어갈 때마다 검사해서 콘솔에 경고를 남긴다 — 빌드나 Play 자체를 막지는 않는다.
+        /// </summary>
+        [InitializeOnLoadMethod]
+        private static void RegisterPassMaterialGuard()
+        {
+            CheckPassMaterialsAssigned();
+            EditorApplication.playModeStateChanged += change =>
+            {
+                if (change == PlayModeStateChange.ExitingEditMode)
+                    CheckPassMaterialsAssigned();
+            };
+        }
+
+        private static void CheckPassMaterialsAssigned()
+        {
+            foreach (var path in RendererPaths)
+            {
+                var rendererData = AssetDatabase.LoadAssetAtPath<ScriptableRendererData>(path);
+                if (rendererData == null) continue;
+
+                foreach (var feature in rendererData.rendererFeatures)
+                {
+                    if (feature is FullScreenPassRendererFeature fullScreen && feature.isActive && fullScreen.passMaterial == null)
+                    {
+                        Debug.LogWarning($"[CrtSetupTool] {path}의 Full Screen Pass Renderer Feature '{feature.name}'이(가) " +
+                                          "활성 상태인데 passMaterial이 비어 있습니다. 이 상태로 두면 그 패스는 아무 효과도 " +
+                                          "내지 않고(의도한 것이면 무시해도 됨), 반대로 실수로 material을 지운 채 커밋하면 " +
+                                          "나중에 다시 채울 때 원인 파악이 어려웠던 전례가 있습니다 — BlueComplex/CRT/Diagnose로 확인하세요.");
+                    }
+                }
+            }
+        }
+
         [MenuItem("BlueComplex/CRT/Setup CRT Effect")]
         public static void SetupAll()
         {
