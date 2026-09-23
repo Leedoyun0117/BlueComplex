@@ -2,7 +2,6 @@ using System;
 using BlueComplex.UI.Layout;
 using BlueComplex.UI.Motion;
 using BlueComplex.UI.Rendering;
-using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -104,8 +103,7 @@ namespace BlueComplex.UI.Presentation
             if (ItemTargetSelector.TryPick(_view.Card)) return;
 
             UiSoundHooks.Play(UiSoundCue.ButtonClick);
-            var font = _canvasRect.GetComponentInChildren<TMP_Text>(true)?.font;
-            var book = ClueBookPanel.GetOrCreate(_canvasRect, font);
+            var book = ClueBookPanel.GetOrCreate(_canvasRect);
             var icon = UiIcons.Get(_view.Card.Definition.Id);
             // 손패 안에서 카드가 놓인 자리(1부터) — 슬롯이 고정이라(ClueCardTray) 화면에 보이는 순서 그대로다.
             var clueNumber = _view.transform.GetSiblingIndex() + 1;
