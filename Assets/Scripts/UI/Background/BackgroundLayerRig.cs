@@ -69,7 +69,14 @@ namespace BlueComplex.UI.Background
             _layers = layers;
         }
 
-        /// <summary>각 레이어를 리그 로컬 (0, 0, Distance)에 놓고 거리에 비례해 스케일한다.</summary>
+        /// <summary>각 레이어를 리그 로컬 (0, 0, Distance)에 놓고 거리에 비례해 스케일한다.
+        /// 부모를 바꾸지 않는다 — 예전엔 여기서 <c>layer.Root.SetParent(transform, ...)</c>로 매번 레이어를
+        /// "Layers" 컨테이너 밖으로 끌어내 리그의 직속 자식으로 만들었다. 그 결과 BackgroundSetupTool이
+        /// "Layers"만 지우고 다시 만드는 정리 로직이 이전 실행의 레이어(이미 Layers 밖으로 빠져나간 뒤라
+        /// 정리 대상에서 빠짐)를 전혀 못 지웠고, Setup Background를 실행할 때마다 Min/Hour 피벗 등이
+        /// 안 지워진 채 계속 쌓였다(실제로 GameScene에 Min Pivot이 3개나 있었다) — 켜켜이 쌓인 예전 손
+        /// 오브젝트가 최신(정상 작동하는) 손과 겹쳐 보여서 "시계가 안 움직인다"로 보였다. 레이어는
+        /// BuildRig가 만들 때 이미 "Layers" 밑에 정확히 부모가 잡혀 있으므로 여기서 다시 옮길 필요가 없다.</summary>
         [ContextMenu("Apply Layout")]
         public void Apply()
         {
@@ -77,7 +84,6 @@ namespace BlueComplex.UI.Background
             {
                 if (layer.Root == null) continue;
 
-                layer.Root.SetParent(transform, worldPositionStays: false);
                 layer.Root.localPosition = new Vector3(0f, 0f, layer.Distance);
                 layer.Root.localRotation = Quaternion.identity;
                 layer.Root.localScale = Vector3.one * ScaleAt(layer.Distance);
