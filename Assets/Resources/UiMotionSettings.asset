@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b070b2839537831498d6f88806e33816, type: 3}
+  m_Name: UiMotionSettings
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Motion.UiMotionSettings
+  heartTransition: 0.9
+  bandMove: 0.6
+  keyBandPulse: 0.7
+  bandResultFlash: 0.5
+  badgeFlicker: 0.5
+  keyDropHeight: 90
+  keyFall: 0.16
+  keyBounce: 0.22
+  keyFlash: 0.38
+  clueHover: 0.14
+  clueHoverLift: 6
+  clueHoverScale: 1.04
+  cluePickup: 0.12
+  cluePickupScale: 1.16
+  cluePickupTilt: 4
+  clueReturnFly: 0.3
+  clueReturnSettle: 0.42
+  clueSuck: 0.38
+  bubbleDraw: 0.55
+  bubbleErase: 0.65
+  dialogueSecondsPerChar: 0.03
+  dialogueSoundEvery: 1
+  dialogueNextBlink: 0.9
+  itemUse: 0.5
+  itemInsert: 0.42
+  postitPeel: 0.5
+  postitPinPopAt: 0.6
+  postitStick: 0.55
+  postitStagger: 0.1
+  postitWrite: 0.55
+  keyTurnFade: 0.6
+  keyTurnDim: 0.86
+  keyTurnSecondsPerChar: 0.06
+  keyTurnHold: 1.1

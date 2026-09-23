@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4fccf14e2184b9b9d280b57853a1ab1, type: 3}
+  m_Name: ResultTagLines
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.ResultTagLines
+  _entries:
+  - emotions: [0]
+    label: 침체 / 슬픔
+    line: '…조금만 더 일찍 알았더라면, 뭔가 달라졌을까.'
+  - emotions: [0, 1]
+    label: 침체 / 슬픔, 혐오
+    line: '생각하고 싶지 않아. 떠올릴수록 속이 안 좋아'
+  - emotions: [0, 1, 2]
+    label: 침체 / 슬픔, 혐오, 공포
+    line: '싫어… 다시 그때처럼 되는 건 정말 무서워.'
+  - emotions: [1]
+    label: 침체 / 혐오
+    line: '보고 싶지 않아. 그냥 치워 줘.'
+  - emotions: [1, 2]
+    label: 침체 / 혐오, 공포
+    line: '가까이 가져오지 마. 저건… 뭔가 잘못됐어.'
+  - emotions: [2]
+    label: 침체 / 공포
+    line: '잠깐… 이거 계속 봐도 괜찮은 거야?'
+  - emotions: [0, 2]
+    label: 침체 / 슬픔, 공포
+    line: '또 잃게 될까 봐 무서워. 차라리 모르는 게 나았을지도 몰라.'
+  - emotions: [3]
+    label: 흥분 / 행복
+    line: '아, 이거 기억나! 그때 정말 좋았는데.'
+  - emotions: [4]
+    label: 흥분 / 사랑
+    line: '이상하다. 보기만 해도 괜히 기분이 좋아져.'
+  - emotions: [5]
+    label: 흥분 / 분노
+    line: '그래, 바로 이거야. 아직도 생각하면 화가 나.'
+  - emotions: [3, 4]
+    label: 흥분 / 행복, 사랑
+    line: '그냥, 별일 없어도 좋았어.'
+  - emotions: [3, 4, 5]
+    label: 흥분 / 행복, 사랑, 분노
+    line: '좋았어. 정말 좋아했어. 그래서 더 화가 나는 거야.'
+  - emotions: [4, 5]
+    label: 흥분 / 사랑, 분노
+    line: '좋아하니까 더 못 참겠어. 어떻게 나한테 그럴 수가 있어'
