@@ -42,7 +42,6 @@ namespace BlueComplex.EditorTools
 
             public static readonly (Vector2 Min, Vector2 Max) Items = Box(0.87f, 0.03f, 0.10f, 0.69f);
             public static readonly (Vector2 Min, Vector2 Max) Status = Box(0.02f, 0.57f, 0.12f, 0.19f);
-            public static readonly (Vector2 Min, Vector2 Max) Trait = Box(0.40f, 0.585f, 0.07f, 0.03f);
             public static readonly (Vector2 Min, Vector2 Max) Dialogue = Box(0.01f, 0.77f, 0.47f, 0.19f);
             public static readonly (Vector2 Min, Vector2 Max) Clues = Box(0.50f, 0.74f, 0.46f, 0.21f);
 
@@ -305,6 +304,16 @@ namespace BlueComplex.EditorTools
             SetRef(portraitView, "_image", image);
             SetRef(portraitView, "_neutral", LoadPortraitSprite("Yuki/yuki_neutral.png"));
             SetRef(portraitView, "_reactive", LoadPortraitSprite("Yuki/yuki_reactive.png"));
+
+            // 분노/슬픔/기쁨(Yuki_Fix-Sheet에서 잘라 둔 것)은 Resources에 있다 — PortraitXrayView가 비어 있으면 Resources.Load로 스스로 찾지만,
+            // 프리팹이 그 폴백에 기대지 않고 직접 들고 있게 구워 둔다.
+            foreach (var (field, file) in new[] { ("_angry", "yuki_angry"), ("_sad", "yuki_sad"), ("_joy", "yuki_joy") })
+            {
+                var path = $"Assets/Resources/UI/Portraits/Yuki/{file}.png";
+                var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+                if (sprite == null) Debug.LogWarning($"[UiLayoutCleanupTool] 표정 스프라이트를 못 읽었다: {path}");
+                else SetRef(portraitView, field, sprite);
+            }
         }
 
         // ---------------------------------------------------------------
@@ -321,6 +330,8 @@ namespace BlueComplex.EditorTools
         private static readonly Color XrayGlass = new Color32(70, 150, 230, 56);
         private static readonly Color XrayCyan = new Color32(120, 226, 236, 255);
         private static readonly Color BrainLabelInk = new Color32(74, 22, 36, 255);
+        /// <summary>특성 뱃지 바탕 — 목업의 "혼란" 칩처럼 어두운 올리브 갈색(글자는 흰색).</summary>
+        private static readonly Color TraitBadgeFill = new Color32(78, 66, 38, 240);
 
         /// <summary>도트 뇌 영역(0 위쪽 띠, 1 아래 왼쪽, 2 오른쪽 큰 엽)의 글자 중심(뇌 이미지 대비 0~1, 원점 왼쪽 아래). 아트에서 영역 마스크의 중심을 잰 값이다.
         /// 영역 수는 컴플렉스 최대 중첩(<see cref="ComplexBoard.DefaultMaxSlots"/>)과 같다 — 뇌의 세 부분과 슬롯은 1:1이다.</summary>
@@ -488,6 +499,32 @@ namespace BlueComplex.EditorTools
             // 맨 마지막 자식이라 Brain(BrainArea)보다 나중에 그려져 그 위를 덮지만, raycastTarget이 꺼져 있어 뇌 영역 클릭·호버는 그대로 통과한다.
             var glassTint = EnsureImage(content, "GlassTint", XrayGlass, Vector2.zero, Vector2.one, raycast: false);
             glassTint.transform.SetAsLastSibling();
+
+            // 특성 UI(UI 가이드 "추가 : 특성 UI"): 판넬이 펼쳐졌을 때만 그 위(Content 왼쪽 위 구석, 목업의 "혼란" 칩 자리)에 뱃지가 나란히 뜬다.
+            // Content의 CanvasGroup 자식이라 판넬과 같이 나타나고 접히며, 접힌 동안엔 입력도 안 받는다. 컨테이너·원본 뱃지에는 항상 글자가 없다 —
+            // 뱃지는 TraitStatusView가 붙어 있는 특성 수만큼 원본을 복제해 채운다(특성이 없으면 아무것도 안 보인다). 파란 색조 밑에 깔리지 않게 GlassTint 뒤에 둔다.
+            var traits = Ensure(content, "Traits");
+            SetRect(traits, new Vector2(0.03f, 0.84f), new Vector2(0.97f, 0.97f), Vector2.zero, Vector2.zero);
+            // 뱃지 배치(왼쪽 위부터, 폭이 넘으면 다음 줄)는 TraitStatusView가 직접 한다 — LayoutGroup은 넘칠 때 줄바꿈이 없다. 그래서 원본 뱃지는 왼쪽 위 앵커·피벗이다.
+            var badge = EnsureImage(traits, "Badge", TraitBadgeFill, new Vector2(0f, 1f), new Vector2(0f, 1f), raycast: true);
+            ((RectTransform)badge.transform).pivot = new Vector2(0f, 1f);
+            MockupStyle.AddPaperEdge(badge.gameObject, shadow: false);
+            var badgeLayout = GetOrAdd<HorizontalLayoutGroup>(badge.gameObject);
+            badgeLayout.padding = new RectOffset(12, 12, 3, 5);
+            badgeLayout.childAlignment = TextAnchor.MiddleCenter;
+            badgeLayout.childControlWidth = true;
+            badgeLayout.childControlHeight = true;
+            badgeLayout.childForceExpandWidth = false;
+            badgeLayout.childForceExpandHeight = false;
+            var badgeLabel = EnsureText(badge.transform, "Label", string.Empty, font, 20f, Color.white, TextAlignmentOptions.Center,
+                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, FontStyles.Bold);
+            var badgeView = GetOrAdd<TraitBadgeView>(badge.gameObject);
+            SetRef(badgeView, "_label", badgeLabel);
+            badge.gameObject.SetActive(false);
+
+            var traitView = GetOrAdd<TraitStatusView>(traits.gameObject);
+            SetRef(traitView, "_container", traits);
+            SetRef(traitView, "_badgeTemplate", badgeView);
 
             SetRef(panel, "_tablet", tablet);
             SetRef(panel, "_basePlate", basePlate);
@@ -750,8 +787,8 @@ namespace BlueComplex.EditorTools
             // 스테이지 표기와 특성 표시는 프리팹 없이 MainHud에 바로 둔다 — 글자 하나짜리라 따로 재사용할 일이 없다.
             EnsureLabelView<StageTitleView>(hud, "Stage Title", Anchors.StageTitle, "STAGE 01\n가라앉다", font, 36f, LightLabel,
                 TextAlignmentOptions.TopLeft, FontStyles.Bold);
-            EnsureLabelView<TraitStatusView>(hud, "Trait Status", Anchors.Trait, "특성 없음", font, 22f, new Color32(222, 228, 240, 255),
-                TextAlignmentOptions.Center, FontStyles.Normal);
+            // 특성 표시는 엑스레이 판넬 안으로 옮겼다(CleanXrayPanel) — 예전에 화면 중앙에 상시 떠 있던 "특성 없음" 글자는 걷어낸다.
+            Remove(hud, "Trait Status");
 
             // 내용 없이 색만 채운 자리 — 지속시간은 컴플렉스 포스트잇이 보여준다(막대는 목업 쪽 선택, Notion 원문은 막대+텍스트 — 보고 항목).
             Remove(hud, "Complex Duration Display");
@@ -804,8 +841,12 @@ namespace BlueComplex.EditorTools
             foreach (var brain in root.GetComponentsInChildren<BrainView>(true))
                 SetTooltip(brain, tooltip);
 
+            // 특성 뱃지도 같은 공유 팝업을 쓴다(0.25초 호버 효과 설명).
+            foreach (var traits in root.GetComponentsInChildren<TraitStatusView>(true))
+                SetTooltip(traits, tooltip);
+
             // 새 글자 뷰는 툴팁 팝업 밑에 둔다 — 팝업이 항상 맨 위여야 한다.
-            foreach (var name in new[] { "Stage Title", "Trait Status" })
+            foreach (var name in new[] { "Stage Title" })
             {
                 var view = hud.Find(name);
                 if (view != null && view.GetSiblingIndex() > tooltip.transform.GetSiblingIndex())
