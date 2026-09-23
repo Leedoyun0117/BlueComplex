@@ -22,7 +22,6 @@ namespace BlueComplex.UI.Presentation
         [SerializeField] private MemorySpaceBubble _memoryBubble;
         [SerializeField] private ComplexStatusController _complexStatus;
         [SerializeField] private TraitStatusView _traitStatus;
-        [SerializeField] private ClockController _clock;
 
         /// <summary>즉시 끝나므로 연출 재생 중인 프레임이 없다 — 입력을 잠글 이유가 없다.</summary>
         public bool IsPresenting => false;
@@ -37,8 +36,6 @@ namespace BlueComplex.UI.Presentation
             if (_memoryBubble == null) _memoryBubble = transform.root.GetComponentInChildren<MemorySpaceBubble>(true);
             if (_complexStatus == null) _complexStatus = transform.root.GetComponentInChildren<ComplexStatusController>(true);
             if (_traitStatus == null) _traitStatus = transform.root.GetComponentInChildren<TraitStatusView>(true);
-            // 벽시계는 HUD가 아니라 3D 배경 리그에 있어 root 아래에서 못 찾는다.
-            if (_clock == null) _clock = FindFirstObjectByType<ClockController>(FindObjectsInactive.Include);
             base.Awake();
         }
 
@@ -61,7 +58,6 @@ namespace BlueComplex.UI.Presentation
             var resultTagLine = TurnSummaryFormatter.BuildResultTagLine(report);
             _dialogue.PlayTyped(resultTagLine != null ? $"{summaryLine} {resultTagLine}" : summaryLine);
             _heartRate?.PlayTurnResult(report);
-            if (_clock != null) _clock.AdvanceTo(report.Turn, animate: false);
             if (!report.IsPass)
                 _memoryBubble?.SetPersistentSummary(TurnSummaryFormatter.BuildFinalEmotionSummary(report));
             _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger, Session.Censorship.Level);
