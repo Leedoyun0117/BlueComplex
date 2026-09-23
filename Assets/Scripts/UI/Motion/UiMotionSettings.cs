@@ -68,8 +68,6 @@ namespace BlueComplex.UI.Motion
         [Header("아이템 패널")]
         [Tooltip("사용한 카드가 구겨져 사라지는 시간.")]
         public float itemUse = 0.5f;
-        [Tooltip("새 카드가 빈 칸에 끼워지는 시간.")]
-        public float itemInsert = 0.42f;
     }
 
     /// <summary>모션 값 조회. 에셋이 없으면 기본값 인스턴스를 만들어 쓴다.</summary>
