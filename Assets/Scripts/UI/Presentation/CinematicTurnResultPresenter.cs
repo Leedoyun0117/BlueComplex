@@ -37,7 +37,6 @@ namespace BlueComplex.UI.Presentation
         [SerializeField] private MemorySpaceBubble _memoryBubble;
         [SerializeField] private ComplexStatusController _complexStatus;
         [SerializeField] private TraitStatusView _traitStatus;
-        [SerializeField] private ClockController _clock;
         [SerializeField] private ItemController _items;
 
         /// <summary>컴플렉스 이벤트 대사가 다 나온 뒤 다음 컴플렉스로 넘어가기 전의 짧은 쉼(초).</summary>
@@ -73,8 +72,6 @@ namespace BlueComplex.UI.Presentation
             if (_complexStatus == null) _complexStatus = root.GetComponentInChildren<ComplexStatusController>(true);
             if (_traitStatus == null) _traitStatus = root.GetComponentInChildren<TraitStatusView>(true);
             if (_items == null) _items = root.GetComponentInChildren<ItemController>(true);
-            // 벽시계는 HUD가 아니라 3D 배경 리그에 있어 root 아래에서 못 찾는다. 없어도 연출은 그대로 돈다.
-            if (_clock == null) _clock = FindFirstObjectByType<ClockController>(FindObjectsInactive.Include);
 
             if (_brain == null || _dialogue == null || _clueTray == null || _heartRate == null ||
                 _xrayPanel == null || _memoryBubble == null)
@@ -168,18 +165,10 @@ namespace BlueComplex.UI.Presentation
         {
             _heartRate.PlayTurnResult(report);
             _traitStatus?.Refresh();
-            AdvanceClock(report);
             yield return PlayDialogue(TurnSummaryFormatter.Build(report));
 
             // 넘어간 턴에도 손패는 연출이 도는 동안 갱신이 미뤄져 있다(ClueHandController.OnHandChanged 참고).
             _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger, Session.Censorship.Level);
-        }
-
-        /// <summary>시계는 심박수 이동과 같은 타이밍에 돌린다 — 컴플렉스 발광/대사가 끝난 뒤이고,
-        /// 분침 회전(0.7초)이 태그 상승(0.9초) 안에 끝나 다음 턴 연출과 겹치지 않는다.</summary>
-        private void AdvanceClock(TurnReport report)
-        {
-            if (_clock != null) _clock.AdvanceTo(report.Turn);
         }
 
         private IEnumerator PresentRoutine(TurnReport report)
@@ -194,10 +183,12 @@ namespace BlueComplex.UI.Presentation
             // Flash가 끝나고 돌아갈 자리가 무표정이 아니라 이 표정이 된다(PortraitXrayView.SetMood 문서 참고).
             _portrait?.SetMood(PortraitReactionRules.ClassifyYuki(report.FinalTags, Session.Zone.StateOf(report.HeartbeatValue)));
 
-            // TickDurations/스폰이 Resolve 이후에 일어나므로, 발광 전에 먼저 뇌의 영역 배치를 최신 보드
-            // 상태로 맞춰야 한다(BrainView.PlayGlow 문서 참고).
-            _brain.Refresh(Session.Complexes.InPriorityOrder().ToList());
+            // TickDurations/스폰은 Resolve 이후에 일어나 이 시점의 보드에는 이미 만료된 컴플렉스가 없다 — 그대로 배치하면 마지막 턴에
+            // 발동한 컴플렉스(지속 1턴짜리는 항상)가 영역을 못 찾아 발광·대사가 통째로 빠진다. 그래서 발광 동안은 해석 당시의
+            // 컴플렉스(Steps, 우선순위 순서)로 배치하고, 반응이 끝난 뒤에 최신 보드로 맞춘다.
+            _brain.Refresh(report.Interpretation.Steps.Select(step => step.Complex).ToList());
             yield return PlayComplexReactions(report);
+            _brain.Refresh(Session.Complexes.InPriorityOrder().ToList());
 
             yield return PlaySummaryWithResultTags(report);
 
@@ -218,7 +209,6 @@ namespace BlueComplex.UI.Presentation
         {
             foreach (var step in report.Interpretation.Steps)
             {
-                // 같은 턴에 만료돼 이미 행이 없는 컴플렉스는 조용히 건너뛴다.
                 if (!step.Triggered || !_brain.PlayGlow(step.Complex)) continue;
 
                 _portrait?.Flash();
@@ -282,7 +272,6 @@ namespace BlueComplex.UI.Presentation
             _heartRate.PlayTurnResult(report);
             // 컴플렉스 포스트잇(남은 턴·새로 붙거나 만료된 컴플렉스)은 여기서 안 바뀐다 — 연출이 다 끝나고 포스트잇이 떼어져 있는 사이에 갱신된다.
             _traitStatus?.Refresh();
-            AdvanceClock(report);
             _memoryBubble.SetPersistentSummary(TurnSummaryFormatter.BuildFinalEmotionSummary(report));
 
             yield return tagSequence.WaitForCompletion(true);
