@@ -31,7 +31,6 @@ namespace BlueComplex.EditorTools
         private const string WindowLightName = "Window Spot Light";
         private const string ClockControllerName = "Clock Controller";
         private const string SmokeName = "Lamp Smoke";
-
         private const float PixelsPerUnit = 100f;
         private const int MaxTextureSize = 4096;
         private const int BaseRenderQueue = 3000;
@@ -111,6 +110,7 @@ namespace BlueComplex.EditorTools
             var materials = EnsureMaterials(shader);
             var rig = BuildRig(camera, materials, out var clockController, log);
             var lampDriver = EnsureLights(rig, log);
+            EnsureCupSteam(rig, log);
             ConfigureCamera(camera, log);
             DisableConflictingSceneObjects(log);
             WireBootstrapper(clockController, lampDriver, log);
@@ -358,6 +358,16 @@ namespace BlueComplex.EditorTools
         }
 
         // ── 씬: 광원 ──────────────────────────────────────────────────────────────
+
+        /// <summary>테이블 위 컵에서 피어오르는 김 파티클. Things.png의 김은 정적 그림뿐이라 그 위에 옅은 퍼프를 얹는다.
+        /// 위치는 처음 만들 때만 잡는다(손으로 옮긴 값은 존중). 파티클 모듈은 <see cref="CupSteamEmitter"/>가 Awake에서 구성한다.</summary>
+        private static void EnsureCupSteam(BackgroundLayerRig rig, StringBuilder log)
+        {
+            var (go, created) = FindOrCreateChild(rig.transform, CupSteamEmitter.ObjectName);
+            if (created) go.transform.position = rig.CanvasPixelToWorld(CupSteamEmitter.CupMouthPixel, CupSteamEmitter.DefaultDistance);
+            if (go.GetComponent<CupSteamEmitter>() == null) go.AddComponent<CupSteamEmitter>();
+            log.AppendLine($"  {CupSteamEmitter.ObjectName}: {(created ? "생성" : "재사용")} — pos {go.transform.position}");
+        }
 
         private static LampLightDriver EnsureLights(BackgroundLayerRig rig, StringBuilder log)
         {

@@ -146,8 +146,9 @@ namespace BlueComplex.UI.Background
             return material;
         }
 
-        /// <summary>부드러운 원형 알파 폴오프 텍스처를 코드로 굽는다 — 별도 연기 아트 없이 자연스러운 뭉치 모양을 낸다.</summary>
-        private static Texture2D GetSmokeTexture()
+        /// <summary>부드러운 원형 알파 폴오프 텍스처를 코드로 굽는다 — 별도 연기 아트 없이 자연스러운 뭉치 모양을 낸다.
+        /// 컵 김(<see cref="CupSteamEmitter"/>)도 같은 퍼프를 쓴다.</summary>
+        internal static Texture2D GetSmokeTexture()
         {
             if (_cachedTexture != null) return _cachedTexture;
 
