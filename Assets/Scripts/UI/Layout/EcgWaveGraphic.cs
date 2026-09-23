@@ -10,14 +10,17 @@ namespace BlueComplex.UI.Layout
     /// <summary>
     /// 심전도 모니터의 화면: 흐르는 파형 + 목표 심박수 띠. 표시만 한다 — 판정 없음.
     ///
-    /// 세로축이 심박수 눈금이다(<see cref="HeartbeatMonitorScale"/>). 파형 봉우리(R파)의 높이가 현재 BPM에 정비례하고,
+    /// 세로축이 심박수 눈금이다(<see cref="HeartbeatMonitorScale"/>). 파형 봉우리(R파)의 높이가 현재 BPM에 따라 정해지고,
     /// 목표 띠의 위아래 경계도 같은 함수로 놓인다 — 두 그림이 이 그래픽 한 장 안에서 같은 <see cref="Scale"/>을 부르므로 어긋날 수 없다.
-    /// 흥분할수록 봉우리가 높아지고 침체할수록 낮아진다. P·T파도 봉우리에 비례해 커지고 작아진다.
+    /// 흥분할수록 봉우리가 높아지고 침체할수록 낮아진다(저심박 쪽 곡선이 더 가팔라 침체될수록 작아지는 게 뚜렷이 보인다). P·T파도 봉우리에 비례해 커지고 작아진다.
     ///
     /// 파형은 왼쪽으로 흐른다. 화면을 지나가는 봉우리의 수는 BPM에 정비례(1분에 BPM박)하고, 빠른 심박일수록 봉우리 간격이 좁아진다 —
     /// 간격은 BPM의 <see cref="_spacingExponent"/>제곱에 반비례하게 줄어든다(지수 1이면 흐르는 속도가 BPM과 무관해진다). 그 결과 흐르는 속도는 BPM이 오르면 빨라진다.
     /// 표시 BPM(<see cref="ShownBpm"/>)은 트윈으로 새 값에 따라가고 위상은 끊기지 않고 이어져, 값이 바뀌어도 파형이 튀지 않는다.
-    /// 매우 침체·매우 흥분(<c>irregular</c>)에서는 봉우리 <b>간격</b>이 흔들리고 기준선에 미세한 떨림이 얹힌다 — 봉우리 높이는 흔들지 않는다.
+    /// 박마다 크기 자체도 큼직하게 들쭉날쭉하다(<see cref="BeatAmplitudeScale"/>) — 같은 BPM, 같은 상태 구간 안에서도 매 박이 다르게 뛰어야
+    /// 살아있어 보인다. 이 흔들림 폭은 특정 상태 이름(매우 침체 등)이 아니라 BPM이 생존 구간 중앙에서 얼마나 먼지로 정해져서, 구간을
+    /// 넘나들 때 갑자기 규칙이 바뀐 것처럼 보이지 않고 침체·흥분이 심할수록 계속 더 커진다.
+    /// 매우 침체·매우 흥분(<c>irregular</c>)에서는 그와 별개로 봉우리 <b>간격</b>이 흔들리고 기준선에도 미세한 떨림이 얹힌다.
     /// </summary>
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class EcgWaveGraphic : MaskableGraphic
@@ -27,6 +30,15 @@ namespace BlueComplex.UI.Layout
 
         /// <summary>불규칙할 때 박 하나가 앞뒤로 흔들리는 최대 폭(박 단위). 인접한 박이 겹치지 않는 한도(0.37) 안에서 잡는다.</summary>
         private const float JitterBeats = 0.16f;
+
+        /// <summary>박마다 크기(진폭)가 얼마나 들쭉날쭉한지 — 안정 구간 한복판(생존 구간의 정중앙)에서도 걸리는 바닥값. 상태 구간이 바뀌어야만
+        /// 흔들리면 그 사이(같은 구간 안)에서는 매번 똑같아 보여 기계적으로 느껴진다 — 그래서 특정 상태 분기가 아니라 항상 큼직하게 걸어 둔다.
+        /// 진폭에 곱하는 비율이라 침체돼서 진폭 자체가 작아지면 이 흔들림의 실제 픽셀 크기도 함께 작아진다.</summary>
+        private const float BeatSizeJitterBase = 0.32f;
+
+        /// <summary>생존 구간 중앙에서 멀어질수록(침체·흥분이 심할수록) <see cref="BeatSizeJitterBase"/>에 더해지는 몫. 상태 이름(매우 침체 등)이
+        /// 아니라 BPM 자체와 연속적으로 이어져서, 구간 경계를 넘는 순간 흔들림 폭이 뚝 뛰지 않고 슬며시 커진다.</summary>
+        private const float BeatSizeJitterExtreme = 0.4f;
 
         /// <summary>불규칙할 때 기준선에 얹는 떨림의 크기(픽셀).</summary>
         private const float NoisePixels = 1.7f;
@@ -269,7 +281,9 @@ namespace BlueComplex.UI.Layout
             vh.AddTriangle(index, index + 2, index + 3);
         }
 
-        /// <summary>화면 안 좌표(왼쪽 아래 원점)로 꼭짓점을 만든다. R파 높이 = <c>Scale.ToY(shownBpm)</c>, 박마다 위상(<c>_phase</c>)만큼 왼쪽으로 밀린다.</summary>
+        /// <summary>화면 안 좌표(왼쪽 아래 원점)로 꼭짓점을 만든다. 박마다 위상(<c>_phase</c>)만큼 왼쪽으로 밀리고,
+        /// 박 하나의 크기는 <c>Scale.ToY(shownBpm)</c> 기준 진폭에 <see cref="BeatAmplitudeScale"/>(박마다 다른, 예측하기 어려운 배율)을 곱한 값이다 —
+        /// 그래서 심박수가 바뀌면 봉우리가 커지고 작아지는 것뿐 아니라, 박마다 크기가 들쭉날쭉한 폭 자체도 함께 커지고 작아진다.</summary>
         private void BuildPolyline(float width, float height)
         {
             _points.Clear();
@@ -286,6 +300,7 @@ namespace BlueComplex.UI.Layout
             {
                 var n = first + b;
                 var jitter = (Hash01(n) - 0.5f) * 2f * JitterBeats * _irregularity;
+                var beatAmplitude = amplitude * BeatAmplitudeScale(n);
 
                 for (var i = 0; i < Beat.Length; i++)
                 {
@@ -294,13 +309,25 @@ namespace BlueComplex.UI.Layout
                     if (i == 0 && noise > 0.01f && _points.Count > 0)
                         AddBaselineRun(_points[_points.Count - 1].x, x, baseline, noise, spacing, height);
 
-                    // R파 꼭짓점은 noise를 얹지 않는다 — 봉우리 높이는 언제나 Scale.ToY(BPM) 그대로.
-                    var y = baseline + Beat[i].y * amplitude;
+                    var y = baseline + Beat[i].y * beatAmplitude;
                     if (i != RPeakIndex) y += Noise((float)(n + Beat[i].x)) * noise;
 
                     _points.Add(new Vector2(x, Mathf.Clamp(y, 0.5f, height - 0.5f)));
                 }
             }
+        }
+
+        /// <summary>박 번호 n의 크기 배율. 1 근처를 오르내리는 예측 불가능한 값(같은 박은 항상 같은 값)이라 매 박이 조금씩
+        /// 더 크거나 작게 뛴다. 흔들림 폭은 <see cref="BeatSizeJitterBase"/>(항상)에 심박수가 생존 구간 중앙에서 먼 정도(0~1, 상태
+        /// 분기가 아니라 BPM 자체의 연속값)를 곱한 <see cref="BeatSizeJitterExtreme"/>이 더해진다. 가로 지터(<see cref="Hash01(long)"/>를
+        /// 그대로 씀)와 겹쳐 보이지 않게 다른 해시 오프셋을 쓴다.</summary>
+        private float BeatAmplitudeScale(long n)
+        {
+            var centerFraction = Scale.TopBpm > 0 ? _shownBpm / Scale.TopBpm : 0f;
+            var extremity = Mathf.Clamp01(Mathf.Abs(centerFraction - 0.5f) * 2f);
+            var range = BeatSizeJitterBase + BeatSizeJitterExtreme * extremity;
+            var r = Hash01(n * 7 + 3) - 0.5f;
+            return Mathf.Max(0.15f, 1f + r * 2f * range);
         }
 
         /// <summary>박과 박 사이 기준선 구간에 중간 점을 촘촘히 넣어 떨림이 보이게 한다.</summary>

@@ -51,15 +51,28 @@ namespace BlueComplex.Core.Complexes
     /// </summary>
     public sealed class ComplexBoard
     {
-        public const int MaxSlots = 4;
+        /// <summary>스테이지 설정이 따로 정하지 않았을 때의 최대 중첩. 뇌 인터페이스가 3분할이라 3이다(StageConfig.MaxComplexSlots의 기본값).</summary>
+        public const int DefaultMaxSlots = 3;
 
         private readonly List<ComplexInstance> _slots = new();
+
+        /// <summary>이 보드에 동시에 붙을 수 있는 컴플렉스 수. 스테이지 설정(<c>StageConfig.MaxComplexSlots</c>)에서 온다.</summary>
+        public int MaxSlots { get; }
+
+        public ComplexBoard(int maxSlots = DefaultMaxSlots)
+        {
+            if (maxSlots < 1) throw new ArgumentOutOfRangeException(nameof(maxSlots), "최대 중첩은 1 이상이어야 합니다.");
+            MaxSlots = maxSlots;
+        }
 
         public IReadOnlyList<ComplexInstance> Slots => _slots;
         public bool IsFull => _slots.Count >= MaxSlots;
 
         public event Action<ComplexInstance> Attached;
         public event Action<ComplexInstance> Expired;
+
+        /// <summary>붙어 있는 컴플렉스의 남은 지속 시간이 아이템(극복)으로 바뀌었을 때 발생한다. 턴마다 줄어드는 Tick은 알리지 않는다(Presenter가 안다).</summary>
+        public event Action<ComplexInstance> DurationChanged;
 
         /// <summary>슬롯이 가득 차면 신규 컴플렉스는 거부된다.</summary>
         public bool TryAttach(ComplexInstance instance)
@@ -84,6 +97,16 @@ namespace BlueComplex.Core.Complexes
                 _slots.Remove(expired);
                 Expired?.Invoke(expired);
             }
+        }
+
+        /// <summary>붙어 있는 컴플렉스의 남은 지속 시간을 절반으로 줄인다(아이템 '극복'). 줄었으면 <see cref="DurationChanged"/>를 알린다.</summary>
+        public bool HalveRemainingTurns(ComplexInstance complex)
+        {
+            if (!_slots.Contains(complex)) return false;
+            if (!complex.HalveRemainingTurns()) return false;
+
+            DurationChanged?.Invoke(complex);
+            return true;
         }
 
         public void Clear() => _slots.Clear();

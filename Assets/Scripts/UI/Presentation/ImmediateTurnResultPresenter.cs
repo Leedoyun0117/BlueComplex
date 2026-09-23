@@ -55,7 +55,11 @@ namespace BlueComplex.UI.Presentation
             _complexList.Refresh(Session.Complexes.InPriorityOrder().ToList());
             _complexStatus?.Refresh();
             _traitStatus?.Refresh();
-            _dialogue.PlayTyped(TurnSummaryFormatter.Build(report));
+            // 이 Presenter는 연출 없이 한 줄만 보여주므로, 결과 대사가 있으면 사건 요약 뒤에 이어 붙인다
+            // (Cinematic 쪽은 "결과"와 "결과 대사"를 별도의 타이핑 단계로 재생한다).
+            var summaryLine = TurnSummaryFormatter.Build(report);
+            var resultTagLine = TurnSummaryFormatter.BuildResultTagLine(report);
+            _dialogue.PlayTyped(resultTagLine != null ? $"{summaryLine} {resultTagLine}" : summaryLine);
             _heartRate?.PlayTurnResult(report);
             if (_clock != null) _clock.AdvanceTo(report.Turn, animate: false);
             if (!report.IsPass)

@@ -1,0 +1,86 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45810c43d7b4449a925d626775105968, type: 3}
+  m_Name: ComplexReactionLines
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.ComplexReactionLines
+  _entries:
+  - complexId: complex_good_child
+    label: 착한 아이
+    lines:
+    - '이렇게 행복했던 건, 내가 착했기 때문이야.'
+    - '내가 착하지 않다는 걸 알았다면, 행복하지 못했을까?'
+    - '행복했어, 내가 친절했던 만큼 말이야.'
+  - complexId: complex_anti_past
+    label: 반 과거
+    lines:
+    - '다 지나간 일이야. 별로 기억하고 싶지 않다고.'
+    - '내가 왜 그랬을까? 돌이켜 보면 이해하지 못하겠어.'
+    - '내가 행복했다고? 전부 만들어진 허상이겠지.'
+  - complexId: complex_childhood_friend
+    label: 소꿉친구
+    lines:
+    - '.. 어릴 적을 추억하는 행동은 모두가 하지 않을까?'
+    - '어릴 때부터 함께였다는 건… 역시 조금 특별한 의미가 있는 거 아닐까?'
+    - '그렇게 오랫동안 기억하고 있다는 건, 평범한 친구였기 때문만은 아닐 거야.'
+    - '어릴 적 친구를 아직도 떠올린다는 건… 분명 그만한 이유가 있는 거겠지?'
+    - '친구라고 하기엔 너무 오래 남아 있잖아. 어쩌면 처음부터 조금 달랐던 걸지도 몰라.'
+    - '어린 시절부터 함께한 사람이라면… 다른 사람과 똑같이 생각할 수는 없지 않을까?'
+  - complexId: complex_othering
+    label: 타자화
+    lines:
+    - '사실 그 사람과는 별 관계가 아니었어.'
+    - '나는 나고, 그 사람은 그 사람인거지.'
+    - '내가 만약 의미 있는 관계라고 생각했어도, 지금은 아닌걸.'
+    - '서로 다른 각자의 삶을 사는거야.'
+  - complexId: complex_optimism
+    label: 낙관
+    lines:
+    - '…다 괜찮아.'
+    - '다른 면에서 보면 전부 좋은 일일거야.'
+    - '부정은 아무런 의미가 없어.'
+    - '전부 괜찮을 거야..'
+  - complexId: complex_rumination
+    label: 되새김
+    lines:
+    - '계속 떠올라. 이제 그만하고 싶은데..'
+    - '기억 해서 좋을 게 뭐가 있다고.'
+    - '머리를 한 대 내려 치면 잊어버릴 수 있을까?'
+  - complexId: complex_guilt
+    label: 죄책감
+    lines:
+    - '왜 인지 가슴 한 곳이 빈 것 같아. 차라리 내가 없어지면, 다 해결되지 않을까?'
+    - '이제 돌아갈 수 없겠지.. 내가 그렇게 행복한 기억을 가질 자격이 있을까?'
+    - '이런 감정은 나처럼 금방 잊는 사람보다 다른 이에게 더 필요했을 텐데.'
+    - '이렇게 행복한 추억을 가지고, 이런 삶을 살아도 되는 걸까?'
+  - complexId: complex_dependence
+    label: 의존
+    lines:
+    - '아무렇지도 않아. 정말로. 하지만, 딱 한번만 볼 수 있으면..'
+    - '..혼자 할 수 있다고 착각했나봐..'
+    - '내 일부가 사라진 기분이야.'
+    - '좋았던 시절이 그리워.'
+  - complexId: complex_avoidance
+    label: 회피
+    lines:
+    - '아니야. 이미 지나간 일이야. 제발.. 그래야만 해.'
+    - '이미 견뎌 본 일일거야. 기억에는 없지만..'
+    - '나는 자고 일어났고, 그 일은 어제가 되어있어.'
+    - '그냥 눈을 감고 지나가길 기다려.'
+  - complexId: complex_stockholm
+    label: 스톡홀름
+    lines:
+    - '나를 해치는 사람도 나에게 관심이 있어서 그러는 거겠지. 사실 정말 관심 없으면 건드리지도 않는다고.'
+    - '정말 아무 감정도 없었다면, 굳이 나한테 그렇게까지 하진 않았을 거야.'
+    - '상처를 줬다고 해서 전부 미워했던 건 아닐지도 몰라. 관심이 있으니까 그런 거겠지.'
+    - '이상하지만… 나를 신경 쓰지 않았다면 애초에 그렇게 집착하지도 않았을 거야.'
+    - '무서웠던 건 맞아. 그래도 그 사람이 나를 계속 보고 있었다는 건 사실이잖아.'
+    - '방법이 잘못됐을 뿐이지… 어쩌면 나를 생각하고 있었던 걸지도 모르잖아.'

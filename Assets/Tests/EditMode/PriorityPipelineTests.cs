@@ -10,12 +10,14 @@ namespace BlueComplex.Core.Tests
     {
         private static readonly IEmotionPolarityTable Polarity = new DefaultEmotionPolarityTable();
 
-        // 회피(과거+공포/혐오 → 현재)와 반 과거(과거+인물+행복/사랑 → 혐오)가 둘 다 조건을 만족할 수 있는 단서.
-        private static TagSet FearAndHappinessInThePast() =>
-            new(TimeTag.Past, new[] { PersonTag.Family }, new[] { EmotionTag.Fear, EmotionTag.Happiness });
+        // 회피(현재/미래+공포/혐오 → 과거)와 반 과거(과거+인물+행복/사랑 → 혐오)가 둘 다 조건을 만족할 수 있는 단서.
+        // 회피가 먼저 해석되면 시간을 과거로 바꿔 반 과거의 '과거' 조건을 새로 만족시키고, 반대로 반 과거가
+        // 먼저면(아직 현재이므로) 조건이 깨져 발동하지 못한다 — 그래도 회피 자신은 그대로 발동한다.
+        private static TagSet FearAndHappinessInThePresent() =>
+            new(TimeTag.Present, new[] { PersonTag.Family }, new[] { EmotionTag.Fear, EmotionTag.Happiness });
 
         [Test]
-        public void AvoidanceFirst_BreaksAntiPastPastCondition()
+        public void AvoidanceFirst_EnablesAntiPastPastCondition()
         {
             var board = new ComplexBoard();
             var avoidance = new ComplexInstance(PrototypeContent.Avoidance(), priority: 0);
@@ -24,24 +26,24 @@ namespace BlueComplex.Core.Tests
             board.TryAttach(antiPast);
 
             var resolver = new ComplexResolver(board);
-            var result = resolver.Resolve(FearAndHappinessInThePast());
+            var result = resolver.Resolve(FearAndHappinessInThePresent());
 
             Assert.AreEqual(2, result.Steps.Count);
             Assert.AreSame(avoidance, result.Steps[0].Complex, "낮은 우선순위(회피)가 먼저 해석되어야 한다.");
-            Assert.IsTrue(result.Steps[0].Triggered, "회피는 과거+공포 조건을 만족해 발동해야 한다.");
+            Assert.IsTrue(result.Steps[0].Triggered, "회피는 현재+공포 조건을 만족해 발동해야 한다.");
 
             Assert.AreSame(antiPast, result.Steps[1].Complex);
-            Assert.IsFalse(result.Steps[1].Triggered,
-                "회피가 시간을 현재로 바꿔버렸으므로 반 과거의 '과거' 조건이 깨져야 한다.");
+            Assert.IsTrue(result.Steps[1].Triggered,
+                "회피가 시간을 과거로 바꿨으므로 반 과거의 '과거' 조건이 새로 만족돼야 한다.");
 
-            Assert.AreEqual(TimeTag.Present, result.Final.Time);
-            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Happiness), "반 과거가 발동하지 않았으므로 행복은 그대로 남아야 한다.");
+            Assert.AreEqual(TimeTag.Past, result.Final.Time);
+            Assert.IsFalse(result.Final.HasEmotion(EmotionTag.Happiness), "행복은 반 과거에 의해 혐오로 바뀌어 사라져야 한다.");
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Disgust));
             Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Fear));
-            Assert.IsFalse(result.Final.HasEmotion(EmotionTag.Disgust));
         }
 
         [Test]
-        public void AntiPastFirst_BothTrigger_ButFinalResultDiffersFromAvoidanceFirst()
+        public void AntiPastFirst_DoesNotTrigger_ButAvoidanceStillDoes()
         {
             var board = new ComplexBoard();
             var antiPast = new ComplexInstance(PrototypeContent.AntiPast(Polarity), priority: 0);
@@ -50,19 +52,18 @@ namespace BlueComplex.Core.Tests
             board.TryAttach(avoidance);
 
             var resolver = new ComplexResolver(board);
-            var result = resolver.Resolve(FearAndHappinessInThePast());
+            var result = resolver.Resolve(FearAndHappinessInThePresent());
 
             Assert.AreSame(antiPast, result.Steps[0].Complex, "낮은 우선순위(반 과거)가 먼저 해석되어야 한다.");
-            Assert.IsTrue(result.Steps[0].Triggered);
+            Assert.IsFalse(result.Steps[0].Triggered, "아직 시간이 현재이므로 반 과거의 '과거' 조건이 깨져 있다.");
 
             Assert.AreSame(avoidance, result.Steps[1].Complex);
-            Assert.IsTrue(result.Steps[1].Triggered,
-                "반 과거는 시간을 바꾸지 않으므로 회피는 여전히 발동해야 한다.");
+            Assert.IsTrue(result.Steps[1].Triggered, "회피는 반 과거와 무관하게 현재+공포 조건으로 발동해야 한다.");
 
-            Assert.AreEqual(TimeTag.Present, result.Final.Time);
-            Assert.IsFalse(result.Final.HasEmotion(EmotionTag.Happiness), "행복은 반 과거에 의해 혐오로 바뀌어 사라져야 한다.");
-            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Disgust));
+            Assert.AreEqual(TimeTag.Past, result.Final.Time);
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Happiness), "반 과거가 발동하지 않았으므로 행복은 그대로 남아야 한다.");
             Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Fear));
+            Assert.IsFalse(result.Final.HasEmotion(EmotionTag.Disgust));
         }
 
         [Test]
@@ -113,7 +114,7 @@ namespace BlueComplex.Core.Tests
             board.TryAttach(avoidance); // 우선순위 0을 나중에 붙임
 
             var resolver = new ComplexResolver(board);
-            var result = resolver.Resolve(FearAndHappinessInThePast());
+            var result = resolver.Resolve(FearAndHappinessInThePresent());
 
             Assert.AreSame(avoidance, result.Steps[0].Complex, "부착 순서가 아니라 우선순위 순서로 해석되어야 한다.");
             Assert.AreSame(antiPast, result.Steps[1].Complex);
