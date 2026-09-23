@@ -25,7 +25,7 @@ namespace BlueComplex.Core.Stage
                 new[] { EmotionTag.Happiness }),
 
             new ClueDefinition("s1_flower", "꽃 한 송이",
-                "꽃 한 송이\n\n그 애는 뭐하고 있으려나?",
+                "꽃 한 송이\n\n그 애는 뭐하고 있으려나? 몇 년이 흘러도 걔가 준 꽃을 보면 늘 떠올라. 꽃 이름이 뭐였더라?",
                 TimeTag.Past,
                 new[] { PersonTag.Friend },
                 new[] { EmotionTag.Love }),
@@ -76,7 +76,19 @@ namespace BlueComplex.Core.Stage
                 "낡은 토끼 인형\n\n오래 되었지만 여전히 포근해.",
                 TimeTag.Past,
                 NoPerson,
-                new[] { EmotionTag.Happiness })
+                new[] { EmotionTag.Happiness }),
+
+            new ClueDefinition("s1_cookie_box", "쿠키 상자",
+                "쿠키 상자\n\n김이 올라오는 갓 구운 쿠키야. 여러 모양들로 정성 들여 만들어진 것 같아.",
+                TimeTag.Past,
+                new[] { PersonTag.Family },
+                new[] { EmotionTag.Happiness, EmotionTag.Love }),
+
+            new ClueDefinition("s1_clock", "시계",
+                "시계\n\n지금도 계속 움직이고 있어. 오늘도 시간을 허비한 걸까?",
+                TimeTag.Present,
+                NoPerson,
+                new[] { EmotionTag.Sadness })
         };
 
         // ── 스테이지 1 컴플렉스 10종. 지속 시간(턴)은 표의 값이다. ──────────────────────────
@@ -224,20 +236,20 @@ namespace BlueComplex.Core.Stage
                 new ConvertMatchedEmotionsTo(EmotionTag.Love)
             });
 
-        /// <summary>과거 + 공포/혐오 → 과거를 현재로.</summary>
+        /// <summary>현재 또는 미래 + 공포/혐오 → 과거로.</summary>
         public static ComplexDefinition Avoidance() => new(
             "complex_avoidance",
             "회피 컴플렉스",
-            "고통스러운 과거를 현재의 일처럼 바꾸어 받아들인다.",
+            "고통스러운 현재나 미래를 과거의 일처럼 바꾸어 받아들인다.",
             defaultDuration: 2,
             new IComplexCondition[]
             {
-                new TimeIs(TimeTag.Past),
+                new TimeIsAnyOf(TimeTag.Present, TimeTag.Future),
                 new HasAnyEmotion(EmotionTag.Fear, EmotionTag.Disgust)
             },
             new IComplexEffect[]
             {
-                new ShiftTime(TimeTag.Present)
+                new ShiftTime(TimeTag.Past)
             });
 
         public static IReadOnlyList<ComplexDefinition> Complexes(IEmotionPolarityTable polarityTable) => new[]

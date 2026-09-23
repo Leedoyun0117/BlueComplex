@@ -248,6 +248,10 @@ namespace BlueComplex.UI.Presentation
 
             yield return PlayDialogue(TurnSummaryFormatter.Build(report));
 
+            // "대화 루프": 결과 → 결과 대사. 표에 맞는 조합이 없으면(태그 없음, 침체/흥분 혼합 등) 조용히 건너뛴다.
+            var resultTagLine = TurnSummaryFormatter.BuildResultTagLine(report);
+            if (resultTagLine != null) yield return PlayDialogue(resultTagLine);
+
             if (tags.Count == 0) yield break;
 
             var readyAt = appearedAt + show.Duration() + UiMotion.Settings.tagHold;

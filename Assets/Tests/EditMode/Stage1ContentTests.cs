@@ -24,7 +24,9 @@ namespace BlueComplex.Core.Tests
             new object[] { "놀이공원 티켓", TimeTag.Future, new[] { PersonTag.Family }, new[] { EmotionTag.Happiness } },
             new object[] { "개학 날짜 달력", TimeTag.Future, new[] { PersonTag.Other }, new[] { EmotionTag.Sadness, EmotionTag.Disgust } },
             new object[] { "찢어진 책가방", TimeTag.Past, new[] { PersonTag.Other, PersonTag.Friend }, new[] { EmotionTag.Fear, EmotionTag.Anger } },
-            new object[] { "낡은 토끼 인형", TimeTag.Past, new PersonTag[0], new[] { EmotionTag.Happiness } }
+            new object[] { "낡은 토끼 인형", TimeTag.Past, new PersonTag[0], new[] { EmotionTag.Happiness } },
+            new object[] { "쿠키 상자", TimeTag.Past, new[] { PersonTag.Family }, new[] { EmotionTag.Happiness, EmotionTag.Love } },
+            new object[] { "시계", TimeTag.Present, new PersonTag[0], new[] { EmotionTag.Sadness } }
         };
 
         private static readonly (string Name, int Duration)[] ComplexTable =
@@ -42,7 +44,7 @@ namespace BlueComplex.Core.Tests
         };
 
         [Test]
-        public void Clues_AreExactlyTheTenFromTheStageTable()
+        public void Clues_AreExactlyTheTwelveFromTheStageTable()
         {
             var clues = PrototypeContent.Clues();
 
@@ -96,7 +98,7 @@ namespace BlueComplex.Core.Tests
         {
             var config = PrototypeContent.PrototypeStage(Polarity);
 
-            Assert.AreEqual(10, config.Clues.Count);
+            Assert.AreEqual(12, config.Clues.Count);
             Assert.AreEqual(10, config.ComplexPool.Count);
             Assert.AreEqual("가라앉다", config.DisplayName);
         }
