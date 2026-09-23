@@ -30,6 +30,9 @@ namespace BlueComplex.UI.Presentation
         private ITurnResultPresenter _presenter;
         private QuarterHud _quarterHud;
 
+        /// <summary>DLJ: 화면에 심박수를 반영하는 시점. 상태 이펙트도 태그/파형 연출과 동기화한다.</summary>
+        public event System.Action<int, bool> HeartbeatPresented;
+
         private QuarterHud Hud => _quarterHud != null ? _quarterHud : _quarterHud = QuarterHud.GetOrCreate(transform.root);
 
         protected override void Subscribe(StageSession session)
@@ -81,6 +84,7 @@ namespace BlueComplex.UI.Presentation
 
             _bpm.SetValue(value, color, KoreanLabels.State(state), animate: !snap);
             _bar.SetPulse(value, color, irregular, snap);
+            HeartbeatPresented?.Invoke(value, snap);
         }
 
         /// <summary>코어의 현재 턴 상태(현재 쿼터의 목표 구역, 쿼터 내 턴 위치)를 바와 쿼터 HUD에 반영한다.

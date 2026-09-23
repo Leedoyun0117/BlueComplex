@@ -108,6 +108,8 @@ namespace BlueComplex.UI.Presentation
             var held = Session.Items.Held;
             var capacity = Session.Items.Capacity;
             var firstNew = animateNew && held.Count > _shownCount ? _shownCount : int.MaxValue;
+            // DLJ: 접혀 있어도 획득 연출과 빈칸이 보이도록 패널을 펼친다.
+            if (firstNew != int.MaxValue) _panel.SetFolded(false);
 
             for (var i = 0; i < _panel.SlotCount; i++)
             {

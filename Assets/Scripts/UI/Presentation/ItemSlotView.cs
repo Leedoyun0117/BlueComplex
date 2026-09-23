@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using BlueComplex.Core.Items;
+using BlueComplex.UI.Effects.DLJ;
 using BlueComplex.UI.Layout;
 using BlueComplex.UI.Motion;
 using DG.Tweening;
@@ -16,8 +17,8 @@ namespace BlueComplex.UI.Presentation
     /// 슬롯 자체엔 담기엔 너무 길다. 카드가 없는 자리는 파인 빈 칸(<see cref="SetEmpty"/>)으로 남는다.
     ///
     /// 움직임: 사용한 카드는 구겨지며 사라지고(<see cref="PlayUse"/>), 새 카드는 빈 칸에 눌려 끼워진다(<see cref="Render"/>의 insert).
-    /// 슬롯은 세로 레이아웃 그룹의 자식이라 위치는 건드리지 않고 크기·기울기·투명도로만 표현한다.
-    /// 시간은 UiMotionSettings(인스펙터)에서 온다.</summary>
+    /// 등장 시 DLJ 시각 복제본만 움직여 세로 레이아웃 그룹의 슬롯 위치는 유지한다.
+    /// 등장 시간은 DLJItemArrivalSettings, 사용 시간은 UiMotionSettings(인스펙터)에서 온다.</summary>
     public sealed class ItemSlotView : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
     {
         private const float HoverDelay = 0.25f;
@@ -39,6 +40,7 @@ namespace BlueComplex.UI.Presentation
         private Color _edgeColor;
         private CanvasGroup _group;
         private Tween _motion;
+        private bool _inserting;
 
         public ItemDefinition Item { get; private set; }
 
@@ -130,20 +132,10 @@ namespace BlueComplex.UI.Presentation
         private void PlayInsert()
         {
             _motion?.Kill();
-            var total = UiMotion.Settings.itemInsert;
-            var rect = (RectTransform)transform;
-            var group = EnsureGroup();
-
-            // 크게 들린 채 옅게 시작해서 칸 위에 눌려 앉는다.
-            rect.localScale = Vector3.one * 1.3f;
-            rect.localRotation = Quaternion.Euler(0f, 0f, 7f);
-            group.alpha = 0f;
-
-            _motion = DOTween.Sequence().SetUpdate(true).SetTarget(this)
-                .Append(group.DOFade(1f, total * 0.4f))
-                .Join(rect.DOScale(1f, total).SetEase(Ease.OutBack, 1.6f))
-                .Join(rect.DOLocalRotate(Vector3.zero, total).SetEase(Ease.OutBack))
-                .AppendCallback(() => UiSoundHooks.Play(UiSoundCue.Pin));
+            HideTooltip();
+            _inserting = true;
+            _motion = ItemArrivalMotion.Play((RectTransform)transform, _background, _nameText, _iconImage,
+                EmptyColor, () => _inserting = false);
         }
 
         private void ResetPose()
@@ -175,12 +167,12 @@ namespace BlueComplex.UI.Presentation
 
         public void OnPointerClick(PointerEventData eventData)
         {
-            if (Item != null) Clicked?.Invoke(Item);
+            if (Item != null && !_inserting) Clicked?.Invoke(Item);
         }
 
         public void OnPointerEnter(PointerEventData eventData)
         {
-            if (Item == null) return;
+            if (Item == null || _inserting) return;
             _hoverRoutine = StartCoroutine(HoverThenShow());
         }
 
