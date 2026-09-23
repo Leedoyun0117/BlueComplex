@@ -24,9 +24,12 @@ namespace BlueComplex.Core.Tests
 
         /// <summary>
         /// 휴리스틱 클리어율이 무전략의 몇 배 이상이어야 하는가. 쿼터 구조는 키 판정이 3번뿐이라 운의 비중이 구조적으로 크다 —
-        /// 카드 풀 도달 모델 적용 직후 실측 1.55배(42.7% vs 27.6%)를 실력이 작동하는 증거로 보고 여유를 둔 값이다.
+        /// 카드 풀 도달 모델 적용 직후 실측 1.55배(42.7% vs 27.6%)를 실력이 작동하는 증거로 보고 여유를 둔 값이었다.
+        /// ClueHand.RefillForNewQuarter로 쿼터 시작마다 손패가 항상 가득 차도록 고친 뒤(이전엔 저작된 단서 수가
+        /// 스테이지 전체 턴 수보다 적어 3쿼터 손패가 굶주렸다 — 그만큼 후반 턴이 강제로 넘어가 위험 노출이 줄어 있었다)
+        /// 재측정한 1.33배(32.1% vs 24.2%)에 여유를 둔 값이다.
         /// </summary>
-        private const double MinClearRateRatio = 1.4;
+        private const double MinClearRateRatio = 1.2;
 
         [Test]
         public void HeuristicBot_ImprovesClearRate_ComparedToFirstCardBot()

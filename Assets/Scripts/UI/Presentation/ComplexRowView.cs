@@ -1,6 +1,7 @@
 using System.Collections;
 using BlueComplex.Core.Complexes;
 using BlueComplex.UI.Layout;
+using BlueComplex.UI.Motion;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -185,6 +186,7 @@ namespace BlueComplex.UI.Presentation
             // 아이템 대상 선택 중이면 클릭은 대상 선택이다(상세 팝업을 띄우지 않는다).
             if (ItemTargetSelector.TryPick(_complex)) return;
 
+            UiSoundHooks.Play(UiSoundCue.ButtonClick);
             StopHoverRoutine();
             ShowTooltip();
         }

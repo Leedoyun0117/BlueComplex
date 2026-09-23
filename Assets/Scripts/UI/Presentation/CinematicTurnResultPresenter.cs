@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using BlueComplex.Core.Stability;
 using BlueComplex.Core.Stage;
 using BlueComplex.Core.Turn;
 using BlueComplex.UI.Background;
@@ -189,6 +190,10 @@ namespace BlueComplex.UI.Presentation
             var openTween = _xrayPanel.Open();
             if (openTween != null) yield return openTween.WaitForCompletion(true);
 
+            // "표정과 반응" 기획표: 이 턴의 최종 태그·심박수로 정해지는 바탕 표정. 컴플렉스 발광(Flash)보다 먼저 정해 둬야
+            // Flash가 끝나고 돌아갈 자리가 무표정이 아니라 이 표정이 된다(PortraitXrayView.SetMood 문서 참고).
+            _portrait?.SetMood(PortraitReactionRules.ClassifyYuki(report.FinalTags, Session.Zone.StateOf(report.HeartbeatValue)));
+
             // TickDurations/스폰이 Resolve 이후에 일어나므로, 발광 전에 먼저 뇌의 영역 배치를 최신 보드
             // 상태로 맞춰야 한다(BrainView.PlayGlow 문서 참고).
             _brain.Refresh(Session.Complexes.InPriorityOrder().ToList());
@@ -242,6 +247,10 @@ namespace BlueComplex.UI.Presentation
             var show = _memoryBubble.ShowResultTags(tags);
 
             yield return PlayDialogue(TurnSummaryFormatter.Build(report));
+
+            // "대화 루프": 결과 → 결과 대사. 표에 맞는 조합이 없으면(태그 없음, 침체/흥분 혼합 등) 조용히 건너뛴다.
+            var resultTagLine = TurnSummaryFormatter.BuildResultTagLine(report);
+            if (resultTagLine != null) yield return PlayDialogue(resultTagLine);
 
             if (tags.Count == 0) yield break;
 

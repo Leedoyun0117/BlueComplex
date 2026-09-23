@@ -128,6 +128,7 @@ namespace BlueComplex.UI.Presentation
             // 아이템 대상 선택 중이면 클릭은 대상 선택이다(상세 팝업을 띄우지 않는다).
             if (ItemTargetSelector.TryPick(Complex)) return;
 
+            UiSoundHooks.Play(UiSoundCue.ButtonClick);
             StopHoverRoutine();
             ShowTooltip();
         }

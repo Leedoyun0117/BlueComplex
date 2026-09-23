@@ -219,8 +219,13 @@ namespace BlueComplex.UI.Layout
             vh.Clear();
             if (!IsVisible || _main.Points.Count < 2) return;
 
-            var rect = GetPixelAdjustedRect();
-            if (rect.width <= 1f || rect.height <= 1f) return;
+            var bounds = GetPixelAdjustedRect();
+            if (bounds.width <= 1f || bounds.height <= 1f) return;
+
+            // 제어점은 원형을 뜻하지만 가로세로를 rect.width/height로 따로 늘리면(정사각형이 아닌 패널일 때) 계란형으로 찌그러진다.
+            // 짧은 변 기준 정사각형으로 안쪽에 맞춰 중앙에 놓아야 패널 비율과 무관하게 원 모양을 유지한다.
+            var side = Mathf.Min(bounds.width, bounds.height);
+            var rect = new Rect(bounds.xMin + (bounds.width - side) * 0.5f, bounds.yMin + (bounds.height - side) * 0.5f, side, side);
 
             var from = Mathf.Min(_from, _to);
 

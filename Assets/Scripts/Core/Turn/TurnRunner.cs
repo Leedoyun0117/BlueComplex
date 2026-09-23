@@ -162,6 +162,10 @@ namespace BlueComplex.Core.Turn
             // 모든 쿼터의 목표 구역을 스테이지 시작 시점에 한꺼번에 확정한다 — 플레이어는 처음부터 전부 볼 수 있다.
             _keys.PrepareZones(_keyPlacer.PlaceAll(_heartbeat.Value, _keys.KeyTurns));
 
+            // 아이템도 손패처럼 쿼터마다 빈 칸을 채운다 — 스테이지 시작 시점의 첫 지급은 여기서 이루어진다
+            // (이후 쿼터 경계 리필은 BeginTurn의 쿼터 시작 처리에서 이루어진다).
+            _items.Refill();
+
             BeginTurn();
         }
 
@@ -169,13 +173,15 @@ namespace BlueComplex.Core.Turn
         {
             CurrentTurn++;
 
-            // 손패와 아이템은 쿼터가 시작될 때만 채운다. 쿼터 중에는 낸/쓴 만큼 줄어든 채로 진행된다.
-            // 아이템은 스테이지 시작(첫 쿼터)에 칸 수만큼 지급되고, 이후로는 쓴 칸만 다음 쿼터 시작에 다시 채워진다(안 쓴 아이템은 그대로).
+            // 손패는 쿼터가 시작될 때만 채운다. 쿼터 중에는 낸 만큼 줄어든 채로 진행된다.
+            // RefillForNewQuarter로 채운다 — 지난 쿼터에 낸 단서까지 풀로 되돌려 손패가 항상 가득 차게 한다
+            // (저작된 단서 수가 스테이지 전체 턴 수보다 적기 때문. ClueHand 클래스 주석 참고).
+            // 아이템도 손패와 마찬가지로 쓴 칸만 다른 아이템으로 채운다(안 쓴 아이템은 그대로 유지) — Items.cs의 ItemInventory.Refill 참고.
             if (Schedule.IsQuarterStart(CurrentTurn))
             {
-                _hand.Refill();
-                _keys.OpenQuarter(Schedule.QuarterOf(CurrentTurn));
+                _hand.RefillForNewQuarter();
                 _items.Refill();
+                _keys.OpenQuarter(Schedule.QuarterOf(CurrentTurn));
             }
 
             TurnBegan?.Invoke(CurrentTurn);
