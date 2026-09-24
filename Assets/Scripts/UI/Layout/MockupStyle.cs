@@ -9,11 +9,12 @@ namespace BlueComplex.UI.Layout
     /// </summary>
     public static class MockupStyle
     {
-        /// <summary>대사창·단서·아이템 패널 같은 흰 종이.</summary>
-        public static readonly Color Paper = new Color32(242, 239, 230, 255);
+        /// <summary>대사창·단서·아이템 패널 같은 종이 — 밝은 종이색(안쪽은 무늬 없이 이 색 그대로, 윤곽은 셰이더가 손으로 그은 선으로 그린다).
+        /// 순백은 어두운 청록 CRT 화면에서 글레어처럼 튀어서 살짝 회녹색을 섞었다.</summary>
+        public static readonly Color Paper = new Color32(238, 242, 238, 255);
 
-        /// <summary>종이 위에 얹힌 카드(아이템 칸, 단서 카드, 이름표).</summary>
-        public static readonly Color Card = new Color32(236, 233, 224, 255);
+        /// <summary>종이 위에 얹힌 카드(아이템 칸, 단서 카드, 이름표) — 패널과 같은 색, 테두리 선으로 구분된다.</summary>
+        public static readonly Color Card = new Color32(238, 242, 238, 255);
 
         /// <summary>노란 포스트잇(컴플렉스, 쿼터 진행).</summary>
         public static readonly Color Sticky = new Color32(246, 224, 132, 255);
@@ -35,14 +36,21 @@ namespace BlueComplex.UI.Layout
         private const float EdgeThickness = 1.5f;
         private static readonly Vector2 ShadowOffset = new Vector2(4f, -4f);
 
-        /// <summary>종이 가장자리: 얇은 어두운 테두리 + 아래로 떨어지는 그림자. 이미 붙어 있으면 값만 다시 맞춘다(멱등).</summary>
+        /// <summary>종이 가장자리: 어두운 테두리 + 아래로 떨어지는 그림자. 이미 붙어 있으면 값만 다시 맞춘다(멱등).
+        /// 종이 배경(대사창·단서·아이템·키)은 이 호출 전에 <see cref="PaperPanel.Skin(Graphic, PaperKind, int)"/>로 흔들리는 테두리 종이로 만든다 — 그래야 그림자 복제본이 같은 UV를 물려받는다.
+        /// 이 종이는 셰이더가 테두리 선을 직접 그리므로 Outline을 새로 붙이지 않는다. 이미 있는 Outline(아이템 칸의 선택 강조가 색을 바꿔 쓴다)은 평소에 투명하게 둔다.</summary>
         public static void AddPaperEdge(GameObject go, bool shadow = true)
         {
             var outline = go.GetComponent<Outline>();
-            if (outline == null) outline = go.AddComponent<Outline>();
-            outline.effectColor = Border;
-            outline.effectDistance = new Vector2(EdgeThickness, -EdgeThickness);
-            outline.useGraphicAlpha = false;
+            var inkPaper = go.GetComponent<PaperPanel>() != null;
+            if (outline == null && !inkPaper) outline = go.AddComponent<Outline>();
+
+            if (outline != null)
+            {
+                outline.effectColor = inkPaper ? new Color(Border.r, Border.g, Border.b, 0f) : Border;
+                outline.effectDistance = new Vector2(EdgeThickness, -EdgeThickness);
+                outline.useGraphicAlpha = false;
+            }
 
             if (shadow) AddShadow(go);
         }

@@ -45,6 +45,8 @@ namespace BlueComplex.UI.Presentation
             // StageBootstrapper가 계속 재사용하므로 여기서 새로 만들거나 참조를 바꾸지 않는다.
             Session.Ledger.CommitRun();
 
+            UiSoundHooks.StopAmbient(); // 상시 배경음은 스테이지가 끝나면 페이드아웃. 재시작하면 처음부터 다시 시작한다.
+
             // "스테이지 시작 대화" 기획: 클리어 대사는 최종 심박수 구간에 따라 갈리고, 결과 패널이 뜨기 전에 먼저 나온다.
             // 실패는 클리어 대사가 없으므로(기획표에 없음) 바로 보여준다.
             if (outcome == StageOutcome.Cleared) StartCoroutine(PlayClearDialogueThenShow(outcome));

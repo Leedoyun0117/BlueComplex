@@ -41,8 +41,9 @@ namespace BlueComplex.Core.Stage
             var hand = new ClueHand(pool);
 
             var complexBoard = new ComplexBoard(config.MaxComplexSlots);
-            if (config.StartingComplex != null)
-                complexBoard.TryAttach(new ComplexInstance(config.StartingComplex, priority: 0));
+            var startingComplex = ChooseStartingComplex(config, random);
+            if (startingComplex != null)
+                complexBoard.TryAttach(new ComplexInstance(startingComplex, priority: 0));
 
             var traits = new TraitBoard(config.Traits);
             var heartbeat = new Heartbeat(heartbeatStartValue);
@@ -88,6 +89,15 @@ namespace BlueComplex.Core.Stage
                 Censorship = censorship,
                 ActiveItems = activeItems
             };
+        }
+
+        /// <summary>고정 시작 컴플렉스가 있으면 그것, 없고 무작위가 켜져 있으면 풀에서 시드 난수로 하나. 난수는 스테이지당 한 번만 쓴다.</summary>
+        private static ComplexDefinition ChooseStartingComplex(StageConfig config, IRandomSource random)
+        {
+            if (config.StartingComplex != null) return config.StartingComplex;
+            if (!config.RandomStartingComplex || config.ComplexPool.Count == 0) return null;
+
+            return config.ComplexPool[random.Range(0, config.ComplexPool.Count)];
         }
 
         /// <summary>

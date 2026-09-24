@@ -53,3 +53,33 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 78d8a0a85eec98c4694bc436cf5c6c96, type: 3}
     volume: 1
     pitchRange: {x: 0.97, y: 1.03}
+  - cue: 13
+    clips:
+    - {fileID: 8300000, guid: 6693305562ae5004e8a72e570a032ab5, type: 3}
+    volume: 0.5
+    pitchRange: {x: 1, y: 1}
+  - cue: 14
+    clips:
+    - {fileID: 8300000, guid: 67d30ad6defc66345a974a772932f32e, type: 3}
+    volume: 0.5
+    pitchRange: {x: 1, y: 1}
+  - cue: 15
+    clips:
+    - {fileID: 8300000, guid: 84dac09e54eb2f84dbf6083d7faaa7f7, type: 3}
+    volume: 0.5
+    pitchRange: {x: 1, y: 1}
+  - cue: 16
+    clips:
+    - {fileID: 8300000, guid: 8bf592700f389054c87ab98a2a7c3019, type: 3}
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+  - cue: 17
+    clips:
+    - {fileID: 8300000, guid: 8872858962326144a9e1e179694d8f56, type: 3}
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+  - cue: 18
+    clips:
+    - {fileID: 8300000, guid: 0c58ae6dc648c7d44bfaff8e2ca8768d, type: 3}
+    volume: 0.25
+    pitchRange: {x: 1, y: 1}

@@ -3,9 +3,8 @@ using UnityEngine;
 namespace BlueComplex.UI.Background
 {
     /// <summary>
-    /// 낡은 천장 램프 소켓에서 새어 나오는 아주 옅은 연기. 항상 은은하게 위로 흐르고,
-    /// 정전 순간(<see cref="Burst"/>)에는 잠깐 더 진하게 뿜는다 — <see cref="LampLightDriver"/>의
-    /// 조명 시퀀스와는 느슨하게만 엮인, 스스로 완결된 이펙트다.
+    /// 낡은 천장 램프 소켓에서 새어 나오는 연기. 평소에는 나오지 않고, 정전 순간에만
+    /// <see cref="Burst"/>로 한 번 뿜는다(<see cref="LampLightDriver"/>의 정전 시퀀스가 호출).
     ///
     /// 파티클 모듈과 소프트 원형 텍스처를 전부 Awake에서 코드로 만든다 — 씬 파일에 파티클 커브를
     /// 손으로 심거나 별도 PNG를 아트로 받을 필요가 없다(에디터에서는 정지 화면으로 보이고,
@@ -14,9 +13,7 @@ namespace BlueComplex.UI.Background
     [RequireComponent(typeof(ParticleSystem))]
     public sealed class LampSmokeEmitter : MonoBehaviour
     {
-        [Header("은은한 상시 연기")]
-        [Tooltip("초당 발생량. 아주 적어도 된다 — '조금이라도 자연스럽게' 나오면 충분하다.")]
-        [SerializeField, Range(0f, 5f)] private float _ambientRatePerSecond = 1.2f;
+        [Header("연기 모양")]
         [SerializeField] private float _lifetime = 3.5f;
         [SerializeField] private float _riseSpeed = 0.35f;
         [SerializeField] private float _startSize = 0.35f;
@@ -72,7 +69,7 @@ namespace BlueComplex.UI.Background
 
             var emission = _ps.emission;
             emission.enabled = true;
-            emission.rateOverTime = _ambientRatePerSecond;
+            emission.rateOverTime = 0f; // 상시 발생 없음 — 정전 순간 Burst()의 Emit으로만 나온다.
 
             var shape = _ps.shape;
             shape.enabled = true;
