@@ -13,6 +13,15 @@ namespace BlueComplex.Core.Stability
         Joy
     }
 
+    /// <summary>나츠의 표정 상태. Fury는 당황이다. Focus(키 턴)는 심박수가 아니라 턴 종류로 정해지므로 <see cref="PortraitReactionRules.ClassifyNatsu"/>는 돌려주지 않는다.</summary>
+    public enum NatsuExpression
+    {
+        Normal,
+        Fury,
+        Focus,
+        Relief
+    }
+
     /// <summary>
     /// "표정과 반응" 기획서(유키/나츠)의 순수 판정 로직. UI 쪽 포트레이트 뷰는 이 판정 결과로 스프라이트만 고르고,
     /// 판정 자체는 여기서만 한다(Unity 의존 없음, EditMode 테스트로 검증 가능).
@@ -40,6 +49,17 @@ namespace BlueComplex.Core.Stability
         /// <summary>나츠가 당황하는 조건 — 매우 침체 또는 매우 흥분.</summary>
         public static bool IsNatsuFlustered(HeartbeatState heartbeatState) =>
             heartbeatState is HeartbeatState.VeryDepressed or HeartbeatState.VeryExcited;
+
+        /// <summary>
+        /// 심박수 구간이 바뀔 때의 나츠 표정: 매우 침체/매우 흥분이면 당황(Fury), 안정 구간에 새로 들어섰으면 안도(Relief),
+        /// 그 외엔 Normal. Normal은 "지금 표정을 평소로 되돌려라"는 뜻이지, 안도 연출이 도는 중에 끊으라는 뜻이 아니다(호출한 쪽이 판단).
+        /// </summary>
+        public static NatsuExpression ClassifyNatsu(HeartbeatState previous, HeartbeatState current)
+        {
+            if (IsNatsuFlustered(current)) return NatsuExpression.Fury;
+            if (current == HeartbeatState.Stable && previous != HeartbeatState.Stable) return NatsuExpression.Relief;
+            return NatsuExpression.Normal;
+        }
 
         /// <summary>emotion 하나의 개수가 다른 모든 감정 태그 각각보다 많은가("다른 태그보다 많을 시"의 문자 그대로 해석 — 동률이면 아니다).</summary>
         private static bool IsPlurality(TagSet tags, EmotionTag emotion)
