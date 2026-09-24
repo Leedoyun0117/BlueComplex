@@ -28,6 +28,9 @@ namespace BlueComplex.Core.Tests
         /// ClueHand.RefillForNewQuarter로 쿼터 시작마다 손패가 항상 가득 차도록 고친 뒤(이전엔 저작된 단서 수가
         /// 스테이지 전체 턴 수보다 적어 3쿼터 손패가 굶주렸다 — 그만큼 후반 턴이 강제로 넘어가 위험 노출이 줄어 있었다)
         /// 재측정한 1.33배(32.1% vs 24.2%)에 여유를 둔 값이다.
+        ///
+        /// 키 구역 좌/우를 쿼터마다 균등 랜덤으로 바꾼 뒤(도달 불가한 우측이 절반 배치된다) 재측정: 5.0% vs 3.4% = 1.47배.
+        /// 클리어율 절대값이 낮아 배율의 변동이 커졌지만 기준 자체는 유지한다.
         /// </summary>
         private const double MinClearRateRatio = 1.2;
 
@@ -72,6 +75,11 @@ namespace BlueComplex.Core.Tests
             log.AppendLine($"    휴리스틱 : {DescribeSides(wideHeuristic)}");
 
             Debug.Log(log.ToString());
+
+            var placedRight = wideNaive.Sum(r => r.Zones.Count(z => z.StartSlot >= 100));
+            var placedTotal = wideNaive.Sum(r => r.Zones.Count);
+            Assert.That(placedRight / (double)placedTotal, Is.InRange(0.47, 0.53),
+                $"{WideSeeds.Length}시드에서 우측 구역 배치 비율이 균등해야 한다.");
 
             Assert.GreaterOrEqual(wideHeuristicClearRate, wideNaiveClearRate * MinClearRateRatio,
                 $"{WideSeeds.Length}시드 기준 휴리스틱 클리어율({wideHeuristicClearRate:P1})이 " +
