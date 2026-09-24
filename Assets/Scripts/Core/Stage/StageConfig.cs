@@ -30,7 +30,16 @@ namespace BlueComplex.Core.Stage
 
         public IReadOnlyList<ClueDefinition> Clues { get; }
         public IReadOnlyList<ComplexDefinition> ComplexPool { get; }
+
+        /// <summary>고정 시작 컴플렉스. 비어 있고 <see cref="RandomStartingComplex"/>도 꺼져 있으면 컴플렉스 없이 시작한다.</summary>
         public ComplexDefinition StartingComplex { get; }
+
+        /// <summary>
+        /// 켜면 스테이지를 만들 때(<see cref="StageFactory.Create"/>) 시작 컴플렉스를 <see cref="ComplexPool"/>에서 시드 난수로 하나 고른다 —
+        /// 같은 시드면 같은 컴플렉스, 다른 시드면 (대체로) 다른 컴플렉스. <see cref="StartingComplex"/>가 채워져 있으면 그쪽이 우선한다.
+        /// </summary>
+        public bool RandomStartingComplex { get; }
+
         public IReadOnlyList<ItemDefinition> ItemPool { get; }
 
         /// <summary>이 스테이지에 나오는 특성 목록(일반 + 특수). 아이템과 컴플렉스 초과가 id·구간 방향으로 여기서 찾는다.</summary>
@@ -59,7 +68,8 @@ namespace BlueComplex.Core.Stage
                            int maxComplexSlots = ComplexBoard.DefaultMaxSlots,
                            IReadOnlyList<TraitDefinition> traits = null,
                            int itemSlots = ItemInventory.DefaultCapacity,
-                           IReadOnlyDictionary<string, IReadOnlyList<string>> itemParameters = null)
+                           IReadOnlyDictionary<string, IReadOnlyList<string>> itemParameters = null,
+                           bool randomStartingComplex = false)
         {
             if (maxComplexSlots < 1)
                 throw new ArgumentOutOfRangeException(nameof(maxComplexSlots), "최대 중첩은 1 이상이어야 합니다.");
@@ -81,6 +91,7 @@ namespace BlueComplex.Core.Stage
             Clues = clues;
             ComplexPool = complexPool;
             StartingComplex = startingComplex;
+            RandomStartingComplex = randomStartingComplex;
             ItemPool = itemPool;
         }
     }

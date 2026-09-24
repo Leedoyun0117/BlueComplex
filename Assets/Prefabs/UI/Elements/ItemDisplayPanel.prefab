@@ -13,7 +13,8 @@ GameObject:
   - component: {fileID: 8225486368386861430}
   - component: {fileID: 3137830273016243721}
   - component: {fileID: 2543539836554126073}
-  - component: {fileID: 6810524018714608969}
+  - component: {fileID: 7050092464307041741}
+  - component: {fileID: 398788545422539209}
   m_Layer: 5
   m_Name: Slot 1
   m_TagString: Untagged
@@ -62,8 +63,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.9254902, g: 0.9137255, b: 0.8784314, a: 1}
+  m_Material: {fileID: 2100000, guid: e8bc71c032bbef94b8f093250f661ff6, type: 2}
+  m_Color: {r: 0.93333334, g: 0.9490196, b: 0.93333334, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -116,7 +117,20 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
---- !u!114 &6810524018714608969
+--- !u!114 &7050092464307041741
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 993397389650023303}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3d94f18c6e2470b8b5e1f7d92c40a63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Layout.PaperPanel
+  _seed: 0
+--- !u!114 &398788545422539209
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -128,7 +142,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 1}
+  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 0}
   m_EffectDistance: {x: 1.5, y: -1.5}
   m_UseGraphicAlpha: 0
 --- !u!1 &1089975842655343771
@@ -144,7 +158,8 @@ GameObject:
   - component: {fileID: 5378170812456526396}
   - component: {fileID: 8904642627243942774}
   - component: {fileID: 1127875870434140464}
-  - component: {fileID: 433112961409999274}
+  - component: {fileID: 5248183293519783447}
+  - component: {fileID: 3084108765683125572}
   m_Layer: 5
   m_Name: Slot 0
   m_TagString: Untagged
@@ -193,8 +208,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.9254902, g: 0.9137255, b: 0.8784314, a: 1}
+  m_Material: {fileID: 2100000, guid: e8bc71c032bbef94b8f093250f661ff6, type: 2}
+  m_Color: {r: 0.93333334, g: 0.9490196, b: 0.93333334, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -247,7 +262,20 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
---- !u!114 &433112961409999274
+--- !u!114 &5248183293519783447
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1089975842655343771}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3d94f18c6e2470b8b5e1f7d92c40a63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Layout.PaperPanel
+  _seed: 0
+--- !u!114 &3084108765683125572
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -259,7 +287,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 1}
+  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 0}
   m_EffectDistance: {x: 1.5, y: -1.5}
   m_UseGraphicAlpha: 0
 --- !u!1 &1986180795279694201
@@ -744,7 +772,8 @@ GameObject:
   - component: {fileID: 6445734899245782281}
   - component: {fileID: 957678070668004991}
   - component: {fileID: 6674495832073674328}
-  - component: {fileID: 8817848614948079962}
+  - component: {fileID: 6974617588117423095}
+  - component: {fileID: 316874146812763119}
   m_Layer: 5
   m_Name: Slot 2
   m_TagString: Untagged
@@ -793,8 +822,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.9254902, g: 0.9137255, b: 0.8784314, a: 1}
+  m_Material: {fileID: 2100000, guid: e8bc71c032bbef94b8f093250f661ff6, type: 2}
+  m_Color: {r: 0.93333334, g: 0.9490196, b: 0.93333334, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -847,7 +876,20 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
---- !u!114 &8817848614948079962
+--- !u!114 &6974617588117423095
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2669761017065689394}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3d94f18c6e2470b8b5e1f7d92c40a63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Layout.PaperPanel
+  _seed: 0
+--- !u!114 &316874146812763119
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -859,7 +901,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 1}
+  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 0}
   m_EffectDistance: {x: 1.5, y: -1.5}
   m_UseGraphicAlpha: 0
 --- !u!1 &3581927024527478593
@@ -1237,7 +1279,8 @@ GameObject:
   - component: {fileID: 2725910212251001756}
   - component: {fileID: 3719859907844369258}
   - component: {fileID: 2563221566984682434}
-  - component: {fileID: 804511752102118809}
+  - component: {fileID: 4122742648848183730}
+  - component: {fileID: 2785340494304832436}
   m_Layer: 5
   m_Name: Slot 3
   m_TagString: Untagged
@@ -1286,8 +1329,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.9254902, g: 0.9137255, b: 0.8784314, a: 1}
+  m_Material: {fileID: 2100000, guid: e8bc71c032bbef94b8f093250f661ff6, type: 2}
+  m_Color: {r: 0.93333334, g: 0.9490196, b: 0.93333334, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1340,7 +1383,20 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
---- !u!114 &804511752102118809
+--- !u!114 &4122742648848183730
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4857534990437779874}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3d94f18c6e2470b8b5e1f7d92c40a63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Layout.PaperPanel
+  _seed: 0
+--- !u!114 &2785340494304832436
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1352,7 +1408,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 1}
+  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 0}
   m_EffectDistance: {x: 1.5, y: -1.5}
   m_UseGraphicAlpha: 0
 --- !u!1 &5429559981680554109
@@ -1443,8 +1499,9 @@ GameObject:
   - component: {fileID: 1817035054993328675}
   - component: {fileID: 7824177398879054134}
   - component: {fileID: 5142607413714570817}
-  - component: {fileID: 8435723147961432271}
-  - component: {fileID: 1125537494358043799}
+  - component: {fileID: 2494079319021284426}
+  - component: {fileID: 5101166677863762975}
+  - component: {fileID: 4144903618374277031}
   m_Layer: 5
   m_Name: ItemDisplayPanel
   m_TagString: Untagged
@@ -1542,8 +1599,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.9490196, g: 0.9372549, b: 0.9019608, a: 1}
+  m_Material: {fileID: 2100000, guid: b623c1b59a635404087a16fbdcd4bc2d, type: 2}
+  m_Color: {r: 0.93333334, g: 0.9490196, b: 0.93333334, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1560,7 +1617,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &8435723147961432271
+--- !u!114 &2494079319021284426
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5539325633092337936}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3d94f18c6e2470b8b5e1f7d92c40a63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Layout.PaperPanel
+  _seed: 0
+--- !u!114 &5101166677863762975
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1572,10 +1642,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 1}
+  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 0}
   m_EffectDistance: {x: 1.5, y: -1.5}
   m_UseGraphicAlpha: 0
---- !u!114 &1125537494358043799
+--- !u!114 &4144903618374277031
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

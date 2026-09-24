@@ -639,9 +639,7 @@ MonoBehaviour:
   _bootstrapper: {fileID: 650770981}
   _minuteHand: {fileID: 507181491}
   _hourHand: {fileID: 550069531}
-  _minutesPerTurn: 15
-  _tickDuration: 0.7
-  _tickOvershoot: 0.6
+  _secondsPerMinuteHandLap: 60
 --- !u!1 &507181490
 GameObject:
   m_ObjectHideFlags: 0

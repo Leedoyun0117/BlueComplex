@@ -73,7 +73,12 @@ namespace BlueComplex.EditorTools
             // 나츠 초상화(UI 가이드 5번, 목업엔 있지만 지금까지 안 만들어져 있었다 — Notion 스펙 재확인 후 새로 추가).
             // 목업 원본 좌표(L 0.61, W 0.23 근방)는 지금 레이아웃(기억 풍선·키 카드가 그 자리를 이미 차지)과 겹쳐서 못 쓴다 —
             // 기억 풍선 오른쪽 끝(L 0.617)과 키 카드 위(T 0.562) 사이의 빈 자리에 세로로 긴 카드로 새로 잡았다.
-            public static readonly (Vector2 Min, Vector2 Max) Natsu = Box(0.665f, 0.25f, 0.137f, 0.30f);
+            //
+            // 크기 조정(유키와 비슷한 비중으로): 나츠 시트 프레임은 80×80(머리 폭 46px)이라 유키(163×201, 머리 폭 150px)와 같은 박스에 넣으면
+            // 머리가 유키의 절반도 안 된다. 화면 배율을 유키(2.58배)의 약 3배(7.5배 = 600px 정사각)로 잡으면 머리 폭이 345px(유키 387px)이고,
+            // 머리 꼭대기(y 305)를 유키와 맞추면 보이는 상반신 높이도 같다(단서 패널 윗변 y 799까지 494px). 바닥이 단서 패널 밑으로 53px 들어가는데
+            // 나츠를 유키처럼 맨 밑 형제로 깔아 패널이 덮는다. 가로는 아이템 패널(x 1670~)에 어깨가 닿지 않는 선(어깨 끝 x 1667)까지 왼쪽으로 뺐다.
+            public static readonly (Vector2 Min, Vector2 Max) Natsu = Box(1090f / 1920f, 252f / 1080f, 600f / 1920f, 600f / 1080f);
 
             /// <summary>엑스레이 판넬 컨테이너 — 접힌 위치(스테이지 표기 바로 밑 왼쪽 구석)부터, 펼쳤을 때 화면에 실제로 보이는 유키 초상화(<see cref="YukiDrop"/>)
             /// 위로 뻗는 원 자리까지를 덮는 투명 영역이다. 목업에는 없는 일시적 요소다. 안의 배치는 ComplexXrayPanel이 이 크기(1080p에서 960×918)를
@@ -104,6 +109,7 @@ namespace BlueComplex.EditorTools
         {
             var font = TmpKoreanFontSetupTool.EnsureKoreanFontAsset();
             UiMotionSettingsTool.Ensure();
+            PaperPanelSetupTool.EnsureMaterials(); // 종이 배경(대사창·단서·아이템)이 입는 종이 머티리얼(흔들리는 테두리)
 
             EditElement("HeartRateIndicatorPanel", root => CleanHeartMonitor(root, font));
             EditElement("BpmDisplay", root => CleanBpmDisplay(root, font));
@@ -205,6 +211,7 @@ namespace BlueComplex.EditorTools
             var panel = GetOrAdd<Image>(root);
             panel.color = MockupStyle.Paper;
             panel.raycastTarget = true;
+            PaperPanel.Skin(panel, PaperKind.Panel);
             MockupStyle.AddPaperEdge(root);
 
             var layout = root.GetComponent<VerticalLayoutGroup>();
@@ -239,6 +246,7 @@ namespace BlueComplex.EditorTools
                 var background = slot.GetComponent<Image>();
                 background.color = MockupStyle.Card;
                 background.raycastTarget = true;
+                PaperPanel.Skin(background, PaperKind.Card);
                 MockupStyle.AddPaperEdge(slot.gameObject, shadow: false);
 
                 var icon = EnsureImage(slot.transform, "Icon", Color.white, new Vector2(0.22f, 0.36f), new Vector2(0.78f, 0.94f));
@@ -669,6 +677,7 @@ namespace BlueComplex.EditorTools
             var panel = GetOrAdd<Image>(root);
             panel.color = MockupStyle.Paper;
             panel.raycastTarget = true;
+            PaperPanel.Skin(panel, PaperKind.Panel);
             MockupStyle.AddPaperEdge(root);
 
             var layout = root.GetComponent<HorizontalLayoutGroup>();
@@ -688,6 +697,7 @@ namespace BlueComplex.EditorTools
             {
                 var background = card.GetComponent<Image>();
                 background.color = MockupStyle.Card;
+                PaperPanel.Skin(background, PaperKind.Card);
                 MockupStyle.AddPaperEdge(card.gameObject, shadow: false);
 
                 Remove(card.transform, "Attributes");
@@ -738,6 +748,7 @@ namespace BlueComplex.EditorTools
             var backdrop = root.transform.Find("ClickCatcher").GetComponent<Image>();
             backdrop.color = MockupStyle.Paper;
             backdrop.raycastTarget = true;
+            PaperPanel.Skin(backdrop, PaperKind.Panel);
             MockupStyle.AddPaperEdge(backdrop.gameObject);
 
             var label = root.transform.Find("Label").GetComponent<TMP_Text>();
@@ -748,6 +759,7 @@ namespace BlueComplex.EditorTools
             label.raycastTarget = false;
 
             var tag = EnsureImage(root.transform, "NameTag", MockupStyle.Card, new Vector2(0.034f, 0.69f), new Vector2(0.165f, 0.925f));
+            PaperPanel.Skin(tag, PaperKind.Card);
             MockupStyle.AddPaperEdge(tag.gameObject, shadow: false);
             EnsureText(tag.transform, "Name", "유키", font, 28f, MockupStyle.Ink, TextAlignmentOptions.Center,
                 Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, FontStyles.Bold);
@@ -811,6 +823,7 @@ namespace BlueComplex.EditorTools
             natsuImage.preserveAspect = true;
             natsuImage.raycastTarget = false;
             MockupStyle.AddPaperEdge(natsu.gameObject);
+            natsu.SetAsFirstSibling(); // 유키(바로 아래에서 다시 맨 앞으로)와 같이 맨 밑에 깐다 — 단서 패널이 하반신을 덮는다.
 
             // 유키 초상화는 맨 밑에 깐다 — 위에 있으면 엑스레이 판넬/카드 입력을 가로채고, 엑스레이가 펼쳐질 때 그 위로 뇌가 겹쳐야 한다.
             var yuki = Place(hud, "Yuki Portrait", Anchors.YukiDrop);

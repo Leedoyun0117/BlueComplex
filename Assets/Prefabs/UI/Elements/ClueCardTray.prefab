@@ -89,7 +89,8 @@ GameObject:
   - component: {fileID: 2584428373180047377}
   - component: {fileID: 4551626137351042605}
   - component: {fileID: 8466134330203369479}
-  - component: {fileID: 2753610842742448460}
+  - component: {fileID: 3711543682305368332}
+  - component: {fileID: 6826863915238113691}
   m_Layer: 5
   m_Name: Card 2
   m_TagString: Untagged
@@ -138,8 +139,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.9254902, g: 0.9137255, b: 0.8784314, a: 1}
+  m_Material: {fileID: 2100000, guid: e8bc71c032bbef94b8f093250f661ff6, type: 2}
+  m_Color: {r: 0.93333334, g: 0.9490196, b: 0.93333334, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -199,7 +200,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.ClueCardDragHandler
   _canvasGroup: {fileID: 2584428373180047377}
---- !u!114 &2753610842742448460
+--- !u!114 &3711543682305368332
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1694846503939763428}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3d94f18c6e2470b8b5e1f7d92c40a63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Layout.PaperPanel
+  _seed: 0
+--- !u!114 &6826863915238113691
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -211,7 +225,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 1}
+  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 0}
   m_EffectDistance: {x: 1.5, y: -1.5}
   m_UseGraphicAlpha: 0
 --- !u!1 &2207305400482403629
@@ -228,7 +242,8 @@ GameObject:
   - component: {fileID: 1557896556879436309}
   - component: {fileID: 2308780100902566593}
   - component: {fileID: 1270505068380817267}
-  - component: {fileID: 1215733755228674213}
+  - component: {fileID: 2808052576939495778}
+  - component: {fileID: 6210825154257314902}
   m_Layer: 5
   m_Name: Card 3
   m_TagString: Untagged
@@ -277,8 +292,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.9254902, g: 0.9137255, b: 0.8784314, a: 1}
+  m_Material: {fileID: 2100000, guid: e8bc71c032bbef94b8f093250f661ff6, type: 2}
+  m_Color: {r: 0.93333334, g: 0.9490196, b: 0.93333334, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -338,7 +353,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.ClueCardDragHandler
   _canvasGroup: {fileID: 1557896556879436309}
---- !u!114 &1215733755228674213
+--- !u!114 &2808052576939495778
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2207305400482403629}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3d94f18c6e2470b8b5e1f7d92c40a63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Layout.PaperPanel
+  _seed: 0
+--- !u!114 &6210825154257314902
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -350,7 +378,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 1}
+  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 0}
   m_EffectDistance: {x: 1.5, y: -1.5}
   m_UseGraphicAlpha: 0
 --- !u!1 &2715427298056571771
@@ -853,7 +881,8 @@ GameObject:
   - component: {fileID: 765948515884958201}
   - component: {fileID: 4796195410135626026}
   - component: {fileID: 7911935188102611755}
-  - component: {fileID: 5770374922216789138}
+  - component: {fileID: 2267098603648834447}
+  - component: {fileID: 340969656620202936}
   m_Layer: 5
   m_Name: Card 1
   m_TagString: Untagged
@@ -902,8 +931,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.9254902, g: 0.9137255, b: 0.8784314, a: 1}
+  m_Material: {fileID: 2100000, guid: e8bc71c032bbef94b8f093250f661ff6, type: 2}
+  m_Color: {r: 0.93333334, g: 0.9490196, b: 0.93333334, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -963,7 +992,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.ClueCardDragHandler
   _canvasGroup: {fileID: 765948515884958201}
---- !u!114 &5770374922216789138
+--- !u!114 &2267098603648834447
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4451146708100797584}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3d94f18c6e2470b8b5e1f7d92c40a63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Layout.PaperPanel
+  _seed: 0
+--- !u!114 &340969656620202936
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -975,7 +1017,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 1}
+  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 0}
   m_EffectDistance: {x: 1.5, y: -1.5}
   m_UseGraphicAlpha: 0
 --- !u!1 &6178084638290570032
@@ -1436,8 +1478,9 @@ GameObject:
   - component: {fileID: 7131304472189347069}
   - component: {fileID: 7341026592612209645}
   - component: {fileID: 6798925326652686008}
-  - component: {fileID: 1480987203964233924}
-  - component: {fileID: 8820971346980895935}
+  - component: {fileID: 6064057222538793989}
+  - component: {fileID: 306806410940775669}
+  - component: {fileID: 5223484840489455615}
   m_Layer: 5
   m_Name: ClueCardTray
   m_TagString: Untagged
@@ -1532,8 +1575,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.9490196, g: 0.9372549, b: 0.9019608, a: 1}
+  m_Material: {fileID: 2100000, guid: b623c1b59a635404087a16fbdcd4bc2d, type: 2}
+  m_Color: {r: 0.93333334, g: 0.9490196, b: 0.93333334, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1550,7 +1593,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &1480987203964233924
+--- !u!114 &6064057222538793989
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7175570518653970535}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3d94f18c6e2470b8b5e1f7d92c40a63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Layout.PaperPanel
+  _seed: 0
+--- !u!114 &306806410940775669
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1562,10 +1618,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 1}
+  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 0}
   m_EffectDistance: {x: 1.5, y: -1.5}
   m_UseGraphicAlpha: 0
---- !u!114 &8820971346980895935
+--- !u!114 &5223484840489455615
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1594,7 +1650,8 @@ GameObject:
   - component: {fileID: 3568539227076663295}
   - component: {fileID: 5726018218710837309}
   - component: {fileID: 8199660305987348019}
-  - component: {fileID: 2583043994151778285}
+  - component: {fileID: 918495041992420201}
+  - component: {fileID: 8461579111747163387}
   m_Layer: 5
   m_Name: Card 0
   m_TagString: Untagged
@@ -1643,8 +1700,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.9254902, g: 0.9137255, b: 0.8784314, a: 1}
+  m_Material: {fileID: 2100000, guid: e8bc71c032bbef94b8f093250f661ff6, type: 2}
+  m_Color: {r: 0.93333334, g: 0.9490196, b: 0.93333334, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1704,7 +1761,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.ClueCardDragHandler
   _canvasGroup: {fileID: 3568539227076663295}
---- !u!114 &2583043994151778285
+--- !u!114 &918495041992420201
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7283259688052073817}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3d94f18c6e2470b8b5e1f7d92c40a63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Layout.PaperPanel
+  _seed: 0
+--- !u!114 &8461579111747163387
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1716,6 +1786,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 1}
+  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 0}
   m_EffectDistance: {x: 1.5, y: -1.5}
   m_UseGraphicAlpha: 0

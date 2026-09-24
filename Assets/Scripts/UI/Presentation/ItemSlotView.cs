@@ -31,9 +31,9 @@ namespace BlueComplex.UI.Presentation
 
         private static readonly Color FilledColor = MockupStyle.Card;
 
-        /// <summary>카드가 빠진 자리: 종이(패널)보다 살짝 어두운 불투명한 파인 자리. 반투명으로 두면 안 된다 — 테두리(Outline)가 그래픽 모양 그대로 채운 사본을 뒤에 깔아서 속이 찬 어두운 블록으로 보인다.</summary>
-        private static readonly Color EmptyColor = new Color32(226, 222, 212, 255);
-        private static readonly Color CrumpledColor = new Color32(196, 192, 182, 255);
+        /// <summary>카드가 빠진 자리: 종이(패널)보다 살짝 어두운 불투명한 파인 자리(종이 셰이더는 밝은 무채색만 윤곽선을 그리므로 너무 어둡거나 색이 있으면 안 된다). 반투명으로 두면 안 된다 — 테두리(Outline)가 그래픽 모양 그대로 채운 사본을 뒤에 깔아서 속이 찬 어두운 블록으로 보인다.</summary>
+        private static readonly Color EmptyColor = new Color32(224, 228, 224, 255);
+        private static readonly Color CrumpledColor = new Color32(192, 196, 192, 255);
 
         private Coroutine _hoverRoutine;
         private Outline _edge;
