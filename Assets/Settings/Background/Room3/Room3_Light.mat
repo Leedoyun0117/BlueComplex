@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: CRT_PostProcess
-  m_Shader: {fileID: 4800000, guid: 946240a5eefa1644d8b865a6f0c217b5, type: 3}
+  m_Name: Room3_Light
+  m_Shader: {fileID: 4800000, guid: 4ac9b37e60b12154fbf70d4de765fc70, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -16,34 +16,25 @@ Material:
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
+  m_CustomRenderQueue: 3000
   stringTagMap: {}
   disabledShaderPasses: []
   m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
-    - _UITex:
-        m_Texture: {fileID: 8400000, guid: fe512a8b7377fa94e8a1e6d7abcba1c5, type: 2}
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: 4f5245159a0ad7846ae7017f992fb6f0, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Aberration: 0.002
-    - _Bloom: 0.3
-    - _BloomThreshold: 0.6
-    - _Brightness: 1
-    - _Curvature: 0.12
-    - _Flicker: 0.04
-    - _Noise: 0.06
-    - _Pastel: 0
-    - _ScanCount: 420
-    - _ScanIntensity: 0.35
-    - _ScanSpeed: 0
-    - _ScanThickness: 1
-    - _Shake: 0
-    - _TintR: 0
-    - _Vignette: 0.55
-    m_Colors: []
+    - _AlphaPower: 1.8
+    - _LightClamp: 0.6
+    - _LightGain: 1
+    - _ShadowAlphaCutoff: 0.5
+    - _SurfaceGlow: 0.08
+    m_Colors:
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
