@@ -31,6 +31,10 @@ namespace BlueComplex.UI.Bootstrap
         [Tooltip("인스펙터에서 낼 카드의 손패 인덱스. 컨텍스트 메뉴 'Play Selected Card'로 실행.")]
         [SerializeField] private int _selectedCardIndex;
 
+        [Header("스테이지 (임시 디버그 선택)")]
+        [Tooltip("시작할 스테이지 번호(1 또는 2). Play 중에는 F1/F2 키로 해당 스테이지를 새로 시작한다.")]
+        [SerializeField, Range(1, 2)] private int _stageNumber = 1;
+
         [Header("시드")]
         [SerializeField] private int _seed = 20260916;
 
@@ -76,7 +80,13 @@ namespace BlueComplex.UI.Bootstrap
 
         private void Update()
         {
-            if (!_enableKeyboardInput || InputBlocked || Session == null || Keyboard.current == null) return;
+            if (!_enableKeyboardInput || Session == null || Keyboard.current == null) return;
+
+            // 스테이지 선택은 대화 재생 중(InputBlocked)에도 통한다 — BeginNewSession이 재생 중인 대화를 끊는다.
+            if (Keyboard.current.f1Key.wasPressedThisFrame) StartStage(1);
+            else if (Keyboard.current.f2Key.wasPressedThisFrame) StartStage(2);
+
+            if (InputBlocked) return;
 
             if (Keyboard.current.digit1Key.wasPressedThisFrame) PlayCardAtIndex(0);
             else if (Keyboard.current.digit2Key.wasPressedThisFrame) PlayCardAtIndex(1);
@@ -100,6 +110,29 @@ namespace BlueComplex.UI.Bootstrap
             Session.Runner.PlayClue(Session.Hand.Cards[index]);
         }
 
+        /// <summary>스테이지 번호(1 또는 2)를 골라 새 무작위 시드로 시작한다. 해금 지식(Ledger)은 유지된다. 임시 디버그 선택용.</summary>
+        public void StartStage(int stageNumber)
+        {
+            if (stageNumber < 1 || stageNumber > 2)
+            {
+                Debug.LogWarning($"스테이지 {stageNumber}는 없습니다. (1 또는 2)");
+                return;
+            }
+
+            _stageNumber = stageNumber;
+            BeginNewSession(Environment.TickCount);
+        }
+
+        [ContextMenu("Start Stage 1")]
+        private void StartStage1FromInspector() => StartStage(1);
+
+        [ContextMenu("Start Stage 2")]
+        private void StartStage2FromInspector() => StartStage(2);
+
+        private StageConfig CreateConfig() => _stageNumber == 2
+            ? Stage2Content.Stage2(_polarityTable)
+            : PrototypeContent.PrototypeStage(_polarityTable);
+
         /// <summary>같은 시드로 스테이지를 재시작한다. 해금 지식(Ledger)은 그대로 유지된다.</summary>
         public void RestartWithSameSeed() => BeginNewSession(CurrentSeed);
 
@@ -117,7 +150,7 @@ namespace BlueComplex.UI.Bootstrap
             _quarterDialoguePlaying = false;
 
             CurrentSeed = seed;
-            var config = PrototypeContent.PrototypeStage(_polarityTable);
+            var config = CreateConfig();
             var random = new SystemRandomSource(seed);
 
             Config = config;
