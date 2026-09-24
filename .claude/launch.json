@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pagecurl-proto",
+      "runtimeExecutable": "C:/Users/taeho/AppData/Local/Python/pythoncore-3.14-64/python.exe",
+      "runtimeArgs": ["C:/Users/taeho/AppData/Local/Temp/claude/C--Unity-BlueComplex/c6894421-f62e-4d36-bb54-aa21f2ae982a/scratchpad/server.py"],
+      "port": 8765
+    }
+  ]
+}
