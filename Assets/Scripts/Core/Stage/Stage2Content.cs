@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using BlueComplex.Core.Clues;
 using BlueComplex.Core.Complexes;
 using BlueComplex.Core.Items;
+using BlueComplex.Core.Stability;
 using BlueComplex.Core.Tags;
 
 namespace BlueComplex.Core.Stage
@@ -119,7 +120,7 @@ namespace BlueComplex.Core.Stage
             "stage2_past_denial",
             "과거 부정 컴플렉스",
             "과거의 슬픔을 부정하여, 느끼지 않는다.",
-            defaultDuration: 2,
+            defaultDuration: 5,
             new IComplexCondition[]
             {
                 new TimeIs(TimeTag.Past),
@@ -182,7 +183,7 @@ namespace BlueComplex.Core.Stage
             "stage2_self_blame",
             "자책 컴플렉스",
             "가족과 관련된 침체되는 감정을 자책하며 더 깊게 느낍니다.",
-            defaultDuration: 1,
+            defaultDuration: 3,
             new IComplexCondition[]
             {
                 new HasPerson(PersonTag.Family),
@@ -198,7 +199,7 @@ namespace BlueComplex.Core.Stage
             "stage2_over_expectation",
             "과한 기대 컴플렉스",
             "현재의 행복이 미래까지 이어질 것이라고 강하게 확신합니다.",
-            defaultDuration: 2,
+            defaultDuration: 4,
             new IComplexCondition[]
             {
                 new TimeIs(TimeTag.Present),
@@ -214,7 +215,7 @@ namespace BlueComplex.Core.Stage
             "stage2_scattered_mind",
             "의식 분산 컴플렉스",
             "두 명 이상의 인물에 대한 감정을 느끼면, 의식이 분산되어 침체됩니다.",
-            defaultDuration: 2,
+            defaultDuration: 3,
             new IComplexCondition[]
             {
                 new PersonCountAtLeast(2),
@@ -230,7 +231,7 @@ namespace BlueComplex.Core.Stage
             "stage2_self_anger",
             "자기 분노 컴플렉스",
             "감정이 침체 쪽으로 기울어 있다면 자신의 모습에 분노합니다.",
-            defaultDuration: 2,
+            defaultDuration: 4,
             new IComplexCondition[]
             {
                 new DepressedNotFewerThanExcited(polarityTable)
@@ -260,7 +261,7 @@ namespace BlueComplex.Core.Stage
             "stage2_distrust",
             "불신 컴플렉스",
             "가까운 사람의 애정을 두려움으로 받아들인다.",
-            defaultDuration: 3,
+            defaultDuration: 5,
             new IComplexCondition[]
             {
                 new HasPerson(PersonTag.Lover),
@@ -276,7 +277,7 @@ namespace BlueComplex.Core.Stage
             "stage2_over_interpretation",
             "과대 해석 컴플렉스",
             "가까운 사람의 사랑을 느끼면, 다른 감정은 모두 무시하고, 사랑만 받아들입니다.",
-            defaultDuration: 1,
+            defaultDuration: 3,
             new IComplexCondition[]
             {
                 new HasPerson(PersonTag.Family),
@@ -312,7 +313,7 @@ namespace BlueComplex.Core.Stage
             "stage2_overthinking",
             "사고 과다 컴플렉스",
             "과거의 감정을 배로 느낍니다. 과거의 감정이 아니라면 슬픔을 느낍니다.",
-            defaultDuration: 2,
+            defaultDuration: 4,
             new IComplexCondition[]
             {
                 new TimeIsAnyOf(TimeTag.Past, TimeTag.Present, TimeTag.Future),
@@ -340,6 +341,16 @@ namespace BlueComplex.Core.Stage
             Overthinking()
         };
 
+        /// <summary>스테이지 2 전용 컴플렉스 발현 확률(최종 값). 기본표(50/30/0/30/50%)에 배율을 곱한 값이 아니라 구간별로 직접 지정한다.</summary>
+        public static IReadOnlyDictionary<HeartbeatState, double> SpawnChances { get; } = new Dictionary<HeartbeatState, double>
+        {
+            [HeartbeatState.VeryDepressed] = 0.8,
+            [HeartbeatState.Depressed] = 0.5,
+            [HeartbeatState.Stable] = 0.0,
+            [HeartbeatState.Excited] = 0.5,
+            [HeartbeatState.VeryExcited] = 0.8
+        };
+
         /// <summary>
         /// 15턴 = 5쿼터 × 3턴 / 키 3개 필요(5쿼터 중) / 키 폭은 스테이지 1과 같은 36.
         /// 3쿼터 × 5턴은 손패(4장)보다 쿼터가 길어 쿼터 5번째 턴에 낼 카드가 없다 — 손패는 쿼터 시작에만 채워지므로 쿼터당 턴은 4 이하여야 한다.
@@ -350,7 +361,7 @@ namespace BlueComplex.Core.Stage
             quarterCount: 5,
             turnsPerQuarter: 3,
             requiredKeys: 3,
-            complexWeight: PrototypeContent.PrototypeComplexWeight,
+            complexWeight: 1.0, // 전용 확률표(complexSpawnChances)가 있어 쓰이지 않는다
             clues: Clues(),
             complexPool: Complexes(polarityTable),
             startingComplex: null,
@@ -369,6 +380,7 @@ namespace BlueComplex.Core.Stage
                     "stage2_distrust", "stage2_over_interpretation", "stage2_persecution", "stage2_overthinking"
                 }
             },
-            randomStartingComplex: true);
+            randomStartingComplex: true,
+            complexSpawnChances: SpawnChances);
     }
 }

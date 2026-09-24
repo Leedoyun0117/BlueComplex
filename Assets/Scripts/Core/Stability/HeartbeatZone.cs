@@ -60,6 +60,15 @@ namespace BlueComplex.Core.Stability
             new Definition(191, 200, HeartbeatState.Fatal, CensorshipLevel.Full, 0.0)
         };
 
+        /// <summary>기본 구간표에서 컴플렉스 발현 확률만 <paramref name="chances"/>로 바꾼 구간표. 표에 없는 구간은 기본 확률을 유지한다.
+        /// 경계값·검열 수준은 그대로다 — 스테이지 전용 발현 확률표를 만들 때 쓴다.</summary>
+        public static IReadOnlyList<Definition> WithSpawnChances(IReadOnlyDictionary<HeartbeatState, double> chances) =>
+            DefaultBoundaries
+                .Select(b => chances.TryGetValue(b.State, out var chance)
+                    ? new Definition(b.Min, b.Max, b.State, b.Censorship, chance)
+                    : b)
+                .ToArray();
+
         private readonly IReadOnlyList<Definition> _boundaries;
 
         /// <summary>Fatal이 아닌 구간들 중 가장 작은 Min. 키 구역 등 생존 가능 범위가 필요한 곳에서 쓴다.</summary>
