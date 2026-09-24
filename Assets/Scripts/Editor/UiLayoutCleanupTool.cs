@@ -802,7 +802,11 @@ namespace BlueComplex.EditorTools
             natsu.offsetMin = Vector2.zero;
             natsu.offsetMax = Vector2.zero;
             var natsuImage = GetOrAdd<Image>(natsu.gameObject);
-            natsuImage.sprite = LoadPortraitSprite("Natsu/natsu_neutral.png");
+            // 기본 표정은 표정 세트의 첫 프레임(CloseEyes_1, 검은 머리 회색 후드) — NatsuPortraitView가 런타임에 덮어쓰지만, 세트 로드가 실패해도
+            // 옛 아트(natsu_neutral, 초록머리)로 조용히 폴백하지 않도록 프리팹에 새 프레임을 직접 굽는다.
+            var natsuSet = AssetDatabase.LoadAssetAtPath<NatsuExpressionSet>("Assets/Resources/UI/Portraits/Natsu/NatsuExpressionSet.asset");
+            if (natsuSet != null && natsuSet.closeEyes is { Length: > 0 }) natsuImage.sprite = natsuSet.closeEyes[0];
+            else Debug.LogWarning("[UiLayoutCleanupTool] 나츠 표정 세트를 못 읽어 기본 스프라이트를 못 구웠다: NatsuExpressionSet.asset");
             natsuImage.color = Color.white;
             natsuImage.preserveAspect = true;
             natsuImage.raycastTarget = false;
