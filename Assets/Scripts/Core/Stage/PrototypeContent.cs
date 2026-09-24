@@ -29,7 +29,7 @@ namespace BlueComplex.Core.Stage
                 "꽃 한 송이\n\n그 애는 뭐하고 있으려나? 몇 년이 흘러도 걔가 준 꽃을 보면 늘 떠올라. 꽃 이름이 뭐였더라?",
                 TimeTag.Past,
                 new[] { PersonTag.Friend },
-                new[] { EmotionTag.Love }),
+                new[] { EmotionTag.Love, EmotionTag.Happiness }),
 
             new ClueDefinition("s1_broccoli", "브로콜리",
                 "브로콜리\n\n으엑. 브로콜리는 정말 싫어. 어릴 때 선생님이 억지로 먹였거든.",
@@ -115,7 +115,7 @@ namespace BlueComplex.Core.Stage
             "complex_anti_past",
             "반 과거 컴플렉스",
             "과거의 행복한 감정을 혐오한다.",
-            defaultDuration: 3,
+            defaultDuration: 2,
             new IComplexCondition[]
             {
                 new TimeIs(TimeTag.Past),

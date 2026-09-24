@@ -143,7 +143,7 @@ namespace BlueComplex.Core.Tests
         public void Overcome_HalvesTheChosenComplexDuration_RoundedUp()
         {
             var overcome = Item("item_overcome");
-            var session = Start(Config(new[] { overcome }, starting: PrototypeContent.AntiPast(Polarity)));
+            var session = Start(Config(new[] { overcome }, starting: PrototypeContent.Optimism())); // 지속 3턴 컴플렉스
             var complex = session.Complexes.Slots[0];
             Assert.AreEqual(3, complex.RemainingTurns);
 

@@ -16,7 +16,7 @@ namespace BlueComplex.Core.Tests
         private static readonly object[] ClueTable =
         {
             new object[] { "가족사진 액자", TimeTag.Past, new[] { PersonTag.Family }, new[] { EmotionTag.Happiness } },
-            new object[] { "꽃 한 송이", TimeTag.Past, new[] { PersonTag.Friend }, new[] { EmotionTag.Love } },
+            new object[] { "꽃 한 송이", TimeTag.Past, new[] { PersonTag.Friend }, new[] { EmotionTag.Love, EmotionTag.Happiness } },
             new object[] { "브로콜리", TimeTag.Present, new[] { PersonTag.Other }, new[] { EmotionTag.Disgust } },
             new object[] { "공포 소설", TimeTag.Present, new[] { PersonTag.Other }, new[] { EmotionTag.Fear } },
             new object[] { "아이들의 낙서", TimeTag.Past, new[] { PersonTag.Other, PersonTag.Friend }, new[] { EmotionTag.Anger } },
@@ -32,7 +32,7 @@ namespace BlueComplex.Core.Tests
         private static readonly (string Name, int Duration)[] ComplexTable =
         {
             ("착한 아이 컴플렉스", 2),
-            ("반 과거 컴플렉스", 3),
+            ("반 과거 컴플렉스", 2),
             ("소꿉친구 컴플렉스", 1),
             ("스톡홀름 컴플렉스", 2),
             ("타자화 컴플렉스", 2),
