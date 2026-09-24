@@ -42,6 +42,76 @@ namespace BlueComplex.Core.Clues
             return true;
         }
 
+        /// <summary>
+        /// set를 인식하는 뽑기. 풀에서 한 장을 뽑고, 그 단서가 set에 속하면 같은 set의 동료를 함께 뽑아 <paramref name="group"/>에 담는다(첫 원소가 처음 뽑힌 단서).
+        /// 동료 수는 <see cref="ClueDefinition.SetPickCount"/> − 1 − (이미 손에 든 같은 set 단서 수)이고 풀에 남은 동료 수를 넘지 않는다 —
+        /// 3개 이상인 set은 뽑힌 단서와 랜덤 동료 하나, 곧 set에서 랜덤 2개가 나오고 나머지는 풀에 남는다.
+        /// 묶음이 <paramref name="freeSlots"/>에 들어가지 않는 set 단서와, 이미 <see cref="ClueDefinition.SetPickCount"/>장이 손에 있는 set의 나머지는
+        /// 후보에서 뺀다 — set를 쪼개지도, 손패를 넘치게 하지도, 한 set가 2장을 넘겨 나오지도 않는다.
+        /// 들어갈 후보가 없으면 false(풀은 그대로).
+        /// 풀에 set 단서가 하나도 없으면 <see cref="TryDraw"/>와 똑같은 난수 한 번만 쓴다(set 없는 스테이지의 뽑기 결과는 그대로다).
+        /// </summary>
+        public bool TryDrawGroup(int freeSlots, IReadOnlyCollection<ClueInstance> held, List<ClueDefinition> group)
+        {
+            group.Clear();
+            if (freeSlots <= 0 || _available.Count == 0) return false;
+
+            if (!_available.Any(d => d.SetId != null))
+            {
+                var plain = _random.Range(0, _available.Count);
+                group.Add(_available[plain]);
+                _available.RemoveAt(plain);
+                return true;
+            }
+
+            var candidates = FittingIndices(freeSlots, held);
+            if (candidates.Count == 0) return false;
+
+            var trigger = _available[candidates[_random.Range(0, candidates.Count)]];
+            var extra = ExtraNeeded(trigger, held);
+            _available.Remove(trigger);
+            group.Add(trigger);
+
+            for (var i = 0; i < extra; i++)
+            {
+                var mates = _available.Where(d => d.SetId == trigger.SetId).ToList();
+                var mate = mates[_random.Range(0, mates.Count)];
+                _available.Remove(mate);
+                group.Add(mate);
+            }
+
+            return true;
+        }
+
+        /// <summary><see cref="TryDrawGroup"/>가 지금 성공할지. 난수를 쓰지 않는다.</summary>
+        public bool CanDrawGroup(int freeSlots, IReadOnlyCollection<ClueInstance> held) =>
+            freeSlots > 0 && FittingIndices(freeSlots, held).Count > 0;
+
+        private List<int> FittingIndices(int freeSlots, IReadOnlyCollection<ClueInstance> held)
+        {
+            var result = new List<int>();
+            for (var i = 0; i < _available.Count; i++)
+            {
+                var definition = _available[i];
+                // 이미 SetPickCount장이 손에 있는 set는 다 제공된 것이다 — 풀에 남은 나머지는 낱개처럼 끼어들지 못한다.
+                if (definition.SetId != null && HeldInSet(definition.SetId, held) >= ClueDefinition.SetPickCount) continue;
+                if (1 + ExtraNeeded(definition, held) <= freeSlots) result.Add(i);
+            }
+            return result;
+        }
+
+        private static int HeldInSet(string setId, IReadOnlyCollection<ClueInstance> held) =>
+            held.Count(c => c.Definition.SetId == setId);
+
+        private int ExtraNeeded(ClueDefinition definition, IReadOnlyCollection<ClueInstance> held)
+        {
+            if (definition.SetId == null) return 0;
+
+            var heldMates = HeldInSet(definition.SetId, held);
+            var poolMates = _available.Count(d => d.SetId == definition.SetId && d != definition);
+            return Math.Min(Math.Max(0, ClueDefinition.SetPickCount - 1 - heldMates), poolMates);
+        }
+
         /// <summary>풀에 남은 단서가 있는지(아이템 '선택적 기억'이 새 단서를 뽑을 수 있는지).</summary>
         public bool HasAny => _available.Count > 0;
 
@@ -73,13 +143,19 @@ namespace BlueComplex.Core.Clues
 
         public ClueHand(CluePool pool) => _pool = pool;
 
+        /// <summary>빈 칸을 채운다. set 단서는 동료와 함께(묶음이 남은 칸에 들어갈 때만) 들어오고, 안 들어가면 그 set는 이번엔 건너뛴다 —
+        /// 남은 후보가 전부 안 들어가는 set뿐이면 칸이 빈 채로 끝난다(<see cref="CluePool.TryDrawGroup"/>).</summary>
         public void Refill()
         {
-            while (_cards.Count < HandSize && _pool.TryDraw(out var definition))
+            var group = new List<ClueDefinition>();
+            while (_cards.Count < HandSize && _pool.TryDrawGroup(HandSize - _cards.Count, _cards, group))
             {
-                var card = new ClueInstance(definition);
-                _cards.Add(card);
-                CardAdded?.Invoke(card);
+                foreach (var definition in group)
+                {
+                    var card = new ClueInstance(definition);
+                    _cards.Add(card);
+                    CardAdded?.Invoke(card);
+                }
             }
         }
 
@@ -104,26 +180,42 @@ namespace BlueComplex.Core.Clues
             CardDestroyed?.Invoke(card);
         }
 
-        /// <summary>풀에 바꿔 올 단서가 남아 있는가.</summary>
+        /// <summary>풀에 바꿔 올 단서가 남아 있는가. (set 단서가 칸에 안 들어가는 경우까지 보려면 <see cref="CanReplace"/>)</summary>
         public bool CanReplaceOne => _pool.HasAny;
+
+        /// <summary>이 카드를 <see cref="TryReplaceRandom"/>으로 바꿀 수 있는가 — 고른 카드를 뺀 자리에 들어갈 후보가 풀에 있는가.
+        /// set 단서는 묶음 전체가 들어갈 자리가 있어야 후보가 된다.</summary>
+        public bool CanReplace(ClueInstance card)
+        {
+            if (!_cards.Contains(card)) return false;
+            var rest = _cards.Where(c => c != card).ToList();
+            return _pool.CanDrawGroup(HandSize - rest.Count, rest);
+        }
 
         /// <summary>
         /// 아이템 '선택적 기억' — 고른 단서를 풀에서 뽑은 랜덤 단서로 같은 자리에서 바꾼다. 새 단서를 먼저 뽑고 그 뒤에 고른 단서를 풀에 돌려놓으므로
-        /// 방금 고른 단서가 바로 다시 나오지는 않는다. 풀이 비어 있으면 아무것도 바꾸지 않고 false.
+        /// 방금 고른 단서가 바로 다시 나오지는 않는다. 새 단서가 set에 속하면 그 동료가 바로 뒤 칸에 함께 들어온다(손패가 <see cref="HandSize"/>를 넘지 않는
+        /// 후보만 뽑힌다). 풀이 비어 있거나 후보가 모두 안 들어가면 아무것도 바꾸지 않고 false.
         /// </summary>
         public bool TryReplaceRandom(ClueInstance card, out ClueInstance replacement)
         {
             replacement = null;
             var index = _cards.IndexOf(card);
             if (index < 0) throw new InvalidOperationException($"{card.Definition.Id} 는 손패에 없습니다.");
-            if (!_pool.TryDraw(out var definition)) return false;
+
+            var rest = _cards.Where(c => c != card).ToList();
+            var group = new List<ClueDefinition>();
+            if (!_pool.TryDrawGroup(HandSize - rest.Count, rest, group)) return false;
 
             _pool.Return(card.Definition);
-            replacement = new ClueInstance(definition);
+            replacement = new ClueInstance(group[0]);
             _cards[index] = replacement;
+            var companions = group.Skip(1).Select(d => new ClueInstance(d)).ToList();
+            _cards.InsertRange(index + 1, companions);
 
             CardDestroyed?.Invoke(card);
             CardAdded?.Invoke(replacement);
+            foreach (var companion in companions) CardAdded?.Invoke(companion);
             return true;
         }
 

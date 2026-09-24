@@ -19,6 +19,10 @@ namespace BlueComplex.UI.Presentation
             _ => "-"
         };
 
+        /// <summary>시간 태그가 여럿인 단서(스테이지 2 "과거 + 현재")는 "과거, 현재"로 잇는다. 하나도 없으면 "-".</summary>
+        public static string Times(System.Collections.Generic.IReadOnlyList<TimeTag> times) =>
+            times.Count == 0 ? "-" : string.Join(", ", System.Linq.Enumerable.Select(times, Time));
+
         public static string Person(PersonTag person) => person switch
         {
             PersonTag.Family => "가족",

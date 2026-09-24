@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BlueComplex.Core.Clues;
 using BlueComplex.Core.Complexes;
 using BlueComplex.Core.Items;
@@ -77,6 +78,10 @@ namespace BlueComplex.Core.Stage
             if (requiredKeys > quarterCount)
                 throw new ArgumentException(
                     $"필요 키({requiredKeys})가 쿼터 수({quarterCount})보다 많으면 클리어할 수 없습니다.", nameof(requiredKeys));
+
+            var loneSet = clues?.Where(c => c.SetId != null).GroupBy(c => c.SetId).FirstOrDefault(g => g.Count() < 2);
+            if (loneSet != null)
+                throw new ArgumentException($"set '{loneSet.Key}' 는 단서가 2개 이상이어야 합니다.", nameof(clues));
 
             Id = id;
             DisplayName = displayName;

@@ -101,7 +101,7 @@ namespace BlueComplex.Core.Items
     public sealed class ReplaceClue : IItemBehaviour, IItemTargeting
     {
         public bool IsValidTarget(ItemTarget target, ItemActivationContext context) =>
-            target is ClueTarget { Card: var card } && context.Hand.Cards.Contains(card) && context.Hand.CanReplaceOne;
+            target is ClueTarget { Card: var card } && context.Hand.CanReplace(card);
 
         public void OnActivate(ItemActivationContext context)
         {
