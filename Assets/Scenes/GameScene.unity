@@ -152,6 +152,10 @@ MonoBehaviour:
   _voices: 6
   _masterVolume: 1
   _sameQueueCooldown: 0.09
+  _bedCrossfade: 0.6
+  _ambientFadeIn: 2
+  _ambientFadeOut: 2.5
+  _ambientLoopSeam: 3
 --- !u!4 &15954282
 Transform:
   m_ObjectHideFlags: 0
@@ -1121,7 +1125,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 06aa7db1fac8ba543b52c896dbb2f986, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Background.LampSmokeEmitter
-  _ambientRatePerSecond: 1.2
   _lifetime: 3.5
   _riseSpeed: 0.35
   _startSize: 0.35
