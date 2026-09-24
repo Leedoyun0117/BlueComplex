@@ -43,6 +43,9 @@ namespace BlueComplex.Core.Stage
 
         public IReadOnlyList<ItemDefinition> ItemPool { get; }
 
+        /// <summary>null이 아니면 쿼터 손패를 채울 때 그 쿼터 키 목표 구간에 맞는 감정의 단서를 강제로 포함한다(<see cref="KeyZoneHandBiasRule"/>).</summary>
+        public KeyHandBiasSettings KeyHandBias { get; }
+
         /// <summary>이 스테이지에 나오는 특성 목록(일반 + 특수). 아이템과 컴플렉스 초과가 id·구간 방향으로 여기서 찾는다.</summary>
         public IReadOnlyList<TraitDefinition> Traits { get; }
 
@@ -70,7 +73,8 @@ namespace BlueComplex.Core.Stage
                            IReadOnlyList<TraitDefinition> traits = null,
                            int itemSlots = ItemInventory.DefaultCapacity,
                            IReadOnlyDictionary<string, IReadOnlyList<string>> itemParameters = null,
-                           bool randomStartingComplex = false)
+                           bool randomStartingComplex = false,
+                           KeyHandBiasSettings keyHandBias = null)
         {
             if (maxComplexSlots < 1)
                 throw new ArgumentOutOfRangeException(nameof(maxComplexSlots), "최대 중첩은 1 이상이어야 합니다.");
@@ -98,6 +102,7 @@ namespace BlueComplex.Core.Stage
             StartingComplex = startingComplex;
             RandomStartingComplex = randomStartingComplex;
             ItemPool = itemPool;
+            KeyHandBias = keyHandBias;
         }
     }
 }

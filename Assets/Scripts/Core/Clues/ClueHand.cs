@@ -32,6 +32,21 @@ namespace BlueComplex.Core.Clues
             _random = random;
         }
 
+        /// <summary>조건을 만족하는(set에 속하지 않은) 단서 하나를 무작위로 뽑는다. 없으면 false. 손패 편향(<see cref="HandBias"/>)이 쓴다.</summary>
+        public bool TryDrawWhere(Func<ClueDefinition, bool> predicate, out ClueDefinition definition)
+        {
+            definition = null;
+            var candidates = new List<int>();
+            for (var i = 0; i < _available.Count; i++)
+                if (_available[i].SetId == null && predicate(_available[i])) candidates.Add(i);
+            if (candidates.Count == 0) return false;
+
+            var index = candidates[_random.Range(0, candidates.Count)];
+            definition = _available[index];
+            _available.RemoveAt(index);
+            return true;
+        }
+
         public bool TryDraw(out ClueDefinition definition)
         {
             definition = null;
@@ -135,6 +150,7 @@ namespace BlueComplex.Core.Clues
         private readonly List<ClueInstance> _cards = new();
         private readonly List<ClueDefinition> _graveyard = new();
         private readonly CluePool _pool;
+        private HandBias _bias;
 
         public IReadOnlyList<ClueInstance> Cards => _cards;
 
@@ -147,6 +163,8 @@ namespace BlueComplex.Core.Clues
         /// 남은 후보가 전부 안 들어가는 set뿐이면 칸이 빈 채로 끝난다(<see cref="CluePool.TryDrawGroup"/>).</summary>
         public void Refill()
         {
+            AddBiasedCards();
+
             var group = new List<ClueDefinition>();
             while (_cards.Count < HandSize && _pool.TryDrawGroup(HandSize - _cards.Count, _cards, group))
             {
@@ -163,11 +181,45 @@ namespace BlueComplex.Core.Clues
         /// 손패를 채운다 — 정의된 단서 수가 손패 크기보다 적어도 매 쿼터 손패가 가득 차는 것을 보장한다.
         /// 회상 등 쿼터 중 손패 갱신(<see cref="Refill"/>, <see cref="RedrawAll"/>)은 무덤을 건드리지 않으므로
         /// 같은 쿼터 안에서 이미 낸 단서는 여전히 돌아오지 않는다.</summary>
-        public void RefillForNewQuarter()
+        public void RefillForNewQuarter(HandBias bias = null)
         {
+            _bias = bias;
             foreach (var definition in _graveyard) _pool.Return(definition);
             _graveyard.Clear();
             Refill();
+        }
+
+        /// <summary>
+        /// 이번 쿼터의 손패 편향이 있으면, 조건 충족 단서가 <see cref="HandBias.MinClues"/>장이 될 때까지 먼저 채워 넣는다(이미 든 것도 센다).
+        /// 남은 풀에 조건 충족 단서가 없으면 이번에 소진된(무덤의) 조건 충족 단서를 풀로 되돌려 다시 쓴다 — 쿼터 중 회상 같은 갱신에서 생긴다.
+        /// 그래도 없으면 있는 만큼만 넣는다. 편향이 없으면 아무것도 하지 않고 난수도 쓰지 않는다. set 단서는 편향으로 뽑지 않는다.
+        /// </summary>
+        private void AddBiasedCards()
+        {
+            if (_bias == null) return;
+
+            var have = _cards.Count(c => _bias.Qualifies(c.Definition));
+            while (have < _bias.MinClues && _cards.Count < HandSize)
+            {
+                if (!_pool.TryDrawWhere(_bias.Qualifies, out var definition))
+                {
+                    var reusable = _graveyard.Where(d => d.SetId == null && _bias.Qualifies(d)).ToList();
+                    if (reusable.Count == 0) return;
+
+                    foreach (var d in reusable)
+                    {
+                        _graveyard.Remove(d);
+                        _pool.Return(d);
+                    }
+
+                    if (!_pool.TryDrawWhere(_bias.Qualifies, out definition)) return;
+                }
+
+                var card = new ClueInstance(definition);
+                _cards.Add(card);
+                CardAdded?.Invoke(card);
+                have++;
+            }
         }
 
         /// <summary>단서를 낸다. 손패에서 빠지고 이번 쿼터의 풀로는 돌아가지 않는다(무덤에 쌓여 다음 쿼터에만 되돌아간다).

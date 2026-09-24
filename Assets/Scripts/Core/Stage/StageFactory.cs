@@ -73,7 +73,8 @@ namespace BlueComplex.Core.Stage
                 keys,
                 keyPlacer,
                 ledger,
-                config.ItemParameters);
+                config.ItemParameters,
+                config.KeyHandBias == null ? null : new KeyZoneHandBiasRule(zone, polarityTable, config.KeyHandBias));
 
             return new StageSession
             {
