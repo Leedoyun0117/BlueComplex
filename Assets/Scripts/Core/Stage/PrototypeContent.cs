@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using BlueComplex.Core.Clues;
 using BlueComplex.Core.Complexes;
 using BlueComplex.Core.Items;
@@ -28,24 +29,18 @@ namespace BlueComplex.Core.Stage
                 "꽃 한 송이\n\n그 애는 뭐하고 있으려나? 몇 년이 흘러도 걔가 준 꽃을 보면 늘 떠올라. 꽃 이름이 뭐였더라?",
                 TimeTag.Past,
                 new[] { PersonTag.Friend },
-                new[] { EmotionTag.Love }),
-
-            new ClueDefinition("s1_broken_toy", "망가진 장난감",
-                "망가진 장난감\n\n바닥에 떨어져 망가진 장난감. 우연히 책상이 흔들렸었나.",
-                TimeTag.Present,
-                NoPerson,
-                new[] { EmotionTag.Sadness }),
+                new[] { EmotionTag.Love, EmotionTag.Happiness }),
 
             new ClueDefinition("s1_broccoli", "브로콜리",
-                "브로콜리\n\n으엑. 브로콜리는 정말 싫어.",
+                "브로콜리\n\n으엑. 브로콜리는 정말 싫어. 어릴 때 선생님이 억지로 먹였거든.",
                 TimeTag.Present,
-                NoPerson,
+                new[] { PersonTag.Other },
                 new[] { EmotionTag.Disgust }),
 
             new ClueDefinition("s1_horror_novel", "공포 소설",
                 "소설 책\n\n공포 소설이라.. 왜 무서운걸 이렇게 좋아하는거야?",
                 TimeTag.Present,
-                NoPerson,
+                new[] { PersonTag.Other },
                 new[] { EmotionTag.Fear }),
 
             new ClueDefinition("s1_kids_doodle", "아이들의 낙서",
@@ -70,12 +65,12 @@ namespace BlueComplex.Core.Stage
                 "찢어진 책가방\n\n대뜸 칼을 들고와선 가방을 전부 찢어놓았지. 나쁜 자식..",
                 TimeTag.Past,
                 new[] { PersonTag.Other, PersonTag.Friend },
-                new[] { EmotionTag.Fear, EmotionTag.Anger }),
+                new[] { EmotionTag.Anger }),
 
             new ClueDefinition("s1_old_rabbit", "낡은 토끼 인형",
-                "낡은 토끼 인형\n\n오래 되었지만 여전히 포근해.",
+                "낡은 토끼 인형\n\n생일 선물로 친구에게 받았어. 오래 되었지만 여전히 포근해.",
                 TimeTag.Past,
-                NoPerson,
+                new[] { PersonTag.Friend },
                 new[] { EmotionTag.Happiness }),
 
             new ClueDefinition("s1_cookie_box", "쿠키 상자",
@@ -85,10 +80,16 @@ namespace BlueComplex.Core.Stage
                 new[] { EmotionTag.Happiness, EmotionTag.Love }),
 
             new ClueDefinition("s1_clock", "시계",
-                "시계\n\n지금도 계속 움직이고 있어. 오늘도 시간을 허비한 걸까?",
+                "시계\n\n부모님이 오랫동안 쓰신 시계야. 지금도 계속 움직이고 있어. 오늘도 시간을 허비한 걸까?",
                 TimeTag.Present,
-                NoPerson,
-                new[] { EmotionTag.Sadness })
+                new[] { PersonTag.Family },
+                new[] { EmotionTag.Sadness }),
+
+            new ClueDefinition("s1_landscape", "풍경화",
+                "풍경화\n\n언젠가 이름 모를 화가가 선물해 준 풍경화야. 그림 속 그네를 타는 사람을 보고 있으면 나까지 기분이 좋아져.",
+                TimeTag.Past,
+                new[] { PersonTag.Other },
+                new[] { EmotionTag.Happiness })
         };
 
         // ── 스테이지 1 컴플렉스 10종. 지속 시간(턴)은 표의 값이다. ──────────────────────────
@@ -114,7 +115,7 @@ namespace BlueComplex.Core.Stage
             "complex_anti_past",
             "반 과거 컴플렉스",
             "과거의 행복한 감정을 혐오한다.",
-            defaultDuration: 3,
+            defaultDuration: 2,
             new IComplexCondition[]
             {
                 new TimeIs(TimeTag.Past),
@@ -178,7 +179,7 @@ namespace BlueComplex.Core.Stage
             "complex_optimism",
             "낙관 컴플렉스",
             "세상을 낙관적으로 해석하는 컴플렉스.",
-            defaultDuration: 1,
+            defaultDuration: 3,
             new IComplexCondition[]
             {
                 new HasPerson(PersonTag.Other),
@@ -194,7 +195,7 @@ namespace BlueComplex.Core.Stage
             "complex_rumination",
             "되새김 컴플렉스",
             "과거의 감정을 깊게 느끼는 컴플렉스.",
-            defaultDuration: 1,
+            defaultDuration: 3,
             new IComplexCondition[]
             {
                 new TimeIs(TimeTag.Past)
@@ -297,13 +298,14 @@ namespace BlueComplex.Core.Stage
         };
 
         // ------------------------------------------------------------------
-        // 아이템 7종 (데이터). 행동 조각(PrototypeItemBehaviours)에 숫자·감정·파라미터 키를 넘겨 조합한다.
+        // 아이템 (데이터). 행동 조각(PrototypeItemBehaviours)에 숫자·감정·파라미터 키를 넘겨 조합한다.
         // ------------------------------------------------------------------
 
         /// <summary>StageConfig.ItemParameters에서 감정적 설득이 무시할 컴플렉스 id 목록을 찾는 키.</summary>
         public const string PersuasionTargetsKey = "persuasion.ignored_complexes";
 
-        public static IReadOnlyList<ItemDefinition> Items() => new[]
+        /// <summary>모든 스테이지가 공유하는 7종(기획서 '스테이지 기획'의 스테이지 공용 아이템 목록).</summary>
+        public static IReadOnlyList<ItemDefinition> CommonItems() => new[]
         {
             new ItemDefinition("item_overcome", "극복",
                 "지정한 컴플렉스의 지속 시간을 절반으로 줄인다.",
@@ -315,8 +317,8 @@ namespace BlueComplex.Core.Stage
                 duration: 2, new IgnoreStageComplexes(PersuasionTargetsKey)),
 
             new ItemDefinition("item_empathy", "기억 공감",
-                "'공포', '슬픔' 감정을 결과에서 1씩 제거합니다. 환각 특성을 부여합니다.",
-                duration: 1, new RemoveEmotions(1, EmotionTag.Fear, EmotionTag.Sadness),
+                "'슬픔' 감정을 결과에서 1씩 제거합니다. 환각 특성을 부여합니다.",
+                duration: 1, new RemoveEmotions(1, EmotionTag.Sadness),
                 grantedTraitId: TraitHallucination),
 
             new ItemDefinition("item_recollection", "회상",
@@ -338,6 +340,36 @@ namespace BlueComplex.Core.Stage
                 duration: 0, new ReplaceClue(), ItemTargetKind.Clue),
         };
 
+        /// <summary>
+        /// 무관심 — '아이템과 특성' 페이지에만 있고 '스테이지 기획'의 어느 스테이지 표에도 없다(스테이지 1 표에는 공존감이 대신 실려 있다).
+        /// 지속 시간은 기획서에 없어 결과 보정 아이템(기억 공감·논리적 설득)과 같은 1턴으로 뒀다. 침체 감정 = 슬픔·혐오·공포.
+        /// </summary>
+        public static ItemDefinition Indifference() => new("item_indifference", "무관심",
+            "최종 결과가 타인에 대한 침체 감정이라면 해당 감정을 무시합니다. 무력 특성을 부여합니다.",
+            duration: 1,
+            new IgnoreEmotionsTowardPerson(PersonTag.Other, EmotionTag.Sadness, EmotionTag.Disgust, EmotionTag.Fear),
+            grantedTraitId: TraitLethargy);
+
+        /// <summary>
+        /// 공존감 — 스테이지 1 표에만 있는 아이템. 지속 시간은 기획서에 없어 다른 결과 보정 아이템과 같은 1턴으로 뒀다.
+        /// "선택한 단서"는 이번 턴에 내는 단서로, "타인에 관한 것"은 최종 결과에 타인 태그가 있는 것으로 옮겼다(무관심과 같은 방식).
+        /// </summary>
+        public static ItemDefinition Coexistence() => new("item_coexistence", "공존감",
+            "단서를 하나 선택했을 때, 그 단서가 '타인'에 관한 것이라면 선택한 단서에 행복을 1 추가합니다.",
+            duration: 1,
+            new AddEmotionTowardPerson(PersonTag.Other, EmotionTag.Happiness, 1));
+
+        /// <summary>스테이지 1 아이템 풀 — 기획서 스테이지 1 표의 8종(공용 7종 + 공존감).</summary>
+        public static IReadOnlyList<ItemDefinition> Stage1Items() => CommonItems().Append(Coexistence()).ToArray();
+
+        /// <summary>
+        /// 스테이지 2 아이템 풀 — 기획서 스테이지 2에는 아이템 표가 없어 공존감 도입 전 구성(공용 7종 + 무관심)을 그대로 유지했다.
+        /// </summary>
+        public static IReadOnlyList<ItemDefinition> Stage2Items() => CommonItems().Append(Indifference()).ToArray();
+
+        /// <summary>아이템 전체 목록(id로 찾을 때 쓴다) — 공용 7종 + 무관심 + 공존감. 스테이지 풀은 <see cref="Stage1Items"/>·<see cref="Stage2Items"/>다.</summary>
+        public static IReadOnlyList<ItemDefinition> Items() => CommonItems().Append(Indifference()).Append(Coexistence()).ToArray();
+
         /// <summary>구간 확률에 곱해지는 컴플렉스 발현 배율. 기획자 피드백으로 1.0에서 12.5% 올렸다 — 침체/흥분 30% → 33.75%, 매우 침체/흥분 50% → 56.25%, 안정 0% 유지.
         /// 스테이지 설정(<see cref="StageConfig.ComplexWeight"/>)의 값이라 스테이지마다 다르게 줄 수 있다.</summary>
         public const double PrototypeComplexWeight = 1.125;
@@ -353,7 +385,7 @@ namespace BlueComplex.Core.Stage
             clues: Clues(),
             complexPool: Complexes(polarityTable),
             startingComplex: null,
-            itemPool: Items(),
+            itemPool: Stage1Items(),
             keyWidth: 36,
             maxComplexSlots: ComplexBoard.DefaultMaxSlots,
             traits: Traits(),
@@ -364,6 +396,8 @@ namespace BlueComplex.Core.Stage
                 [PersuasionTargetsKey] = new[] { "complex_stockholm", "complex_dependence", "complex_avoidance" }
             },
             // 시작 컴플렉스는 런마다 풀 10종 중 시드로 뽑는다(같은 시드 재시작이면 같은 컴플렉스).
-            randomStartingComplex: true);
+            randomStartingComplex: true,
+            // 쿼터 손패에 그 쿼터 키 목표 구간 쪽 감정(침체/흥분)을 가진 단서를 3장 이상 강제로 넣는다. 1000시드 스윕: 없을 때 3.5% → 19.1%(완전 해금·태그 다 앎 봇).
+            keyHandBias: new KeyHandBiasSettings(minClues: 3, minTagsNormal: 1, minTagsVery: 1));
     }
 }

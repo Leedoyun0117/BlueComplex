@@ -58,7 +58,14 @@ namespace BlueComplex.Core.Tests
         /// 이번 쿼터를 놓칠 수밖에 없다면 그 구역을 쫓지 않고 다음 쿼터 구역에 가까운 순서를 고른다. Fatal 구간을 밟는 순서는 피한다.
         /// 스폰(무작위)과 아이템 사용은 예측하지 않는다.
         /// </summary>
-        public static ClueInstance ChooseHeuristicCard(StageSession session)
+        public static ClueInstance ChooseHeuristicCard(StageSession session) =>
+            ChooseHeuristicCard(session, card => card.Definition.CreateOriginalTagSet());
+
+        /// <summary>
+        /// 위 휴리스틱과 같되, 카드의 원본 태그를 <paramref name="tagsOf"/>가 준 것으로 본다 — 기본은 진짜 태그(완전 정보)이고,
+        /// 해금 상태만 아는 봇은 자기가 믿는 태그를 넘긴다(KnowledgeBots). 컴플렉스·심박수·구역은 화면에 다 보이므로 진짜 값을 쓴다.
+        /// </summary>
+        public static ClueInstance ChooseHeuristicCard(StageSession session, Func<ClueInstance, TagSet> tagsOf)
         {
             var schedule = session.Runner.Schedule;
             var quarter = session.Runner.CurrentQuarter;
@@ -76,7 +83,7 @@ namespace BlueComplex.Core.Tests
 
             foreach (var sequence in Sequences(hand, picks))
             {
-                var (finalPosition, fatal) = Simulate(session, sequence, evaluator);
+                var (finalPosition, fatal) = Simulate(session, sequence, evaluator, tagsOf);
                 var distance = DistanceToZone(finalPosition, target);
 
                 // 이번 쿼터를 맞출 수 있으면 맞추는 순서가 최우선. 못 맞춘다면 쫓아가지 않고(도달 불가능한 구역을
@@ -96,7 +103,7 @@ namespace BlueComplex.Core.Tests
         }
 
         private static (int finalPosition, bool fatal) Simulate(StageSession session, IReadOnlyList<ClueInstance> sequence,
-                                                                 IEmotionEvaluator evaluator)
+                                                                 IEmotionEvaluator evaluator, Func<ClueInstance, TagSet> tagsOf)
         {
             var board = CloneBoard(session.Complexes);
             var resolver = new ComplexResolver(board);
@@ -107,7 +114,7 @@ namespace BlueComplex.Core.Tests
             {
                 // 지금 붙어 있는 일반 특성과 지속 중인 아이템 효과는 바로 다음 한 턴에만 적용된다(1턴 지속) — 첫 카드만 그걸 반영해 예측한다.
                 var first = i == 0;
-                var original = sequence[i].Definition.CreateOriginalTagSet();
+                var original = tagsOf(sequence[i]).Clone();
                 var interpretation = resolver.Resolve(first ? session.Traits.ApplyToOriginal(original) : original,
                     first ? session.ActiveItems : null);
                 if (first) session.ActiveItems.Modify(interpretation.Final);

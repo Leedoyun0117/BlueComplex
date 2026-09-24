@@ -18,7 +18,7 @@ namespace BlueComplex.Core.Tests
         {
             var board = new ComplexBoard();
             var def = PrototypeContent.AntiPast(new DefaultEmotionPolarityTable());
-            Assert.AreEqual(3, def.DefaultDuration, "기획서: 반 과거 컴플렉스 지속 시간 3턴.");
+            Assert.AreEqual(2, def.DefaultDuration, "기획서: 반 과거 컴플렉스 지속 시간 2턴.");
             var instance = new ComplexInstance(def, priority: 0);
             board.TryAttach(instance);
 

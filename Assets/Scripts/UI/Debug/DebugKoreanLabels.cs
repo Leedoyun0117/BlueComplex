@@ -14,6 +14,9 @@ namespace BlueComplex.UI.DebugPlay
             _ => "-"
         };
 
+        public static string Times(System.Collections.Generic.IReadOnlyList<TimeTag> times) =>
+            times.Count == 0 ? "-" : string.Join(",", System.Linq.Enumerable.Select(times, Time));
+
         public static string Person(PersonTag person) => person switch
         {
             PersonTag.Family => "가족",

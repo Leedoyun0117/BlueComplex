@@ -50,7 +50,7 @@ namespace BlueComplex.UI.Presentation
 
             var knowledge = ledger.GetKnowledge(def.Id);
 
-            var timeText = knowledge.TimeRevealed ? KoreanLabels.Time(def.Time) : "?";
+            var timeText = knowledge.TimeRevealed ? KoreanLabels.Times(def.Times) : "?";
             var personTexts = new string[def.Persons.Count];
             for (var i = 0; i < def.Persons.Count; i++)
             {
