@@ -17,16 +17,16 @@ namespace BlueComplex.Core.Tests
         {
             new object[] { "가족사진 액자", TimeTag.Past, new[] { PersonTag.Family }, new[] { EmotionTag.Happiness } },
             new object[] { "꽃 한 송이", TimeTag.Past, new[] { PersonTag.Friend }, new[] { EmotionTag.Love } },
-            new object[] { "망가진 장난감", TimeTag.Present, new PersonTag[0], new[] { EmotionTag.Sadness } },
-            new object[] { "브로콜리", TimeTag.Present, new PersonTag[0], new[] { EmotionTag.Disgust } },
-            new object[] { "공포 소설", TimeTag.Present, new PersonTag[0], new[] { EmotionTag.Fear } },
+            new object[] { "브로콜리", TimeTag.Present, new[] { PersonTag.Other }, new[] { EmotionTag.Disgust } },
+            new object[] { "공포 소설", TimeTag.Present, new[] { PersonTag.Other }, new[] { EmotionTag.Fear } },
             new object[] { "아이들의 낙서", TimeTag.Past, new[] { PersonTag.Other, PersonTag.Friend }, new[] { EmotionTag.Anger } },
             new object[] { "놀이공원 티켓", TimeTag.Future, new[] { PersonTag.Family }, new[] { EmotionTag.Happiness } },
             new object[] { "개학 날짜 달력", TimeTag.Future, new[] { PersonTag.Other }, new[] { EmotionTag.Sadness, EmotionTag.Disgust } },
-            new object[] { "찢어진 책가방", TimeTag.Past, new[] { PersonTag.Other, PersonTag.Friend }, new[] { EmotionTag.Fear, EmotionTag.Anger } },
-            new object[] { "낡은 토끼 인형", TimeTag.Past, new PersonTag[0], new[] { EmotionTag.Happiness } },
+            new object[] { "찢어진 책가방", TimeTag.Past, new[] { PersonTag.Other, PersonTag.Friend }, new[] { EmotionTag.Anger } },
+            new object[] { "낡은 토끼 인형", TimeTag.Past, new[] { PersonTag.Friend }, new[] { EmotionTag.Happiness } },
             new object[] { "쿠키 상자", TimeTag.Past, new[] { PersonTag.Family }, new[] { EmotionTag.Happiness, EmotionTag.Love } },
-            new object[] { "시계", TimeTag.Present, new PersonTag[0], new[] { EmotionTag.Sadness } }
+            new object[] { "시계", TimeTag.Present, new[] { PersonTag.Family }, new[] { EmotionTag.Sadness } },
+            new object[] { "풍경화", TimeTag.Past, new[] { PersonTag.Other }, new[] { EmotionTag.Happiness } }
         };
 
         private static readonly (string Name, int Duration)[] ComplexTable =
@@ -36,15 +36,15 @@ namespace BlueComplex.Core.Tests
             ("소꿉친구 컴플렉스", 1),
             ("스톡홀름 컴플렉스", 2),
             ("타자화 컴플렉스", 2),
-            ("낙관 컴플렉스", 1),
-            ("되새김 컴플렉스", 1),
+            ("낙관 컴플렉스", 3),
+            ("되새김 컴플렉스", 3),
             ("죄책감 컴플렉스", 2),
             ("의존 컴플렉스", 3),
             ("회피 컴플렉스", 2)
         };
 
         [Test]
-        public void Clues_AreExactlyTheTwelveFromTheStageTable()
+        public void Clues_AreExactlyTheTwelveOfTheStageTable()
         {
             var clues = PrototypeContent.Clues();
 
@@ -101,6 +101,15 @@ namespace BlueComplex.Core.Tests
             Assert.AreEqual(12, config.Clues.Count);
             Assert.AreEqual(10, config.ComplexPool.Count);
             Assert.AreEqual("가라앉다", config.DisplayName);
+        }
+
+        [Test]
+        public void Stage_ItemPool_IsTheEightOfTheStage1Table_WithCoexistenceAndWithoutIndifference()
+        {
+            var names = PrototypeContent.PrototypeStage(Polarity).ItemPool.Select(i => i.DisplayName).ToList();
+
+            CollectionAssert.AreEquivalent(
+                new[] { "극복", "감정적 설득", "기억 공감", "회상", "논리적 설득", "착한 사마리아인", "선택적 기억", "공존감" }, names);
         }
     }
 }

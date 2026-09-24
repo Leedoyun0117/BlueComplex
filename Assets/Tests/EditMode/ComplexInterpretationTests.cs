@@ -54,7 +54,7 @@ namespace BlueComplex.Core.Tests
         [Test]
         public void AntiPast_PastWithoutAnyPerson_DoesNotTrigger()
         {
-            // 낡은 토끼 인형: 과거/(인물 없음)/행복 — '임의의 인물 태그'가 필요하므로 발동하지 않는다.
+            // 과거/(인물 없음)/행복 — '임의의 인물 태그'가 필요하므로 발동하지 않는다.
             var tags = new TagSet(TimeTag.Past, null, new[] { EmotionTag.Happiness });
 
             var result = Resolve(PrototypeContent.AntiPast(Polarity), tags);
@@ -252,7 +252,7 @@ namespace BlueComplex.Core.Tests
         [Test]
         public void Guilt_HappinessWithoutFamily_DoesNotTrigger()
         {
-            // 낡은 토끼 인형: 과거/(인물 없음)/행복 — 가족 태그가 없다.
+            // 과거/(인물 없음)/행복 — 가족 태그가 없다.
             var tags = new TagSet(TimeTag.Past, null, new[] { EmotionTag.Happiness });
 
             Assert.IsFalse(Resolve(PrototypeContent.Guilt(), tags).Steps[0].Triggered);

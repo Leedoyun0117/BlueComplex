@@ -354,7 +354,7 @@ namespace BlueComplex.Core.Stage
             clues: Clues(),
             complexPool: Complexes(polarityTable),
             startingComplex: null,
-            itemPool: PrototypeContent.Items(),
+            itemPool: PrototypeContent.Stage2Items(),
             keyWidth: 36,
             maxComplexSlots: ComplexBoard.DefaultMaxSlots,
             traits: PrototypeContent.Traits(),
