@@ -85,7 +85,7 @@ namespace BlueComplex.EditorTools
             spread.raycastTarget = true; // 페이지 위 빈 곳을 눌러도 배경까지 새지 않는다(안 닫힘).
 
             BuildTabs(backdrop.transform, panel, so, font);
-            BuildLeftPage(spread.transform, panel, so, font);
+            BuildLeftPage(spread.transform, so, font);
             BuildGutter(spread.transform);
             BuildRightPage(spread.transform, panel, so, font);
 
@@ -99,16 +99,16 @@ namespace BlueComplex.EditorTools
         // 왼쪽 페이지 — 탭과 무관하게 항상 같다: 단서 사진 + 시간/인물/감정 쪽지 세 장.
         // ---------------------------------------------------------------
 
-        private static void BuildLeftPage(Transform spread, ClueBookPanel panel, SerializedObject so, TMP_FontAsset font)
+        private static void BuildLeftPage(Transform spread, SerializedObject so, TMP_FontAsset font)
         {
             var left = CreateImage(spread, "Left Page", PageBg, Vector2.zero, new Vector2(0.495f, 1f), Vector2.zero, Vector2.zero);
 
             var photoArea = CreateRect(left.transform, "Photo Area", new Vector2(0.32f, 0.55f), new Vector2(0.92f, 0.92f));
             var photo = CreateImage(photoArea, "Photo", Color.white, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             photo.preserveAspect = true;
-            photo.raycastTarget = true;
-            AddButton(photo, panel.ToggleZoom);
-            Wire(so, "_photoArea", photoArea);
+            // 확대가 기획에서 빠져 사진은 클릭을 받지 않는다. 꺼도 책이 닫히지는 않는다 —
+            // 뒤의 Left Page와 Spread가 레이캐스트를 받아 배경(Backdrop)까지 새지 않는다.
+            photo.raycastTarget = false;
             Wire(so, "_icon", photo);
 
             // 쪽지 세 장 — 시간(뒤) → 인물(가운데) → 감정(맨 앞) 순서로 겹친다(목업 그대로).
@@ -241,7 +241,11 @@ namespace BlueComplex.EditorTools
         /// <summary>탭 두 개 — 파일 왼쪽 바깥에 붙는다(목업 스타일). 항상 둘 다 보이고, 지금 탭만 진하다.</summary>
         private static void BuildTabs(Transform parent, ClueBookPanel panel, SerializedObject so, TMP_FontAsset font)
         {
-            var clueTab = CreateImage(parent, "Tab Clue", TabActive, new Vector2(0.02f, 0.60f), new Vector2(0.095f, 0.68f),
+            // 탭은 오른쪽이 페이지(Spread, 왼쪽 끝 x=0.10) 안으로 0.04만큼 파고들어야 한다 — 그 겹치는 띠가
+            // ClueBookPanel.BringTabToFront의 순서 교체가 눈에 보이는 유일한 곳이다. 가로 앵커를 바꿀 땐 겹침을 유지할 것.
+            // 세로 값이 딱 떨어지지 않는 건 예전에 오프셋(anchoredPosition 42,226)으로 밀어 두었던 위치를 앵커로 옮겨 적었기 때문이다 —
+            // 오프셋은 픽셀 고정이라 화면 비율이 바뀌면(ScreenMatchMode 0.5) 페이지 대비 위치가 틀어져서 비율로 바꿨다.
+            var clueTab = CreateImage(parent, "Tab Clue", TabActive, new Vector2(0.041875f, 0.8092593f), new Vector2(0.14f, 0.8892593f),
                 Vector2.zero, Vector2.zero);
             clueTab.raycastTarget = true;
             CreateTmpText(clueTab.transform, "Label", "단서", font, 18,
@@ -249,13 +253,19 @@ namespace BlueComplex.EditorTools
             AddButton(clueTab, panel.ShowClueTab);
             Wire(so, "_clueTabButton", clueTab);
 
-            var manualTab = CreateImage(parent, "Tab Manual", TabIdle, new Vector2(0.02f, 0.50f), new Vector2(0.095f, 0.58f),
+            var manualTab = CreateImage(parent, "Tab Manual", TabIdle, new Vector2(0.041875f, 0.7092593f), new Vector2(0.14f, 0.7892593f),
                 Vector2.zero, Vector2.zero);
             manualTab.raycastTarget = true;
             CreateTmpText(manualTab.transform, "Label", "메뉴얼", font, 18,
                 TextAlignmentOptions.Center, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero).color = InkLight;
             AddButton(manualTab, panel.ShowManualTab);
             Wire(so, "_manualTabButton", manualTab);
+
+            // 처음 열릴 땐 "단서" 탭이라 그 탭이 페이지를 덮고 "메뉴얼"은 페이지 뒤에 있어야 한다
+            // (런타임 순서 교체는 ClueBookPanel.BringTabToFront가 한다 — 구운 프리팹의 초기 상태를 거기 맞춘다).
+            // 탭 오른쪽이 페이지(Spread) 왼쪽 가장자리와 겹쳐 있어야 이 순서가 눈에 보인다 — 가로 앵커를 바꿀 땐 겹침을 유지할 것.
+            manualTab.transform.SetAsFirstSibling();
+            clueTab.transform.SetAsLastSibling();
         }
 
         // ---------------------------------------------------------------
