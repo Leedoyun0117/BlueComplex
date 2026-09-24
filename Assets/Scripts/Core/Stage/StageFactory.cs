@@ -47,7 +47,9 @@ namespace BlueComplex.Core.Stage
 
             var traits = new TraitBoard(config.Traits);
             var heartbeat = new Heartbeat(heartbeatStartValue);
-            var zone = new HeartbeatZone();
+            var zone = config.ComplexSpawnChances == null
+                ? new HeartbeatZone()
+                : new HeartbeatZone(HeartbeatZone.WithSpawnChances(config.ComplexSpawnChances));
             var evaluator = new TraitAwareEmotionEvaluator(polarityTable, traits);
 
             var censorship = new CensorshipState(heartbeat, zone);
@@ -63,7 +65,7 @@ namespace BlueComplex.Core.Stage
                 complexBoard,
                 new ComplexResolver(complexBoard),
                 new ComplexSpawner(config.ComplexPool, random),
-                new ZoneBasedSpawnPolicy(random, zone, config.ComplexWeight),
+                new ZoneBasedSpawnPolicy(random, zone, config.ComplexSpawnChances == null ? config.ComplexWeight : 1.0),
                 heartbeat,
                 zone,
                 evaluator,

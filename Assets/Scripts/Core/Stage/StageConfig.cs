@@ -24,7 +24,14 @@ namespace BlueComplex.Core.Stage
         /// <summary>키 구역 폭(심박수 칸 수).</summary>
         public int KeyWidth { get; }
 
+        /// <summary>구간 확률에 곱하는 발현 배율. <see cref="ComplexSpawnChances"/>가 있으면 쓰이지 않는다.</summary>
         public double ComplexWeight { get; }
+
+        /// <summary>
+        /// null이 아니면 이 스테이지 전용 구간별 발현 확률표(최종 확률 그대로 — <see cref="ComplexWeight"/>는 곱하지 않는다).
+        /// 표에 없는 구간은 <see cref="HeartbeatZone"/> 기본 확률을 쓴다. null이면 기본 확률표 × <see cref="ComplexWeight"/>.
+        /// </summary>
+        public IReadOnlyDictionary<HeartbeatState, double> ComplexSpawnChances { get; }
 
         /// <summary>컴플렉스가 동시에 붙을 수 있는 최대 수(최대 중첩). 이 수를 넘겨 새 컴플렉스가 나타나면 특수 특성 발현 조건이 된다.</summary>
         public int MaxComplexSlots { get; }
@@ -74,7 +81,8 @@ namespace BlueComplex.Core.Stage
                            int itemSlots = ItemInventory.DefaultCapacity,
                            IReadOnlyDictionary<string, IReadOnlyList<string>> itemParameters = null,
                            bool randomStartingComplex = false,
-                           KeyHandBiasSettings keyHandBias = null)
+                           KeyHandBiasSettings keyHandBias = null,
+                           IReadOnlyDictionary<HeartbeatState, double> complexSpawnChances = null)
         {
             if (maxComplexSlots < 1)
                 throw new ArgumentOutOfRangeException(nameof(maxComplexSlots), "최대 중첩은 1 이상이어야 합니다.");
@@ -103,6 +111,7 @@ namespace BlueComplex.Core.Stage
             RandomStartingComplex = randomStartingComplex;
             ItemPool = itemPool;
             KeyHandBias = keyHandBias;
+            ComplexSpawnChances = complexSpawnChances;
         }
     }
 }
