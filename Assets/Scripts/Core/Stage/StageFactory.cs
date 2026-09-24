@@ -22,7 +22,6 @@ namespace BlueComplex.Core.Stage
         public TraitBoard Traits { get; init; }
         public KeyProgress Keys { get; init; }
         public ClueKnowledgeLedger Ledger { get; init; }
-        public CensorshipState Censorship { get; init; }
         public ActiveItemBoard ActiveItems { get; init; }
     }
 
@@ -51,8 +50,6 @@ namespace BlueComplex.Core.Stage
                 ? new HeartbeatZone()
                 : new HeartbeatZone(HeartbeatZone.WithSpawnChances(config.ComplexSpawnChances));
             var evaluator = new TraitAwareEmotionEvaluator(polarityTable, traits);
-
-            var censorship = new CensorshipState(heartbeat, zone);
 
             var activeItems = new ActiveItemBoard();
             var items = new ItemInventory(config.ItemPool, random, config.ItemSlots);
@@ -89,7 +86,6 @@ namespace BlueComplex.Core.Stage
                 Traits = traits,
                 Keys = keys,
                 Ledger = ledger,
-                Censorship = censorship,
                 ActiveItems = activeItems
             };
         }

@@ -48,14 +48,6 @@ namespace BlueComplex.UI.DebugPlay
             _ => "-"
         };
 
-        public static string Censorship(CensorshipLevel level) => level switch
-        {
-            CensorshipLevel.None => "없음",
-            CensorshipLevel.Partial => "일부",
-            CensorshipLevel.Full => "전체",
-            _ => "-"
-        };
-
         public static string Outcome(BlueComplex.Core.Turn.StageOutcome outcome) => outcome switch
         {
             BlueComplex.Core.Turn.StageOutcome.Cleared => "클리어",

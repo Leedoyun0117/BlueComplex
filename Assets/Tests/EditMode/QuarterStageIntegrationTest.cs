@@ -14,7 +14,7 @@ namespace BlueComplex.Core.Tests
     /// <summary>
     /// 12턴 3쿼터 통합 실행 — 시드 고정, 매 턴 손패의 첫 카드를 내는 단순 전략으로
     /// 프로토타입 스테이지를 끝까지 자동 진행한다. 예외 없이 완주하는 것이 1차 목표이며,
-    /// 로그는 밸런스(특히 검열 지속 턴 수)를 눈으로 확인하기 위한 참고 자료다.
+    /// 로그는 밸런스(특히 컴플렉스 지속 턴 수)를 눈으로 확인하기 위한 참고 자료다.
     /// </summary>
     public class QuarterStageIntegrationTest
     {
@@ -69,14 +69,6 @@ namespace BlueComplex.Core.Tests
             HeartbeatState.Stable => "안정",
             HeartbeatState.Excited => "흥분",
             HeartbeatState.VeryExcited => "매우 흥분",
-            _ => "-"
-        };
-
-        private static string FormatCensorship(CensorshipLevel level) => level switch
-        {
-            CensorshipLevel.None => "없음",
-            CensorshipLevel.Partial => "일부",
-            CensorshipLevel.Full => "전체",
             _ => "-"
         };
 
@@ -161,7 +153,7 @@ namespace BlueComplex.Core.Tests
                 log.AppendLine($"  쿼터 {report.Quarter} · {report.TurnInQuarter}/{config.Quarters.TurnsPerQuarter}턴  키 판정: {judgeText}");
 
                 var state = session.Zone.StateOf(report.HeartbeatValue);
-                log.AppendLine($"  상태: {FormatState(state)}  검열: {FormatCensorship(session.Censorship.Level)}");
+                log.AppendLine($"  상태: {FormatState(state)}");
 
                 log.AppendLine($"  신규 컴플렉스: {(report.SpawnedComplex != null ? report.SpawnedComplex.Definition.DisplayName : "없음")}");
                 log.AppendLine($"  결과: {report.Outcome}");

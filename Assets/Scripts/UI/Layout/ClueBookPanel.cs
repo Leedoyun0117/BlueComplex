@@ -82,18 +82,9 @@ namespace BlueComplex.UI.Layout
             _clueNumberText.text = $"단서 {clueNumber}";
             _titleText.text = vm.Title;
 
-            if (vm.AttributesHidden)
-            {
-                _timeCardText.text = "시간 ?";
-                _personCardText.text = "인물 ?";
-                _emotionCardText.text = "감정\n?, ?";
-            }
-            else
-            {
-                _timeCardText.text = $"시간\n{vm.TimeText}";
-                _personCardText.text = $"인물\n{string.Join(", ", vm.PersonTexts)}";
-                _emotionCardText.text = $"감정\n{string.Join(", ", vm.EmotionTexts)}";
-            }
+            _timeCardText.text = $"시간\n{vm.TimeText}";
+            _personCardText.text = $"인물\n{string.Join(", ", vm.PersonTexts)}";
+            _emotionCardText.text = $"감정\n{string.Join(", ", vm.EmotionTexts)}";
 
             _storyText.text = vm.StoryText;
 

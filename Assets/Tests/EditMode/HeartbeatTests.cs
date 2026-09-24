@@ -150,14 +150,6 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void CensorshipOf_StableZone_IsNone()
-        {
-            var zone = new HeartbeatZone();
-
-            Assert.AreEqual(CensorshipLevel.None, zone.CensorshipOf(80));
-        }
-
-        [Test]
         public void ComplexSpawnChanceOf_StableZone_IsZero()
         {
             var zone = new HeartbeatZone();

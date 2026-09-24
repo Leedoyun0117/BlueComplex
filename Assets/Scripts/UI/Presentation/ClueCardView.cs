@@ -39,9 +39,7 @@ namespace BlueComplex.UI.Presentation
             SetIcon(card.Definition.Id);
             if (_attributesText != null)
             {
-                _attributesText.text = vm.AttributesHidden
-                    ? string.Empty
-                    : $"시간: {vm.TimeText}\n인물: {string.Join(", ", vm.PersonTexts)}\n감정: {string.Join(", ", vm.EmotionTexts)}";
+                _attributesText.text = $"시간: {vm.TimeText}\n인물: {string.Join(", ", vm.PersonTexts)}\n감정: {string.Join(", ", vm.EmotionTexts)}";
             }
 
             if (_storyText != null) _storyText.text = vm.StoryText;

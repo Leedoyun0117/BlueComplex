@@ -78,7 +78,7 @@ namespace BlueComplex.UI.Presentation
         }
 
         /// <summary>BPM 숫자·상태 배지·심전도 파형을 한 번에 갱신한다 — 셋 다 같은 시점(Presenter가 정한다)에 바뀌고 같은 시간 동안 넘어가야 어긋나 보이지 않는다.
-        /// 파형이 불규칙해지는 구간은 코어 구간표의 검열 수준이 아니라 상태(매우 침체·매우 흥분·즉사)로 정한다.</summary>
+        /// 파형이 불규칙해지는 구간은 심박수 상태(매우 침체·매우 흥분·즉사)로 정한다.</summary>
         private void ShowBpm(int value, bool snap)
         {
             var state = Session.Zone.StateOf(value);
