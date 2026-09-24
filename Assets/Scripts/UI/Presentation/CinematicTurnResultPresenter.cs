@@ -38,6 +38,7 @@ namespace BlueComplex.UI.Presentation
         [SerializeField] private ComplexStatusController _complexStatus;
         [SerializeField] private TraitStatusView _traitStatus;
         [SerializeField] private ItemController _items;
+        [SerializeField] private NatsuPortraitView _natsu;
 
         /// <summary>컴플렉스 이벤트 대사가 다 나온 뒤 다음 컴플렉스로 넘어가기 전의 짧은 쉼(초).</summary>
         [SerializeField] private float _eventLinePause = 0.25f;
@@ -72,6 +73,8 @@ namespace BlueComplex.UI.Presentation
             if (_complexStatus == null) _complexStatus = root.GetComponentInChildren<ComplexStatusController>(true);
             if (_traitStatus == null) _traitStatus = root.GetComponentInChildren<TraitStatusView>(true);
             if (_items == null) _items = root.GetComponentInChildren<ItemController>(true);
+            // 나츠 초상화도 순수 장식 — 없어도 연출은 그대로 돈다. 프리팹에 안 구워져 있어 "Natsu Portrait"에 런타임으로 붙인다.
+            if (_natsu == null) _natsu = NatsuPortraitView.GetOrAdd(root);
 
             if (_brain == null || _dialogue == null || _clueTray == null || _heartRate == null ||
                 _xrayPanel == null || _memoryBubble == null)
@@ -79,12 +82,46 @@ namespace BlueComplex.UI.Presentation
                                   "연출이 중간에 멈출 수 있다.", this);
         }
 
-        protected override void Subscribe(StageSession session) => session.Runner.TurnResolved += Present;
-        protected override void Unsubscribe(StageSession session) => session.Runner.TurnResolved -= Present;
+        protected override void Subscribe(StageSession session)
+        {
+            session.Runner.TurnResolved += Present;
+            if (_heartRate != null) _heartRate.HeartbeatPresented += OnHeartbeatPresented;
+        }
+
+        protected override void Unsubscribe(StageSession session)
+        {
+            session.Runner.TurnResolved -= Present;
+            if (_heartRate != null) _heartRate.HeartbeatPresented -= OnHeartbeatPresented;
+        }
+
+        /// <summary>나츠가 마지막으로 반응한 시점의 심박수 상태 — 안정 구간에 "새로" 들어섰는지 가리는 기준.</summary>
+        private HeartbeatState _natsuState;
+
+        /// <summary>
+        /// "표정과 반응" 기획표의 나츠 조건 중 심박수 쪽(당황·안도·평소 복귀). HeartRateController가 심박수를 화면에 반영하는 바로 그 순간
+        /// (이 Presenter가 태그 상승과 같은 프레임에 정한다)에 이 이벤트가 오므로 구간이 바뀌는 시점에 반응한다. 키 턴의 집중은 아이템 사용처럼
+        /// 턴 결과 밖에서 심박수가 바뀌어도 풀리지 않는다 — 턴 결과(연출 중)만 집중을 끝낼 수 있다.
+        /// </summary>
+        private void OnHeartbeatPresented(int value, bool snap)
+        {
+            if (_natsu == null || snap) return;
+            if (_natsu.Current == NatsuExpression.Focus && !IsPresenting) return;
+
+            var state = Session.Zone.StateOf(value);
+            var target = PortraitReactionRules.ClassifyNatsu(_natsuState, state);
+            _natsuState = state;
+
+            // 평소 복귀 요청은 이미 평소이거나 안도 연출이 도는 중이면 무시한다(안도가 끝나면 스스로 평소가 된다).
+            if (target == NatsuExpression.Normal && _natsu.Current is NatsuExpression.Normal or NatsuExpression.Relief) return;
+
+            _natsu.SetExpression(target);
+        }
 
         protected override void Render()
         {
             _pending.Clear(); // 재시작 시 이전 스테이지의 대기 중 연출은 버린다.
+            _natsu?.ResetToNormal();
+            _natsuState = Session.Zone.StateOf(Session.Heartbeat.Value);
 
             // 재시작이 연출 도중이면 옛 코루틴이 새 세션 화면을 계속 만지지 않게 끊고, 떼어져 있던 포스트잇·암전 막을 원래대로 돌린다.
             if (IsPresenting)
@@ -156,6 +193,9 @@ namespace BlueComplex.UI.Presentation
             var keyTurn = runner.CurrentTurnInQuarter == Session.Keys.Schedule.TurnsPerQuarter;
             yield return PostitDirector.GetOrCreate(transform.root)
                 .PlayRefresh(_monologueSpeaker, keyTurn ? _keyTurnMonologue : null, RefreshContent);
+
+            // 키 턴이 시작된다 — 암전이 걷힌 뒤(화면에 보일 때) 나츠가 턱을 짚고 집중한다. 이 집중은 그 키 턴의 결과(심박수 반영)가 풀어 준다.
+            if (keyTurn) _natsu?.SetExpression(NatsuExpression.Focus);
 
             _complexStatus?.RevealNewMarks();
         }
