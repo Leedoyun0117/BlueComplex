@@ -1,117 +1,151 @@
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using BlueComplex.Core.Stability;
-using BlueComplex.UI.Motion;
-using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace BlueComplex.UI.Presentation
 {
     /// <summary>
-    /// 나츠 초상화("Natsu Portrait", MainHud)의 표정. "표정과 반응" 기획표 그대로:
-    /// 평소엔 3초마다 눈을 깜박이고, 매우 침체·매우 흥분이면 당황, 각 쿼터의 키 대화 동안은 집중,
-    /// 안정 상태로 막 들어서면 안도(일회성)로 잠깐 바뀐다. 판정 자체는 <see cref="PortraitReactionRules"/>가 한다 —
-    /// 이 컴포넌트는 그 결과로 스프라이트만 고른다.
+    /// 나츠 초상화("Natsu Portrait", MainHud)의 표정. 상태는 <see cref="NatsuExpression"/> 넷(Normal·Fury 당황·Focus 집중·Relief 안도)이고,
+    /// 프레임은 <see cref="NatsuExpressionSet"/>(Assets/Art/Portraits/Natsu의 시트 4장에서 자른 것)에서 온다.
     ///
-    /// 프리팹에 미리 안 붙어 있다 — 유키와 달리 정지 사진 카드였던 자리라 컴포넌트가 없다. HeartRateController가
-    /// "Natsu Portrait" 오브젝트를 이름으로 찾아 없으면 붙인다(런타임 자동 부착, 프리팹 굽기 불필요). 무표정 스프라이트는
-    /// 이미 그 오브젝트의 Image에 구워져 있는 것(natsu_neutral)을 그대로 기준으로 삼고, 나머지 표정은
-    /// Assets/Resources/UI/Portraits/Natsu/(natsu_blink·natsu_flustered·natsu_focus·natsu_relief)에서 스스로 찾는다 —
-    /// 없으면 그 표정 대신 조용히 무표정을 유지한다.
+    /// 이 컴포넌트는 표정을 "언제" 바꿀지 스스로 정하지 않는다 — <see cref="SetExpression"/>은 CinematicTurnResultPresenter가
+    /// 심박수 구간이 바뀌는 시점·키 턴이 시작되는 시점에 부른다(판정은 <see cref="PortraitReactionRules"/>). 여기서 스스로 하는 건
+    /// 정해진 표정 안의 프레임 재생뿐이다:
+    ///   Normal: 뜬 눈 한 장, 3초마다 눈을 깜박인다(CloseEyes 1→2→3→2→1).
+    ///   Fury: Confused 5장을 왕복하며 계속 식은땀·입꼬리가 흔들린다.
+    ///   Focus: Focus 1→5(손을 올려 턱을 짚음) 후 마지막 장에서 유지.
+    ///   Relief: 집중 중이었다면 TakeOffHand 1→5(손을 뗌)를 먼저 재생하고, 이어서 CloseEyes 1,2,3,4,5,6,5,4,2,1 시퀀스 뒤 Normal로 돌아간다.
+    /// 집중에서 Normal로 돌아올 때도 손 떼기(TakeOffHand)를 재생한다.
+    ///
+    /// 프리팹에 미리 안 붙어 있다 — <see cref="GetOrAdd"/>가 "Natsu Portrait" 오브젝트에 붙인다(런타임 자동 부착, 프리팹 굽기 불필요).
+    /// 표정 세트 에셋이 없으면 조용히 그 자리에 구워진 스프라이트를 유지한다.
     /// </summary>
     public sealed class NatsuPortraitView : MonoBehaviour
     {
+        /// <summary>한 프레임을 보여주는 시간(초). 안도 시퀀스(10스텝)가 1초 안팎이 되게 잡았다.</summary>
+        private const float FrameSeconds = 0.1f;
+        private const float BlinkFrameSeconds = 0.05f;
+        private const float BlinkPeriodSeconds = 3f;
+        private const float FuryFrameSeconds = 0.18f;
+
+        /// <summary>안도 시퀀스의 CloseEyes 프레임(0부터). 기획 원문 "1,2,3,4,5,6,5,4,2,1"을 그대로 옮겼다.</summary>
+        private static readonly int[] ReliefOrder = { 0, 1, 2, 3, 4, 5, 4, 3, 1, 0 };
+        private static readonly int[] BlinkOrder = { 0, 1, 2, 1, 0 };
+
         [SerializeField] private Image _image;
 
-        private Sprite _neutral;
-        private Sprite _blink;
-        private Sprite _flustered;
-        private Sprite _focus;
-        private Sprite _relief;
+        private NatsuExpressionSet _set;
+        private Coroutine _routine;
 
-        /// <summary>지금 바탕 표정(무표정 또는 당황). 집중은 별도 오버레이(_focused)라 여기 안 들어가고, 안도는 일회성 펄스라 역시 안 들어간다.</summary>
-        private Sprite _baseSprite;
+        public NatsuExpression Current { get; private set; } = NatsuExpression.Normal;
 
-        private bool _focused;
-        private Tween _reliefTween;
-        private HeartbeatState? _lastState;
+        /// <summary>"Natsu Portrait" 오브젝트를 이름으로 찾아 이 컴포넌트를 붙여서(이미 있으면 그대로) 돌려준다. 그 오브젝트가 없으면 null.</summary>
+        public static NatsuPortraitView GetOrAdd(Transform root)
+        {
+            var rect = root.GetComponentsInChildren<RectTransform>(true).FirstOrDefault(t => t.name == "Natsu Portrait");
+            if (rect == null) return null;
+
+            var view = rect.GetComponent<NatsuPortraitView>();
+            return view != null ? view : rect.gameObject.AddComponent<NatsuPortraitView>();
+        }
 
         private void Awake()
         {
             if (_image == null) _image = GetComponent<Image>();
-            _neutral = _image != null ? _image.sprite : null;
-            _baseSprite = _neutral;
-
-            _blink = Resources.Load<Sprite>("UI/Portraits/Natsu/natsu_blink");
-            _flustered = Resources.Load<Sprite>("UI/Portraits/Natsu/natsu_flustered");
-            _focus = Resources.Load<Sprite>("UI/Portraits/Natsu/natsu_focus");
-            _relief = Resources.Load<Sprite>("UI/Portraits/Natsu/natsu_relief");
-
-            StartCoroutine(BlinkLoop());
+            _set = NatsuExpressionSet.Load();
         }
 
-        /// <summary>쿼터의 키 대화 동안 켠다 — HeartRateController.SyncTurnState가 HeartRateBarView.SetKeyTurn과 같은 타이밍에 부른다.</summary>
-        public void SetFocused(bool focused)
+        private void OnEnable() => Begin(Current, fromFocus: false);
+
+        /// <summary>표정을 바꾼다. 이미 그 표정이면(안도가 도는 중에 안도 요청이 또 온 경우 포함) 아무것도 안 한다.</summary>
+        public void SetExpression(NatsuExpression next)
         {
-            _focused = focused;
-            Refresh();
+            if (next == Current) return;
+
+            var fromFocus = Current == NatsuExpression.Focus;
+            Current = next;
+            Begin(next, fromFocus);
         }
 
-        /// <summary>턴 결과의 심박수 상태로 당황/안도를 갱신한다 — HeartRateController가 심박수 표시를 갱신하는 시점(PlayTurnResult·아이템 사용·세션 시작)에 같이 부른다.</summary>
-        public void ReactToHeartbeat(HeartbeatState state)
+        /// <summary>애니메이션 없이 평소 표정으로 되돌린다(스테이지 시작·재시작).</summary>
+        public void ResetToNormal()
         {
-            var enteringStable = state == HeartbeatState.Stable && _lastState.HasValue && _lastState.Value != HeartbeatState.Stable;
-            _lastState = state;
-
-            // 안도 펄스가 끝나고 돌아갈 자리도 지금 상태(안정 → 당황 아님)로 먼저 갱신해 둔다 — 안 그러면 펄스가 끝난 뒤
-            // 막 벗어난 당황 표정으로 되돌아가 버린다.
-            _baseSprite = PortraitReactionRules.IsNatsuFlustered(state) ? _flustered : _neutral;
-
-            if (enteringStable) PulseRelief();
-            Refresh();
+            Current = NatsuExpression.Normal;
+            Begin(NatsuExpression.Normal, fromFocus: false);
         }
 
-        /// <summary>안정 상태로 막 들어선 순간 잠깐 안도 표정으로 바뀌었다가 평소로 돌아온다. 깜박임보다 조금 더 오래 머문다(스펙: "눈을 길게 감았다가 뜬다").</summary>
-        private void PulseRelief()
+        private void Begin(NatsuExpression expression, bool fromFocus)
         {
-            if (_image == null || _relief == null) return;
+            if (_routine != null) StopCoroutine(_routine);
+            _routine = null;
 
-            _reliefTween?.Kill();
-            var hold = Mathf.Max(0.6f, UiMotion.Settings.portraitFlash * 2f);
-            _image.sprite = _relief;
-            _reliefTween = DOTween.Sequence().SetUpdate(true).SetTarget(this)
-                .AppendInterval(hold)
-                .AppendCallback(Refresh);
-        }
+            if (_image == null || !isActiveAndEnabled || !HasFrames) return;
 
-        private void Refresh()
-        {
-            if (_reliefTween != null && _reliefTween.IsActive()) return; // 안도 펄스가 도는 중엔 덮지 않는다.
-            if (_image == null) return;
-
-            if (_focused && _focus != null) { _image.sprite = _focus; return; }
-            _image.sprite = _baseSprite != null ? _baseSprite : _neutral;
-        }
-
-        /// <summary>3초마다 짧게 눈을 감는다 — 집중·당황·안도 등 특수 표정이 떠 있는 동안엔 끼어들지 않는다("아래에 해당하지 않는 일반 상황"의 근사).</summary>
-        private IEnumerator BlinkLoop()
-        {
-            var wait = new WaitForSeconds(3f);
-            while (true)
+            _routine = StartCoroutine(expression switch
             {
+                NatsuExpression.Fury => FuryRoutine(),
+                NatsuExpression.Focus => FocusRoutine(),
+                NatsuExpression.Relief => ReliefRoutine(fromFocus),
+                _ => NormalRoutine(fromFocus)
+            });
+        }
+
+        private bool HasFrames =>
+            _set != null && _set.closeEyes is { Length: >= 6 } && _set.confused is { Length: > 0 } &&
+            _set.focus is { Length: > 0 } && _set.takeOffHand is { Length: > 0 };
+
+        private void Show(Sprite sprite)
+        {
+            if (sprite != null) _image.sprite = sprite;
+        }
+
+        private IEnumerator Play(Sprite[] frames, IEnumerable<int> order, float seconds)
+        {
+            var wait = new WaitForSecondsRealtime(seconds);
+            foreach (var index in order)
+            {
+                Show(frames[index]);
                 yield return wait;
-
-                if (_image == null || _blink == null) continue;
-                if (_focused || _baseSprite != _neutral) continue;
-                if (_reliefTween != null && _reliefTween.IsActive()) continue;
-
-                var prior = _image.sprite;
-                _image.sprite = _blink;
-                yield return new WaitForSeconds(0.15f);
-                if (_image.sprite == _blink) _image.sprite = prior;
             }
         }
 
-        private void OnDisable() => DOTween.Kill(this);
+        private IEnumerator NormalRoutine(bool fromFocus)
+        {
+            if (fromFocus) yield return Play(_set.takeOffHand, Enumerable.Range(0, _set.takeOffHand.Length), FrameSeconds);
+
+            Show(_set.closeEyes[0]);
+            var period = new WaitForSecondsRealtime(BlinkPeriodSeconds);
+            while (true)
+            {
+                yield return period;
+                yield return Play(_set.closeEyes, BlinkOrder, BlinkFrameSeconds);
+            }
+        }
+
+        private IEnumerator FuryRoutine()
+        {
+            // 1→5→1 왕복. 양 끝 장이 두 번 연달아 나오지 않게 한 주기는 1..5, 4..2로 만든다.
+            var cycle = Enumerable.Range(0, _set.confused.Length).Concat(Enumerable.Range(1, _set.confused.Length - 2).Reverse()).ToArray();
+            while (true) yield return Play(_set.confused, cycle, FuryFrameSeconds);
+        }
+
+        private IEnumerator FocusRoutine()
+        {
+            yield return Play(_set.focus, Enumerable.Range(0, _set.focus.Length), FrameSeconds);
+        }
+
+        private IEnumerator ReliefRoutine(bool fromFocus)
+        {
+            if (fromFocus) yield return Play(_set.takeOffHand, Enumerable.Range(0, _set.takeOffHand.Length), FrameSeconds);
+
+            yield return Play(_set.closeEyes, ReliefOrder, FrameSeconds);
+
+            // 안도가 끝나면 평소로 — 이후 판단은 다음 심박수 갱신 때 Presenter가 한다.
+            Current = NatsuExpression.Normal;
+            yield return NormalRoutine(fromFocus: false);
+        }
     }
 }

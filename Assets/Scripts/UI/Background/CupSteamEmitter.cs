@@ -141,6 +141,8 @@ namespace BlueComplex.UI.Background
             psRenderer.sortMode = ParticleSystemSortMode.Distance;
             psRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             psRenderer.receiveShadows = false;
+            // 레이어 quad는 sortingOrder가 렌더 큐보다 우선한다 — 0으로 두면 모든 레이어 뒤로 가려진다(BackgroundSorting 참고).
+            psRenderer.sortingOrder = BackgroundSorting.ThingsLayerOrder(this);
 
             // 램프 연기와 재질을 공유하지 않는다 — 렌더 큐가 다르게 조정돼도 서로 안 덮어쓴다.
             _material = new Material(Shader.Find("Sprites/Default")) { name = "Generated Cup Steam (Sprites/Default)" };

@@ -55,5 +55,27 @@ namespace BlueComplex.Core.Tests
 
         [Test]
         public void VeryExcited_IsFlustered() => Assert.IsTrue(PortraitReactionRules.IsNatsuFlustered(HeartbeatState.VeryExcited));
+
+        [Test]
+        public void Natsu_EnteringVeryDepressedOrVeryExcited_IsFury()
+        {
+            Assert.AreEqual(NatsuExpression.Fury, PortraitReactionRules.ClassifyNatsu(HeartbeatState.Depressed, HeartbeatState.VeryDepressed));
+            Assert.AreEqual(NatsuExpression.Fury, PortraitReactionRules.ClassifyNatsu(HeartbeatState.Stable, HeartbeatState.VeryExcited));
+        }
+
+        [Test]
+        public void Natsu_EnteringStable_IsRelief()
+        {
+            Assert.AreEqual(NatsuExpression.Relief, PortraitReactionRules.ClassifyNatsu(HeartbeatState.Depressed, HeartbeatState.Stable));
+            Assert.AreEqual(NatsuExpression.Relief, PortraitReactionRules.ClassifyNatsu(HeartbeatState.VeryExcited, HeartbeatState.Stable));
+        }
+
+        [Test]
+        public void Natsu_StayingStable_IsNormal() =>
+            Assert.AreEqual(NatsuExpression.Normal, PortraitReactionRules.ClassifyNatsu(HeartbeatState.Stable, HeartbeatState.Stable));
+
+        [Test]
+        public void Natsu_LeavingFuryToOrdinaryZone_IsNormal() =>
+            Assert.AreEqual(NatsuExpression.Normal, PortraitReactionRules.ClassifyNatsu(HeartbeatState.VeryDepressed, HeartbeatState.Depressed));
     }
 }

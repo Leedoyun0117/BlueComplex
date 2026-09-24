@@ -29,21 +29,21 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Aberration: 0.002
-    - _Bloom: 0.3
+    - _Aberration: 0.003714286
+    - _Bloom: 0.19714287
     - _BloomThreshold: 0.6
-    - _Brightness: 1
-    - _Curvature: 0.12
-    - _Flicker: 0.04
-    - _Noise: 0.06
+    - _Brightness: 0.6742857
+    - _Curvature: 0.15428571
+    - _Flicker: 0.09142857
+    - _Noise: 0.12857144
     - _Pastel: 0
-    - _ScanCount: 420
-    - _ScanIntensity: 0.35
-    - _ScanSpeed: 0
+    - _ScanCount: 368.57144
+    - _ScanIntensity: 0.43571427
+    - _ScanSpeed: 0.12857144
     - _ScanThickness: 1
-    - _Shake: 0
-    - _TintR: 0
-    - _Vignette: 0.55
+    - _Shake: 0.0034285716
+    - _TintR: 0.47142857
+    - _Vignette: 0.9785714
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1

@@ -37,8 +37,8 @@ namespace BlueComplex.UI.Presentation
         [SerializeField] private MemorySpaceBubble _memoryBubble;
         [SerializeField] private ComplexStatusController _complexStatus;
         [SerializeField] private TraitStatusView _traitStatus;
-        [SerializeField] private ClockController _clock;
         [SerializeField] private ItemController _items;
+        [SerializeField] private NatsuPortraitView _natsu;
 
         /// <summary>컴플렉스 이벤트 대사가 다 나온 뒤 다음 컴플렉스로 넘어가기 전의 짧은 쉼(초).</summary>
         [SerializeField] private float _eventLinePause = 0.25f;
@@ -73,8 +73,8 @@ namespace BlueComplex.UI.Presentation
             if (_complexStatus == null) _complexStatus = root.GetComponentInChildren<ComplexStatusController>(true);
             if (_traitStatus == null) _traitStatus = root.GetComponentInChildren<TraitStatusView>(true);
             if (_items == null) _items = root.GetComponentInChildren<ItemController>(true);
-            // 벽시계는 HUD가 아니라 3D 배경 리그에 있어 root 아래에서 못 찾는다. 없어도 연출은 그대로 돈다.
-            if (_clock == null) _clock = FindFirstObjectByType<ClockController>(FindObjectsInactive.Include);
+            // 나츠 초상화도 순수 장식 — 없어도 연출은 그대로 돈다. 프리팹에 안 구워져 있어 "Natsu Portrait"에 런타임으로 붙인다.
+            if (_natsu == null) _natsu = NatsuPortraitView.GetOrAdd(root);
 
             if (_brain == null || _dialogue == null || _clueTray == null || _heartRate == null ||
                 _xrayPanel == null || _memoryBubble == null)
@@ -82,12 +82,46 @@ namespace BlueComplex.UI.Presentation
                                   "연출이 중간에 멈출 수 있다.", this);
         }
 
-        protected override void Subscribe(StageSession session) => session.Runner.TurnResolved += Present;
-        protected override void Unsubscribe(StageSession session) => session.Runner.TurnResolved -= Present;
+        protected override void Subscribe(StageSession session)
+        {
+            session.Runner.TurnResolved += Present;
+            if (_heartRate != null) _heartRate.HeartbeatPresented += OnHeartbeatPresented;
+        }
+
+        protected override void Unsubscribe(StageSession session)
+        {
+            session.Runner.TurnResolved -= Present;
+            if (_heartRate != null) _heartRate.HeartbeatPresented -= OnHeartbeatPresented;
+        }
+
+        /// <summary>나츠가 마지막으로 반응한 시점의 심박수 상태 — 안정 구간에 "새로" 들어섰는지 가리는 기준.</summary>
+        private HeartbeatState _natsuState;
+
+        /// <summary>
+        /// "표정과 반응" 기획표의 나츠 조건 중 심박수 쪽(당황·안도·평소 복귀). HeartRateController가 심박수를 화면에 반영하는 바로 그 순간
+        /// (이 Presenter가 태그 상승과 같은 프레임에 정한다)에 이 이벤트가 오므로 구간이 바뀌는 시점에 반응한다. 키 턴의 집중은 아이템 사용처럼
+        /// 턴 결과 밖에서 심박수가 바뀌어도 풀리지 않는다 — 턴 결과(연출 중)만 집중을 끝낼 수 있다.
+        /// </summary>
+        private void OnHeartbeatPresented(int value, bool snap)
+        {
+            if (_natsu == null || snap) return;
+            if (_natsu.Current == NatsuExpression.Focus && !IsPresenting) return;
+
+            var state = Session.Zone.StateOf(value);
+            var target = PortraitReactionRules.ClassifyNatsu(_natsuState, state);
+            _natsuState = state;
+
+            // 평소 복귀 요청은 이미 평소이거나 안도 연출이 도는 중이면 무시한다(안도가 끝나면 스스로 평소가 된다).
+            if (target == NatsuExpression.Normal && _natsu.Current is NatsuExpression.Normal or NatsuExpression.Relief) return;
+
+            _natsu.SetExpression(target);
+        }
 
         protected override void Render()
         {
             _pending.Clear(); // 재시작 시 이전 스테이지의 대기 중 연출은 버린다.
+            _natsu?.ResetToNormal();
+            _natsuState = Session.Zone.StateOf(Session.Heartbeat.Value);
 
             // 재시작이 연출 도중이면 옛 코루틴이 새 세션 화면을 계속 만지지 않게 끊고, 떼어져 있던 포스트잇·암전 막을 원래대로 돌린다.
             if (IsPresenting)
@@ -160,6 +194,9 @@ namespace BlueComplex.UI.Presentation
             yield return PostitDirector.GetOrCreate(transform.root)
                 .PlayRefresh(_monologueSpeaker, keyTurn ? _keyTurnMonologue : null, RefreshContent);
 
+            // 키 턴이 시작된다 — 암전이 걷힌 뒤(화면에 보일 때) 나츠가 턱을 짚고 집중한다. 이 집중은 그 키 턴의 결과(심박수 반영)가 풀어 준다.
+            if (keyTurn) _natsu?.SetExpression(NatsuExpression.Focus);
+
             _complexStatus?.RevealNewMarks();
         }
 
@@ -168,18 +205,10 @@ namespace BlueComplex.UI.Presentation
         {
             _heartRate.PlayTurnResult(report);
             _traitStatus?.Refresh();
-            AdvanceClock(report);
             yield return PlayDialogue(TurnSummaryFormatter.Build(report));
 
             // 넘어간 턴에도 손패는 연출이 도는 동안 갱신이 미뤄져 있다(ClueHandController.OnHandChanged 참고).
             _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger, Session.Censorship.Level);
-        }
-
-        /// <summary>시계는 심박수 이동과 같은 타이밍에 돌린다 — 컴플렉스 발광/대사가 끝난 뒤이고,
-        /// 분침 회전(0.7초)이 태그 상승(0.9초) 안에 끝나 다음 턴 연출과 겹치지 않는다.</summary>
-        private void AdvanceClock(TurnReport report)
-        {
-            if (_clock != null) _clock.AdvanceTo(report.Turn);
         }
 
         private IEnumerator PresentRoutine(TurnReport report)
@@ -194,10 +223,12 @@ namespace BlueComplex.UI.Presentation
             // Flash가 끝나고 돌아갈 자리가 무표정이 아니라 이 표정이 된다(PortraitXrayView.SetMood 문서 참고).
             _portrait?.SetMood(PortraitReactionRules.ClassifyYuki(report.FinalTags, Session.Zone.StateOf(report.HeartbeatValue)));
 
-            // TickDurations/스폰이 Resolve 이후에 일어나므로, 발광 전에 먼저 뇌의 영역 배치를 최신 보드
-            // 상태로 맞춰야 한다(BrainView.PlayGlow 문서 참고).
-            _brain.Refresh(Session.Complexes.InPriorityOrder().ToList());
+            // TickDurations/스폰은 Resolve 이후에 일어나 이 시점의 보드에는 이미 만료된 컴플렉스가 없다 — 그대로 배치하면 마지막 턴에
+            // 발동한 컴플렉스(지속 1턴짜리는 항상)가 영역을 못 찾아 발광·대사가 통째로 빠진다. 그래서 발광 동안은 해석 당시의
+            // 컴플렉스(Steps, 우선순위 순서)로 배치하고, 반응이 끝난 뒤에 최신 보드로 맞춘다.
+            _brain.Refresh(report.Interpretation.Steps.Select(step => step.Complex).ToList());
             yield return PlayComplexReactions(report);
+            _brain.Refresh(Session.Complexes.InPriorityOrder().ToList());
 
             yield return PlaySummaryWithResultTags(report);
 
@@ -218,7 +249,6 @@ namespace BlueComplex.UI.Presentation
         {
             foreach (var step in report.Interpretation.Steps)
             {
-                // 같은 턴에 만료돼 이미 행이 없는 컴플렉스는 조용히 건너뛴다.
                 if (!step.Triggered || !_brain.PlayGlow(step.Complex)) continue;
 
                 _portrait?.Flash();
@@ -282,7 +312,6 @@ namespace BlueComplex.UI.Presentation
             _heartRate.PlayTurnResult(report);
             // 컴플렉스 포스트잇(남은 턴·새로 붙거나 만료된 컴플렉스)은 여기서 안 바뀐다 — 연출이 다 끝나고 포스트잇이 떼어져 있는 사이에 갱신된다.
             _traitStatus?.Refresh();
-            AdvanceClock(report);
             _memoryBubble.SetPersistentSummary(TurnSummaryFormatter.BuildFinalEmotionSummary(report));
 
             yield return tagSequence.WaitForCompletion(true);
