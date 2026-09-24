@@ -59,7 +59,7 @@ namespace BlueComplex.UI.Presentation
         public string label;
 
         /// <summary>이 스테이지에 이 세션에서 "정말 처음" 들어올 때만 나오는 고정 시작 대사 — 무작위가 아니라 항상 이거다.
-        /// 기획표의 "처음" 칸. lines가 비어 있으면(스테이지 2·3처럼 아직 안 채워졌으면) 첫 진입이어도 대사 없이 넘어간다.</summary>
+        /// 기획표의 "처음" 칸. lines가 비어 있으면 첫 진입에도 <see cref="stageStartReplay"/> 중 무작위(그것도 비었으면 대사 없이 넘어간다).</summary>
         public DialogueVariant stageStartFirst;
 
         /// <summary>두 번째 이후 진입(재시작·재방문)에 이 중 하나를 무작위로 고른다 — 기획표의 "그 후 (랜덤 변화)" 칸.</summary>
@@ -94,7 +94,9 @@ namespace BlueComplex.UI.Presentation
             if (isFirstEntry)
             {
                 var first = entry.Value.stageStartFirst;
-                return first.lines != null && first.lines.Length > 0 ? first : (DialogueVariant?)null;
+                if (first.lines != null && first.lines.Length > 0) return first;
+
+                // "처음" 칸이 비어 있고 후보만 있는 스테이지(스테이지 2: 원문이 "(랜덤"으로만 나뉜다)는 처음에도 후보 중 무작위.
             }
 
             return Pick(entry.Value.stageStartReplay, range);
