@@ -396,6 +396,8 @@ namespace BlueComplex.Core.Stage
                 [PersuasionTargetsKey] = new[] { "complex_stockholm", "complex_dependence", "complex_avoidance" }
             },
             // 시작 컴플렉스는 런마다 풀 10종 중 시드로 뽑는다(같은 시드 재시작이면 같은 컴플렉스).
-            randomStartingComplex: true);
+            randomStartingComplex: true,
+            // 쿼터 손패에 그 쿼터 키 목표 구간 쪽 감정(침체/흥분)을 가진 단서를 3장 이상 강제로 넣는다. 1000시드 스윕: 없을 때 3.5% → 19.1%(완전 해금·태그 다 앎 봇).
+            keyHandBias: new KeyHandBiasSettings(minClues: 3, minTagsNormal: 1, minTagsVery: 1));
     }
 }

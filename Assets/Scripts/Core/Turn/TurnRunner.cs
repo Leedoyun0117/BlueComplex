@@ -105,6 +105,7 @@ namespace BlueComplex.Core.Turn
         private readonly IKeyZonePlacer _keyPlacer;
         private readonly ClueKnowledgeLedger _ledger;
         private readonly IReadOnlyDictionary<string, IReadOnlyList<string>> _itemParameters;
+        private readonly KeyZoneHandBiasRule _handBias;
 
         public int CurrentTurn { get; private set; }
         public QuarterSchedule Schedule => _keys.Schedule;
@@ -135,7 +136,8 @@ namespace BlueComplex.Core.Turn
                           KeyProgress keys,
                           IKeyZonePlacer keyPlacer,
                           ClueKnowledgeLedger ledger,
-                          IReadOnlyDictionary<string, IReadOnlyList<string>> itemParameters = null)
+                          IReadOnlyDictionary<string, IReadOnlyList<string>> itemParameters = null,
+                          KeyZoneHandBiasRule handBias = null)
         {
             _hand = hand;
             _complexBoard = complexBoard;
@@ -152,6 +154,7 @@ namespace BlueComplex.Core.Turn
             _keyPlacer = keyPlacer;
             _ledger = ledger;
             _itemParameters = itemParameters;
+            _handBias = handBias;
         }
 
         public void StartStage()
@@ -179,7 +182,9 @@ namespace BlueComplex.Core.Turn
             // 아이템도 손패와 마찬가지로 쓴 칸만 다른 아이템으로 채운다(안 쓴 아이템은 그대로 유지) — Items.cs의 ItemInventory.Refill 참고.
             if (Schedule.IsQuarterStart(CurrentTurn))
             {
-                _hand.RefillForNewQuarter();
+                // 스테이지가 켜 두었으면 이번 쿼터 키 목표 구간에 맞는 감정의 단서를 손패에 강제로 넣는다(KeyZoneHandBiasRule).
+                var bias = _handBias?.For(_keys.Zones[Schedule.LastTurnOf(Schedule.QuarterOf(CurrentTurn))]);
+                _hand.RefillForNewQuarter(bias);
                 _items.Refill();
                 _keys.OpenQuarter(Schedule.QuarterOf(CurrentTurn));
             }
