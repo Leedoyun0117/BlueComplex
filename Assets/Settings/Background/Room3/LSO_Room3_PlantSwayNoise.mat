@@ -34,6 +34,9 @@ Material:
     m_Ints: []
     m_Floats:
     - _AlphaPower: 1.8
+    - _BladeLift: 0.008
+    - _BladeStrength: 0.015
+    - _BladeVariation: 18
     - _LightClamp: 0.6
     - _LightGain: 1
     - _NoiseInfluence: 0.75
@@ -43,8 +46,8 @@ Material:
     - _SurfaceGlow: 0.08
     - _SwayFalloff: 2.5
     - _WindPhase: 1
-    - _WindSpeed: 1.2
-    - _WindStrength: 0.035
+    - _WindSpeed: 0.36
+    - _WindStrength: 0.01
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
