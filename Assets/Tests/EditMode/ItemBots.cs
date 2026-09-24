@@ -16,7 +16,7 @@ namespace BlueComplex.Core.Tests
     /// 현재 쿼터 목표 구역에 더 가까워지는 아이템만 쓴다 — 목표 방향에 도움 되는 아이템을 즉시 사용하는 단순 규칙이다.
     ///
     /// 판단은 근시안이다: 다음에 낼 카드 한 장의 결과만 본다(손패에서 가장 좋은 카드). 각 아이템은 자기 효과를 이렇게 흉내 낸다 —
-    /// 감정적 설득(스테이지가 지정한 컴플렉스 무시), 기억 공감(공포·슬픔 1씩 제거 + 환각), 논리적 설득(중복 제거), 사마리아인(침체면 +10, 무력),
+    /// 감정적 설득(스테이지가 지정한 컴플렉스 무시), 기억 공감(슬픔 1씩 제거 + 환각), 무관심(타인 결과의 침체 감정 무시 + 무력), 논리적 설득(중복 제거), 사마리아인(침체면 +10, 무력),
     /// 극복(고른 컴플렉스가 없다고 보고 계산 — 지속이 줄어드는 만큼의 이득은 다음 턴 이후라 근사), 회상·선택적 기억(손패가 목표에서 멀어질 때만 무작위 교체).
     /// 이득이 <see cref="MinGain"/> 미만이면 쓰지 않는다.
     /// </summary>
@@ -31,7 +31,8 @@ namespace BlueComplex.Core.Tests
         {
             public HashSet<string> IgnoredComplexIds = new();
             public ComplexInstance RemovedComplex;
-            public bool RemoveFearSadness;
+            public bool RemoveSadness;
+            public bool IgnoreDepressedTowardOther;
             public bool Collapse;
             public string ExtraTrait;
             public int HeartbeatDelta;
@@ -94,7 +95,10 @@ namespace BlueComplex.Core.Tests
                 }
                 case "item_empathy":
                     return baseline - BestDistance(session,
-                        new Hypothesis { RemoveFearSadness = true, ExtraTrait = PrototypeContent.TraitHallucination }, zone);
+                        new Hypothesis { RemoveSadness = true, ExtraTrait = PrototypeContent.TraitHallucination }, zone);
+                case "item_indifference":
+                    return baseline - BestDistance(session,
+                        new Hypothesis { IgnoreDepressedTowardOther = true, ExtraTrait = PrototypeContent.TraitLethargy }, zone);
                 case "item_logic":
                     return baseline - BestDistance(session, new Hypothesis { Collapse = true }, zone);
                 case "item_samaritan":
@@ -182,10 +186,12 @@ namespace BlueComplex.Core.Tests
             var final = new ComplexResolver(board).Resolve(input, filter).Final;
 
             session.ActiveItems.Modify(final);
-            if (hypothesis.RemoveFearSadness)
+            if (hypothesis.RemoveSadness) final.RemoveEmotion(EmotionTag.Sadness);
+
+            if (hypothesis.IgnoreDepressedTowardOther && final.HasPerson(PersonTag.Other))
             {
-                final.RemoveEmotion(EmotionTag.Fear);
-                final.RemoveEmotion(EmotionTag.Sadness);
+                foreach (var emotion in new[] { EmotionTag.Sadness, EmotionTag.Disgust, EmotionTag.Fear })
+                    final.RemoveEmotion(emotion, final.CountOf(emotion));
             }
 
             if (hypothesis.Collapse) final.CollapseDuplicates();

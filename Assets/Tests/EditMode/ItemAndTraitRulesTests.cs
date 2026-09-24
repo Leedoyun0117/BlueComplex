@@ -73,12 +73,12 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void ItemPool_HasTheSevenItemsOfTheDesignDoc()
+        public void ItemPool_HasTheEightItemsOfTheDesignDoc()
         {
             var ids = PrototypeContent.Items().Select(i => i.DisplayName).ToList();
 
             CollectionAssert.AreEquivalent(
-                new[] { "극복", "감정적 설득", "기억 공감", "회상", "논리적 설득", "착한 사마리아인", "선택적 기억" }, ids);
+                new[] { "극복", "감정적 설득", "기억 공감", "회상", "논리적 설득", "착한 사마리아인", "선택적 기억", "무관심" }, ids);
         }
 
         [Test]
@@ -203,7 +203,7 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void MemoryEmpathy_RemovesFearAndSadnessOneEach_AndGrantsHallucination()
+        public void MemoryEmpathy_RemovesOnlySadnessOneEach_AndGrantsHallucination()
         {
             var empathy = Item("item_empathy");
             var session = Start(Config(new[] { empathy }));
@@ -213,10 +213,38 @@ namespace BlueComplex.Core.Tests
             var tags = new TagSet(emotions: new[] { EmotionTag.Fear, EmotionTag.Fear, EmotionTag.Sadness, EmotionTag.Anger });
             session.ActiveItems.Modify(tags);
 
-            Assert.AreEqual(1, tags.CountOf(EmotionTag.Fear), "공포 2개 중 1개만 제거");
+            Assert.AreEqual(2, tags.CountOf(EmotionTag.Fear), "공포는 건드리지 않는다(기획: 슬픔 감정만)");
             Assert.AreEqual(0, tags.CountOf(EmotionTag.Sadness));
             Assert.AreEqual(1, tags.CountOf(EmotionTag.Anger));
             Assert.IsTrue(session.Traits.Has(PrototypeContent.TraitHallucination));
+
+            var stacked = new TagSet(emotions: new[] { EmotionTag.Sadness, EmotionTag.Sadness });
+            session.ActiveItems.Modify(stacked);
+            Assert.AreEqual(1, stacked.CountOf(EmotionTag.Sadness), "슬픔은 1씩 제거된다");
+        }
+
+        [Test]
+        public void Indifference_IgnoresDepressedEmotionsOfAResultWithOtherPerson_AndGrantsLethargy()
+        {
+            var indifference = Item("item_indifference");
+            var session = Start(Config(new[] { indifference }));
+
+            session.Runner.UseItem(indifference);
+
+            var toOther = new TagSet(TimeTag.Past, new[] { PersonTag.Other, PersonTag.Family },
+                new[] { EmotionTag.Sadness, EmotionTag.Sadness, EmotionTag.Disgust, EmotionTag.Fear, EmotionTag.Happiness, EmotionTag.Anger });
+            session.ActiveItems.Modify(toOther);
+            Assert.AreEqual(0, toOther.CountOf(EmotionTag.Sadness), "겹친 개수까지 전부 무시");
+            Assert.AreEqual(0, toOther.CountOf(EmotionTag.Disgust));
+            Assert.AreEqual(0, toOther.CountOf(EmotionTag.Fear));
+            Assert.AreEqual(1, toOther.CountOf(EmotionTag.Happiness), "흥분 감정은 그대로");
+            Assert.AreEqual(1, toOther.CountOf(EmotionTag.Anger));
+
+            var notOther = new TagSet(TimeTag.Past, new[] { PersonTag.Family }, new[] { EmotionTag.Sadness });
+            session.ActiveItems.Modify(notOther);
+            Assert.AreEqual(1, notOther.CountOf(EmotionTag.Sadness), "타인이 아닌 결과는 그대로");
+
+            Assert.IsTrue(session.Traits.Has(PrototypeContent.TraitLethargy));
         }
 
         [Test]

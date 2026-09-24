@@ -297,7 +297,7 @@ namespace BlueComplex.Core.Stage
         };
 
         // ------------------------------------------------------------------
-        // 아이템 7종 (데이터). 행동 조각(PrototypeItemBehaviours)에 숫자·감정·파라미터 키를 넘겨 조합한다.
+        // 아이템 8종 (데이터). 행동 조각(PrototypeItemBehaviours)에 숫자·감정·파라미터 키를 넘겨 조합한다.
         // ------------------------------------------------------------------
 
         /// <summary>StageConfig.ItemParameters에서 감정적 설득이 무시할 컴플렉스 id 목록을 찾는 키.</summary>
@@ -315,8 +315,8 @@ namespace BlueComplex.Core.Stage
                 duration: 2, new IgnoreStageComplexes(PersuasionTargetsKey)),
 
             new ItemDefinition("item_empathy", "기억 공감",
-                "'공포', '슬픔' 감정을 결과에서 1씩 제거합니다. 환각 특성을 부여합니다.",
-                duration: 1, new RemoveEmotions(1, EmotionTag.Fear, EmotionTag.Sadness),
+                "'슬픔' 감정을 결과에서 1씩 제거합니다. 환각 특성을 부여합니다.",
+                duration: 1, new RemoveEmotions(1, EmotionTag.Sadness),
                 grantedTraitId: TraitHallucination),
 
             new ItemDefinition("item_recollection", "회상",
@@ -336,6 +336,13 @@ namespace BlueComplex.Core.Stage
             new ItemDefinition("item_selective_memory", "선택적 기억",
                 "보유한 단서 중 선택한 하나를 랜덤으로 교체합니다.",
                 duration: 0, new ReplaceClue(), ItemTargetKind.Clue),
+
+            // 지속 시간은 기획서에 없어 결과 보정 아이템(기억 공감·논리적 설득)과 같은 1턴으로 뒀다. 침체 감정 = 슬픔·혐오·공포.
+            new ItemDefinition("item_indifference", "무관심",
+                "최종 결과가 타인에 대한 침체 감정이라면 해당 감정을 무시합니다. 무력 특성을 부여합니다.",
+                duration: 1,
+                new IgnoreEmotionsTowardPerson(PersonTag.Other, EmotionTag.Sadness, EmotionTag.Disgust, EmotionTag.Fear),
+                grantedTraitId: TraitLethargy),
         };
 
         /// <summary>구간 확률에 곱해지는 컴플렉스 발현 배율. 기획자 피드백으로 1.0에서 12.5% 올렸다 — 침체/흥분 30% → 33.75%, 매우 침체/흥분 50% → 56.25%, 안정 0% 유지.
