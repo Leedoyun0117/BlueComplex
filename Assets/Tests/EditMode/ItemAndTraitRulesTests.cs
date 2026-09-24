@@ -73,12 +73,17 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void ItemPool_HasTheEightItemsOfTheDesignDoc()
+        public void ItemPools_FollowTheStageTables()
         {
-            var ids = PrototypeContent.Items().Select(i => i.DisplayName).ToList();
+            var common = new[] { "극복", "감정적 설득", "기억 공감", "회상", "논리적 설득", "착한 사마리아인", "선택적 기억" };
 
-            CollectionAssert.AreEquivalent(
-                new[] { "극복", "감정적 설득", "기억 공감", "회상", "논리적 설득", "착한 사마리아인", "선택적 기억", "무관심" }, ids);
+            CollectionAssert.AreEquivalent(common, PrototypeContent.CommonItems().Select(i => i.DisplayName).ToList());
+            CollectionAssert.AreEquivalent(common.Append("공존감").ToList(),
+                PrototypeContent.Stage1Items().Select(i => i.DisplayName).ToList(), "스테이지 1 표: 공용 7종 + 공존감(무관심 없음).");
+            CollectionAssert.AreEquivalent(common.Append("무관심").ToList(),
+                Stage2Content.Stage2(Polarity).ItemPool.Select(i => i.DisplayName).ToList(), "스테이지 2는 아이템 표가 없어 공용 7종 + 무관심 그대로.");
+            CollectionAssert.AreEquivalent(common.Append("무관심").Append("공존감").ToList(),
+                PrototypeContent.Items().Select(i => i.DisplayName).ToList(), "전체 목록은 id 조회용이다.");
         }
 
         [Test]
@@ -245,6 +250,46 @@ namespace BlueComplex.Core.Tests
             Assert.AreEqual(1, notOther.CountOf(EmotionTag.Sadness), "타인이 아닌 결과는 그대로");
 
             Assert.IsTrue(session.Traits.Has(PrototypeContent.TraitLethargy));
+        }
+
+        [Test]
+        public void Coexistence_AddsOneHappinessToAResultWithOtherPerson_AndGrantsNoTrait()
+        {
+            var coexistence = Item("item_coexistence");
+            var session = Start(Config(new[] { coexistence }));
+
+            session.Runner.UseItem(coexistence);
+
+            var toOther = new TagSet(TimeTag.Past, new[] { PersonTag.Other }, new[] { EmotionTag.Happiness, EmotionTag.Sadness });
+            session.ActiveItems.Modify(toOther);
+            Assert.AreEqual(2, toOther.CountOf(EmotionTag.Happiness), "타인 결과에는 행복이 1 더해진다");
+            Assert.AreEqual(1, toOther.CountOf(EmotionTag.Sadness), "다른 감정은 그대로");
+
+            var noHappiness = new TagSet(TimeTag.Present, new[] { PersonTag.Other, PersonTag.Friend }, new[] { EmotionTag.Fear });
+            session.ActiveItems.Modify(noHappiness);
+            Assert.AreEqual(1, noHappiness.CountOf(EmotionTag.Happiness), "행복이 없던 결과에도 1이 붙는다");
+
+            var notOther = new TagSet(TimeTag.Past, new[] { PersonTag.Family }, new[] { EmotionTag.Sadness });
+            session.ActiveItems.Modify(notOther);
+            Assert.AreEqual(0, notOther.CountOf(EmotionTag.Happiness), "타인이 아닌 결과는 그대로");
+
+            Assert.AreEqual(0, session.Traits.Traits.Count(), "공존감은 특성을 부여하지 않는다");
+        }
+
+        [Test]
+        public void Coexistence_LastsOneTurn()
+        {
+            var coexistence = Item("item_coexistence");
+            var session = Start(Config(new[] { coexistence }, clues: Enumerable.Range(0, 12).Select(i =>
+                new ClueDefinition($"o{i}", $"o{i}", "", TimeTag.Past, new[] { PersonTag.Other }, new[] { EmotionTag.Sadness })).ToList()),
+                heartbeat: 100);
+
+            session.Runner.UseItem(coexistence);
+            var first = session.Runner.PlayClue(session.Hand.Cards[0]);
+            Assert.AreEqual(0, first.HeartbeatDelta, "슬픔(-10) + 공존감 행복(+10) = 0");
+
+            var second = session.Runner.PlayClue(session.Hand.Cards[0]);
+            Assert.AreEqual(-10, second.HeartbeatDelta, "다음 턴에는 효과가 끝나 있다");
         }
 
         [Test]
