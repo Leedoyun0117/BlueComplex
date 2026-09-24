@@ -659,6 +659,8 @@ MonoBehaviour:
   _blackoutHoldMax: 1.4
   _restoreDuration: 3.2
   _smoke: {fileID: 783836342}
+  _bulbRenderer: {fileID: 0}
+  _bulbSwing: 1.5
 --- !u!114 &466152630
 MonoBehaviour:
   m_ObjectHideFlags: 0
