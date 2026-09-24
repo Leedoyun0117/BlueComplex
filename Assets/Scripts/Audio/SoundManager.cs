@@ -27,8 +27,29 @@ namespace BlueComplex.Audio
         [Tooltip("같은 큐가 이 시간(초) 안에 다시 오면 무시한다. 서로 다른 큐끼리는 영향받지 않는다.")]
         [SerializeField] [Min(0f)] private float _sameQueueCooldown = 0.09f;
 
+        [Header("배경음(루프)")]
+        [Tooltip("배경음이 다른 배경음으로 갈아탈 때 크로스페이드 시간(초).")]
+        [SerializeField] [Min(0f)] private float _bedCrossfade = 0.6f;
+
+        [Header("상시 배경음 레이어(Fragile Notes)")]
+        [Tooltip("스테이지 시작 때 상시 배경음이 올라오는 시간(초).")]
+        [SerializeField] [Min(0f)] private float _ambientFadeIn = 2f;
+
+        [Tooltip("스테이지가 끝날 때 상시 배경음이 사라지는 시간(초).")]
+        [SerializeField] [Min(0f)] private float _ambientFadeOut = 2.5f;
+
+        [Tooltip("곡이 끝나기 이 시간(초) 전부터 처음과 겹쳐 크로스페이드해 루프 이음매를 가린다.")]
+        [SerializeField] [Min(0.1f)] private float _ambientLoopSeam = 3f;
+
         private AudioSource[] _pool;
         private int _next;
+
+        /// <summary>배경음 전용 소스 둘 — 하나가 사라지는 동안 다른 하나가 올라온다.</summary>
+        private AudioSource[] _bedSources;
+        private int _bedActive = -1;
+        private float _bedTargetVolume;
+        private readonly float[] _bedFade = new float[2];
+        private AmbientLayer _ambient;
         private readonly Dictionary<UiSoundCue, float> _lastPlayedAt = new();
 
         private SoundLibrary Library => _library != null ? _library : UiSoundLibrary.Current;
@@ -43,10 +64,96 @@ namespace BlueComplex.Audio
                 source.spatialBlend = 0f;
                 _pool[i] = source;
             }
+
+            _bedSources = new AudioSource[2];
+            for (var i = 0; i < _bedSources.Length; i++)
+            {
+                var source = gameObject.AddComponent<AudioSource>();
+                source.playOnAwake = false;
+                source.spatialBlend = 0f;
+                source.loop = true;
+                source.volume = 0f;
+                _bedSources[i] = source;
+            }
+
+            // 상시 배경음 레이어는 심박수 배경음 소스와 완전히 별개의 소스 둘을 쓴다.
+            _ambient = new AmbientLayer(gameObject.AddComponent<AudioSource>(), gameObject.AddComponent<AudioSource>());
         }
 
-        private void OnEnable() => UiSoundHooks.Cue += Play;
-        private void OnDisable() => UiSoundHooks.Cue -= Play;
+        private void OnEnable()
+        {
+            UiSoundHooks.Cue += Play;
+            UiSoundHooks.BedChanged += SetBed;
+            SetBed(UiSoundHooks.CurrentBed); // 배경음이 이미 요청된 뒤에 켜졌어도 따라잡는다.
+
+            UiSoundHooks.AmbientStarted += StartAmbient;
+            UiSoundHooks.AmbientStopped += StopAmbient;
+            if (UiSoundHooks.CurrentAmbient.HasValue && !_ambient.IsActive) StartAmbient(UiSoundHooks.CurrentAmbient.Value);
+        }
+
+        private void OnDisable()
+        {
+            UiSoundHooks.Cue -= Play;
+            UiSoundHooks.BedChanged -= SetBed;
+            UiSoundHooks.AmbientStarted -= StartAmbient;
+            UiSoundHooks.AmbientStopped -= StopAmbient;
+        }
+
+        private void Update()
+        {
+            if (_bedSources == null) return;
+
+            _ambient.Tick(Time.unscaledDeltaTime, _masterVolume);
+
+            var step = _bedCrossfade > 0f ? Time.unscaledDeltaTime / _bedCrossfade : 1f;
+            for (var i = 0; i < _bedSources.Length; i++)
+            {
+                var source = _bedSources[i];
+                var goal = i == _bedActive ? _bedTargetVolume * _masterVolume : 0f;
+                source.volume = Mathf.MoveTowards(source.volume, goal, step * Mathf.Max(_bedTargetVolume, 0.01f));
+
+                // 완전히 사라진 소스는 멈춘다(재생 위치를 붙들고 있지 않게).
+                if (i != _bedActive && source.isPlaying && source.volume <= 0f) source.Stop();
+            }
+        }
+
+        /// <summary>배경음(루프)을 바꾼다. 라이브러리에 클립이 없는 큐면 배경음을 끈다. 새 배경음은 처음부터 시작해 크로스페이드로 올라온다.</summary>
+        public void SetBed(UiSoundCue? cue)
+        {
+            if (_bedSources == null) return;
+
+            SoundEntry entry = null;
+            AudioClip clip = null;
+            var library = Library;
+            if (cue.HasValue && library != null && library.TryGet(cue.Value, out entry) && entry.clips.Length > 0)
+                clip = entry.clips[0];
+
+            if (clip == null)
+            {
+                _bedActive = -1; // 활성 소스가 없으면 Update가 둘 다 페이드아웃 후 멈춘다.
+                return;
+            }
+
+            // 지금 켜져 있는 소스와 다른 쪽을 새 배경음으로 쓴다.
+            _bedActive = _bedActive == 0 ? 1 : 0;
+            var source = _bedSources[_bedActive];
+            source.clip = clip;
+            source.pitch = 1f;
+            source.volume = 0f;
+            _bedTargetVolume = entry.volume;
+            source.Play();
+        }
+
+        /// <summary>상시 배경음 레이어를 처음부터 시작한다(이미 재생 중이면 재시작). 라이브러리에 클립이 없으면 조용히 지나간다.</summary>
+        public void StartAmbient(UiSoundCue cue)
+        {
+            var library = Library;
+            if (library == null || !library.TryGet(cue, out var entry) || entry.clips.Length == 0 || entry.clips[0] == null) return;
+
+            _ambient.Begin(entry.clips[0], entry.volume, _ambientFadeIn, _ambientLoopSeam);
+        }
+
+        public void StopAmbient() => _ambient.End(_ambientFadeOut);
 
         public void Play(UiSoundCue cue)
         {

@@ -1,4 +1,5 @@
 using System;
+using BlueComplex.UI.Layout;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -33,6 +34,9 @@ namespace BlueComplex.UI.Effects.DLJ
             paper.material = background.material;
             paper.preserveAspect = background.preserveAspect;
             paper.raycastTarget = false;
+            // 종이는 원본과 같은 윤곽 무늬여야 한다 — 테두리 복제(아래)보다 먼저 붙여서 복제본이 그 무늬를 물려받게 한다.
+            var sourceSkin = background.GetComponent<PaperPanel>();
+            if (sourceSkin != null) PaperPanel.Skin(paper, background.material, sourceSkin.Seed);
             foreach (var edge in background.GetComponents<Shadow>())
             {
                 if (!edge.enabled) continue;

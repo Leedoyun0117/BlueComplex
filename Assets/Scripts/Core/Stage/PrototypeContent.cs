@@ -352,7 +352,7 @@ namespace BlueComplex.Core.Stage
             complexWeight: PrototypeComplexWeight,
             clues: Clues(),
             complexPool: Complexes(polarityTable),
-            startingComplex: AntiPast(polarityTable),
+            startingComplex: null,
             itemPool: Items(),
             keyWidth: 36,
             maxComplexSlots: ComplexBoard.DefaultMaxSlots,
@@ -362,6 +362,8 @@ namespace BlueComplex.Core.Stage
             {
                 // 스테이지 1에서 '침체' 감정에 영향을 주는 컴플렉스 — 스톡홀름, 의존, 회피.
                 [PersuasionTargetsKey] = new[] { "complex_stockholm", "complex_dependence", "complex_avoidance" }
-            });
+            },
+            // 시작 컴플렉스는 런마다 풀 10종 중 시드로 뽑는다(같은 시드 재시작이면 같은 컴플렉스).
+            randomStartingComplex: true);
     }
 }
