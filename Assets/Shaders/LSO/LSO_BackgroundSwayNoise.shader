@@ -36,9 +36,14 @@ Shader "BlueComplex/LSO/BackgroundSwayNoise"
         _SwayFalloff ("Root Stiffness", Range(0.5, 8)) = 2.5
         _WindPhase ("Per-Object Phase Spread", Range(0, 5)) = 1
 
+        [Header(Per Blade)]
+        _BladeStrength ("Per-Blade Sway X (UV units)", Range(0, 0.08)) = 0.015
+        _BladeLift ("Per-Blade Sway Y (UV units)", Range(0, 0.06)) = 0.008
+        _BladeVariation ("Per-Blade Variation", Range(0, 60)) = 18
+
         [Header(Noise)]
         [NoScaleOffset] _NoiseTex ("Wind Noise (R channel)", 2D) = "gray" {}
-        _NoiseInfluence ("Noise Influence (0 = pure sine)", Range(0, 1)) = 0.75
+        _NoiseInfluence ("Gust Influence", Range(0, 1)) = 0.75
         _NoiseScale ("Noise Scale (world units)", Range(0.01, 5)) = 0.35
         _NoiseScroll ("Noise Scroll Speed", Range(0, 2)) = 0.35
     }
@@ -99,6 +104,9 @@ Shader "BlueComplex/LSO/BackgroundSwayNoise"
                 half _NoiseInfluence;
                 half _NoiseScale;
                 half _NoiseScroll;
+                half _BladeStrength;
+                half _BladeLift;
+                half _BladeVariation;
             CBUFFER_END
 
             // 두 패스가 같은 식을 써야 그림자가 본체를 따라온다. 고칠 땐 아래 그림자 패스의 같은 함수도 같이 고칠 것.
@@ -120,6 +128,54 @@ Shader "BlueComplex/LSO/BackgroundSwayNoise"
                 positionOS.x += offset;
                 positionOS.y -= abs(offset) * 0.35; // 기울어진 만큼 끝이 내려앉는다(길이 보정).
                 return positionOS;
+            }
+
+            // 잎 하나하나가 따로 흔들리게 한다.
+            //
+            // 쿼드는 정점이 4개뿐이라 정점만 밀어서는 판 전체가 한 덩어리로 기울 수밖에 없다 — 그림 안에 잎이
+            // 여러 개여도 뭉쳐서 움직인다. 그래서 정점이 아니라 "텍스처에서 읽어오는 자리"를 픽셀마다 다르게 민다.
+            // 가로 위치(u)를 위상에 섞으므로 u가 다른 잎은 서로 어긋난 박자로 흔들린다. _BladeVariation 이
+            // 클수록 이웃한 잎끼리 더 많이 어긋난다(대략 잎 개수에 맞추면 자연스럽다).
+            //
+            // 가로(_BladeStrength)와 세로(_BladeLift)를 따로 준다. 세로는 위상과 속도를 어긋나게 둬서
+            // 잎 끝이 직선이 아니라 타원을 그리며 돈다 — 가로만 있으면 좌우로 쓸리기만 해서 뻣뻣해 보인다.
+            // 세로는 가로보다 작게 주는 게 자연스럽다(잎은 옆으로 쓸리지 위아래로 튀지 않는다).
+            //
+            // 이건 그림을 휘는 것이라 세게 주면 잎이 늘어져 번진다. 둘 다 UV 단위(폭·높이 대비 비율)로,
+            // 가로는 0.02, 세로는 0.015 를 넘기면 티가 나기 시작한다.
+            // 큰 움직임은 정점 쪽(_WindStrength)에 맡기고 여기선 결만 준다.
+            //
+            // 두 패스가 같은 식을 써야 그림자 실루엣이 본체와 맞는다 — 그림자 패스의 같은 함수도 같이 고칠 것.
+            float2 WarpBladeUV(float2 uv)
+            {
+                float weight = pow(saturate(uv.y), _SwayFalloff);
+                float t = _Time.y * _WindSpeed;
+                float seed = uv.x * _BladeVariation;
+
+                float waveX = sin(t + seed) * 0.65 + sin(t * 1.37 + seed * 1.9 + 2.1) * 0.35;
+
+                // 세로는 가로와 1/4 주기(pi/2) 어긋나게 두고 속도도 다르게 준다 — 위상이 같으면 대각선으로만
+                // 오가서 결국 직선 운동이라 뻣뻣해 보인다. 어긋나야 잎 끝이 타원을 그리며 돌아 살아 있어 보인다.
+                float waveY = sin(t * 1.13 + seed * 1.27 + 1.5707963) * 0.7 + sin(t * 0.61 + seed * 0.8) * 0.3;
+
+                // 돌풍 — 노이즈가 진폭을 키웠다 줄였다 한다.
+                // 노이즈를 안 물리면 기본값 gray(0.5) → 배율이 정확히 1이라 아무 영향이 없다(잎별 흔들림은 그대로 동작한다).
+                float gust = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex,
+                    float2(uv.x * _NoiseScale - _Time.y * _NoiseScroll, 0.5)).r;
+                float gustScale = lerp(1.0, gust * 2.0, _NoiseInfluence);
+                waveX *= gustScale;
+                waveY *= gustScale;
+
+                uv.x += waveX * _BladeStrength * weight;
+                uv.y += waveY * _BladeLift * weight;
+                return uv;
+            }
+
+            // 휘어서 텍스처 밖을 읽으면 가장자리 픽셀이 옆으로 늘어져 번진다 — 밖이면 비운다.
+            // _BaseMap 의 Tiling 1,1 / Offset 0,0 을 전제로 한다(배경 레이어는 전부 그렇다).
+            half InsideBaseMap(float2 uv)
+            {
+                return (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0) ? 1.0h : 0.0h;
             }
 
             struct Attributes
@@ -148,9 +204,10 @@ Shader "BlueComplex/LSO/BackgroundSwayNoise"
 
             half4 Frag(Varyings input) : SV_Target
             {
-                half4 tex = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv) * _BaseColor;
+                float2 bladeUV = WarpBladeUV(input.uv);
+                half4 tex = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, bladeUV) * _BaseColor;
                 half3 art = tex.rgb;
-                half alpha = pow(saturate(tex.a), _AlphaPower);
+                half alpha = pow(saturate(tex.a), _AlphaPower) * InsideBaseMap(bladeUV);
 
                 half3 lightSum = 0;
 
@@ -225,6 +282,9 @@ Shader "BlueComplex/LSO/BackgroundSwayNoise"
                 half _NoiseInfluence;
                 half _NoiseScale;
                 half _NoiseScroll;
+                half _BladeStrength;
+                half _BladeLift;
+                half _BladeVariation;
             CBUFFER_END
 
             float3 _LightDirection;
@@ -248,6 +308,35 @@ Shader "BlueComplex/LSO/BackgroundSwayNoise"
                 positionOS.x += offset;
                 positionOS.y -= abs(offset) * 0.35;
                 return positionOS;
+            }
+
+            // 본체 패스와 같은 식 — 그림자 실루엣이 잎별 흔들림을 따라온다. 한쪽만 고치면 그림자 모양이 어긋난다.
+            float2 WarpBladeUV(float2 uv)
+            {
+                float weight = pow(saturate(uv.y), _SwayFalloff);
+                float t = _Time.y * _WindSpeed;
+                float seed = uv.x * _BladeVariation;
+
+                float waveX = sin(t + seed) * 0.65 + sin(t * 1.37 + seed * 1.9 + 2.1) * 0.35;
+
+                // 세로는 가로와 1/4 주기(pi/2) 어긋나게 두고 속도도 다르게 준다 — 위상이 같으면 대각선으로만
+                // 오가서 결국 직선 운동이라 뻣뻣해 보인다. 어긋나야 잎 끝이 타원을 그리며 돌아 살아 있어 보인다.
+                float waveY = sin(t * 1.13 + seed * 1.27 + 1.5707963) * 0.7 + sin(t * 0.61 + seed * 0.8) * 0.3;
+
+                float gust = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex,
+                    float2(uv.x * _NoiseScale - _Time.y * _NoiseScroll, 0.5)).r;
+                float gustScale = lerp(1.0, gust * 2.0, _NoiseInfluence);
+                waveX *= gustScale;
+                waveY *= gustScale;
+
+                uv.x += waveX * _BladeStrength * weight;
+                uv.y += waveY * _BladeLift * weight;
+                return uv;
+            }
+
+            half InsideBaseMap(float2 uv)
+            {
+                return (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0) ? 1.0h : 0.0h;
             }
 
             struct Attributes
@@ -290,8 +379,9 @@ Shader "BlueComplex/LSO/BackgroundSwayNoise"
 
             half4 ShadowFrag(Varyings input) : SV_Target
             {
-                half texAlpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv).a * _BaseColor.a;
-                half alpha = pow(saturate(texAlpha), _AlphaPower);
+                float2 bladeUV = WarpBladeUV(input.uv);
+                half texAlpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, bladeUV).a * _BaseColor.a;
+                half alpha = pow(saturate(texAlpha), _AlphaPower) * InsideBaseMap(bladeUV);
                 clip(alpha - _ShadowAlphaCutoff);
                 return 0;
             }
