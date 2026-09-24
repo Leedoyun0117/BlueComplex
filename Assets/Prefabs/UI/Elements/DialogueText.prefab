@@ -11,8 +11,9 @@ GameObject:
   - component: {fileID: 5098086504649970630}
   - component: {fileID: 3869635522549359430}
   - component: {fileID: 3250017625285248585}
-  - component: {fileID: 3534408568337996338}
-  - component: {fileID: 1015490615019754148}
+  - component: {fileID: 4861749202884011162}
+  - component: {fileID: 1787890205503306164}
+  - component: {fileID: 6101732469949337377}
   m_Layer: 5
   m_Name: ClickCatcher
   m_TagString: Untagged
@@ -59,8 +60,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.9490196, g: 0.9372549, b: 0.9019608, a: 1}
+  m_Material: {fileID: 2100000, guid: b623c1b59a635404087a16fbdcd4bc2d, type: 2}
+  m_Color: {r: 0.93333334, g: 0.9490196, b: 0.93333334, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -77,7 +78,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &3534408568337996338
+--- !u!114 &4861749202884011162
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3898024687342849109}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3d94f18c6e2470b8b5e1f7d92c40a63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Layout.PaperPanel
+  _seed: 0
+--- !u!114 &1787890205503306164
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -89,10 +103,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 1}
+  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 0}
   m_EffectDistance: {x: 1.5, y: -1.5}
   m_UseGraphicAlpha: 0
---- !u!114 &1015490615019754148
+--- !u!114 &6101732469949337377
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -392,7 +406,8 @@ GameObject:
   - component: {fileID: 1536616502831788909}
   - component: {fileID: 8375630819611988505}
   - component: {fileID: 3482112303979167245}
-  - component: {fileID: 1704220373023279633}
+  - component: {fileID: 504593613063193978}
+  - component: {fileID: 1093936653096632916}
   m_Layer: 5
   m_Name: NameTag
   m_TagString: Untagged
@@ -440,8 +455,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.9254902, g: 0.9137255, b: 0.8784314, a: 1}
+  m_Material: {fileID: 2100000, guid: e8bc71c032bbef94b8f093250f661ff6, type: 2}
+  m_Color: {r: 0.93333334, g: 0.9490196, b: 0.93333334, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -458,7 +473,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &1704220373023279633
+--- !u!114 &504593613063193978
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5821031932821882386}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3d94f18c6e2470b8b5e1f7d92c40a63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Layout.PaperPanel
+  _seed: 0
+--- !u!114 &1093936653096632916
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -470,7 +498,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 1}
+  m_EffectColor: {r: 0.30588236, g: 0.28235295, b: 0.2509804, a: 0}
   m_EffectDistance: {x: 1.5, y: -1.5}
   m_UseGraphicAlpha: 0
 --- !u!1 &8007810172605286987

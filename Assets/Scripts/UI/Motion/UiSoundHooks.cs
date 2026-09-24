@@ -46,6 +46,28 @@ namespace BlueComplex.UI.Motion
 
         /// <summary>벽시계 바늘이 시간을 건너뛰며 움직이는 소리. 쿼터가 넘어가는 턴에서만 난다.</summary>
         ClockTick,
+
+        // ── 심박수 배경음(루프). 항상 하나만 깔린다(SetBed) — 구간이 바뀌면 크로스페이드로 갈아탄다. ──
+
+        /// <summary>심박수 기본 배경음 — 안정 구간(그리고 세션 시작).</summary>
+        HeartbeatBase,
+
+        /// <summary>침체·매우 침체 구간의 심박수 배경음.</summary>
+        HeartbeatDepressed,
+
+        /// <summary>흥분·매우 흥분 구간의 심박수 배경음.</summary>
+        HeartbeatExcited,
+
+        /// <summary>쿼터가 시작될 때 한 번(1쿼터 = 스테이지 시작 포함).</summary>
+        QuarterStart,
+
+        /// <summary>침체 구간에 들어서는 순간의 연출 사운드 — 그 순간 시작되는 HeartbeatDepressed 배경음과 겹쳐 함께 울린다.</summary>
+        DepressedStinger,
+
+        // ── 상시 깔리는 별도 배경음 레이어. 심박수 배경음(SetBed)과는 다른 채널 — 구간이 바뀌어도 끊기거나 갈아타지 않는다. ──
+
+        /// <summary>플레이 내내 깔리는 배경 곡(Fragile Notes). StartAmbient/StopAmbient로만 켜고 끈다.</summary>
+        AmbientNotes,
     }
 
     /// <summary>
@@ -56,6 +78,44 @@ namespace BlueComplex.UI.Motion
     {
         public static event Action<UiSoundCue> Cue;
 
+        /// <summary>배경음(루프) 교체 요청. null이면 배경음을 끈다.</summary>
+        public static event Action<UiSoundCue?> BedChanged;
+
+        /// <summary>지금 요청돼 있는 배경음. SoundManager가 요청 뒤에 켜져도(씬 로딩 순서) 이 값으로 따라잡는다.</summary>
+        public static UiSoundCue? CurrentBed { get; private set; }
+
+        /// <summary>상시 배경음 레이어 시작 요청. 이미 재생 중이어도 처음부터 다시 시작한다(스테이지 재시작).</summary>
+        public static event Action<UiSoundCue> AmbientStarted;
+
+        /// <summary>상시 배경음 레이어 종료 요청(페이드아웃).</summary>
+        public static event Action AmbientStopped;
+
+        /// <summary>지금 켜져 있어야 하는 상시 배경음. SoundManager가 요청 뒤에 켜져도 이 값으로 따라잡는다. 꺼져 있으면 null.</summary>
+        public static UiSoundCue? CurrentAmbient { get; private set; }
+
         public static void Play(UiSoundCue cue) => Cue?.Invoke(cue);
+
+        public static void StartAmbient(UiSoundCue cue)
+        {
+            CurrentAmbient = cue;
+            AmbientStarted?.Invoke(cue);
+        }
+
+        public static void StopAmbient()
+        {
+            if (CurrentAmbient == null) return;
+
+            CurrentAmbient = null;
+            AmbientStopped?.Invoke();
+        }
+
+        /// <summary>배경음을 이 큐로 바꾼다. 이미 그 큐면 아무 일도 없다.</summary>
+        public static void SetBed(UiSoundCue? cue)
+        {
+            if (CurrentBed == cue) return;
+
+            CurrentBed = cue;
+            BedChanged?.Invoke(cue);
+        }
     }
 }

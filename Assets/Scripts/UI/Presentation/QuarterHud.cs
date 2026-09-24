@@ -21,8 +21,19 @@ namespace BlueComplex.UI.Presentation
     {
         // 디자인 목업 배치(화면 비율, 아래쪽 원점). 위치는 여기서만 바꾼다.
         // 키 카드는 목업 표(L 0.61, W 0.24, H 0.15)에서 T만 0.63 → 0.562로 올렸다 — 기울어진 카드의 아래 모서리가 단서 패널(T 0.74)을 파고들지 않게.
+        //
+        // 열렸을 때의 위치(평소엔 단서 패널 뒤에 접혀 윗변만 살짝 삐져나와 있다 — KeyStatusPanel). 나츠 초상화를 유키만큼 키우면서(1090~1690px) 원래 자리(L 0.61)의 카드가
+        // 나츠의 얼굴 아래쪽을 가려서 한 번 왼쪽(L 0.42)으로 옮겼다가, 다시 나츠 쪽(L 0.524)으로 밀었고, 한 번 더 L 0.557(1070px)까지 밀었다. 카드 몸통(기울어진 오른쪽 끝 포함)과 테이프가
+        // 나츠 얼굴 영역(x 1260~1462, y 485~675, 턱끝 y 672)에 안 닿으려면 오른쪽 끝이 턱 밑으로 내려가야 해서 카드를 낮추고(H 0.15 → 0.12) 턱 아래 목·어깨 위에 얹는다.
+        // 카드 전체가 단서 패널(L 0.50) 폭 안에서 올라온다.
         private static readonly (Vector2 Min, Vector2 Max) KeyWindowAnchors =
-            (new Vector2(0.61f, 0.288f), new Vector2(0.85f, 0.438f));
+            (new Vector2(0.557f, 0.2530f), new Vector2(0.797f, 0.3730f));
+
+        /// <summary>단서 트레이를 못 찾았을 때 쓰는 서랍 아래 끝(캔버스 비율, 1080p에서 y 799 — 단서 패널 윗변).</summary>
+        private const float FallbackClipBottom = 0.26f;
+
+        /// <summary>열림 영역의 높이(캔버스 비율, 1080p에서 64px) — 단서 패널 윗변부터 카드 행 바로 위까지.</summary>
+        private const float HotspotHeight = 0.06f;
 
         // 쿼터 진행(대화) 포스트잇: 목업 표(L 0.57, T 0.13, W 0.08, H 0.12)에서 T만 0.115로 — 심박수 모니터(아래 끝 0.135)의 하단 모서리에 걸쳐 붙는다
         // (압정이 모니터 케이스 위, 종이 윗부분이 케이스 하단 여백을 덮는다. 모니터 화면·BPM 글자는 안 가린다).
@@ -139,18 +150,27 @@ namespace BlueComplex.UI.Presentation
             DestroyPanels();
 
             var font = RuntimeUi.FindFont(_canvasRoot);
-            _keyPanel = KeyStatusPanel.Create(_canvasRoot, schedule.QuarterCount, KeyWindowAnchors.Min, KeyWindowAnchors.Max, font);
+            var tray = _canvasRoot.GetComponentInChildren<ClueCardTray>(true);
+            var trayRect = tray != null ? tray.Root : null;
+
+            // 키 카드는 단서 패널 뒤에 접혀 있다가 열림 영역에 포인터를 올리면 그 윗변에서 미끄러져 올라온다(KeyStatusPanel 참고).
+            // 서랍 마스크의 아래 끝 = 단서 패널 윗변. 열림 영역 = 그 패널의 제목 줄(카드 행 위, 상호작용 없는 띠) 전체 폭.
+            var clipBottom = trayRect != null ? trayRect.anchorMax.y : FallbackClipBottom;
+            _keyPanel = KeyStatusPanel.Create(_canvasRoot, schedule.QuarterCount, KeyWindowAnchors.Min, KeyWindowAnchors.Max, font, clipBottom);
+            if (trayRect != null)
+                _keyPanel.AttachHotspot(_canvasRoot, new Vector2(trayRect.anchorMin.x, trayRect.anchorMax.y - HotspotHeight), trayRect.anchorMax);
             _progressPanel = QuarterProgressPanel.Create(_canvasRoot, schedule.TurnsPerQuarter,
                 ProgressWindowAnchors.Min, ProgressWindowAnchors.Max, font);
             _progressPanel.Clicked += OpenOverview;
 
-            var tray = _canvasRoot.GetComponentInChildren<ClueCardTray>(true);
             var items = _canvasRoot.GetComponentInChildren<ItemDisplayPanel>(true);
-            PlaceAfter(tray != null ? tray.transform : null, _keyPanel.transform, _progressPanel.transform);
+            PlaceAfter(tray != null ? tray.transform : null, _keyPanel.Drawer, _keyPanel.Hotspot, _progressPanel.transform);
 
+            // 키 카드는 여기 안 넣는다 — 접혀 있는 게 기본이라 전체 오버레이 위로 끌어올릴 이유가 없고(오버레이가 쿼터별 키 결과를 이미 보여준다),
+            // 올리면 단서 패널 위에 접힌 카드가 그대로 드러난다.
             _overview = StageOverviewOverlay.Create(_canvasRoot, font,
                 schedule.QuarterCount, schedule.TurnsPerQuarter,
-                new[] { items != null ? items.transform : null, tray != null ? tray.transform : null, _keyPanel.transform });
+                new[] { items != null ? items.transform : null, tray != null ? tray.transform : null });
             _overview.Opened += OnOverviewOpened;
             _overview.Closed += OnOverviewClosed;
 
@@ -166,7 +186,12 @@ namespace BlueComplex.UI.Presentation
                 Destroy(_overview.gameObject);
             }
 
-            if (_keyPanel != null) Destroy(_keyPanel.gameObject);
+            if (_keyPanel != null)
+            {
+                Destroy(_keyPanel.Drawer.gameObject);
+                if (_keyPanel.Hotspot != null) Destroy(_keyPanel.Hotspot.gameObject);
+            }
+
             if (_progressPanel != null) Destroy(_progressPanel.gameObject);
         }
 
@@ -177,7 +202,8 @@ namespace BlueComplex.UI.Presentation
 
             var index = anchor.GetSiblingIndex() + 1;
             foreach (var panel in panels)
-                panel.SetSiblingIndex(index++);
+                if (panel != null)
+                    panel.SetSiblingIndex(index++);
         }
 
         private void OpenOverview()

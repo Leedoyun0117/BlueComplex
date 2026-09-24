@@ -33,6 +33,14 @@ namespace BlueComplex.UI.Motion
         public float keyBounce = 0.22f;
         [Tooltip("닿는 순간 밝아졌다가 원래 색으로 돌아오는 시간.")]
         public float keyFlash = 0.38f;
+        [Tooltip("키 카드가 단서 패널 뒤에서 미끄러져 올라와 열리는 시간.")]
+        public float keyDrawerOpen = 0.30f;
+        [Tooltip("키 카드가 단서 패널 뒤로 다시 들어가는 시간.")]
+        public float keyDrawerClose = 0.24f;
+        [Tooltip("포인터가 열림 영역을 벗어난 뒤 닫히기 시작하기까지의 유예(초) — 열림 영역과 카드 사이를 오가는 동안 깜박이지 않게.")]
+        public float keyDrawerCloseDelay = 0.25f;
+        [Tooltip("키를 얻어 열쇠가 찍힌 뒤 카드가 스스로 열려 있는 시간(초). 포인터가 올라와 있으면 닫히지 않는다.")]
+        public float keyPeekHold = 1.4f;
 
         [Header("단서 카드")]
         public float clueHover = 0.14f;

@@ -85,14 +85,50 @@ namespace BlueComplex.UI.Presentation
         protected override void Subscribe(StageSession session)
         {
             session.Runner.TurnResolved += Present;
+            session.Runner.TurnBegan += OnTurnBegan;
             if (_heartRate != null) _heartRate.HeartbeatPresented += OnHeartbeatPresented;
         }
 
         protected override void Unsubscribe(StageSession session)
         {
             session.Runner.TurnResolved -= Present;
+            session.Runner.TurnBegan -= OnTurnBegan;
             if (_heartRate != null) _heartRate.HeartbeatPresented -= OnHeartbeatPresented;
         }
+
+        /// <summary>스테이지의 첫 턴 = 1쿼터 시작(인트로 대화가 끝나고 StartStage가 불린 순간). 이후 쿼터의 시작음은 포스트잇이 새 쿼터로 갱신되는 순간(<see cref="PostitRoutine"/>)에 낸다 —
+        /// TurnBegan은 턴 해석 도중에 쏘아져 그때 소리를 내면 결과 연출보다 먼저 울린다.</summary>
+        private void OnTurnBegan(int turn)
+        {
+            if (turn == 1) UiSoundHooks.Play(UiSoundCue.QuarterStart);
+        }
+
+        /// <summary>심박수 배경음이 마지막으로 맞춘 구간 — 침체에 "새로" 들어섰는지 가리는 기준.</summary>
+        private HeartbeatState _soundState;
+
+        /// <summary>
+        /// 심박수 사운드. 배경음(루프)은 구간에 따라 기본/침체/흥분으로 갈아탄다(즉사 구간은 직전 배경음을 그대로 둔다).
+        /// 침체·매우 침체에 다른 구간에서 들어서는 순간에는 연출 사운드도 함께 울려, 침체 배경음과 겹쳐 난다.
+        /// 심박수를 화면에 반영하는 바로 그 순간(<see cref="HeartRateController.HeartbeatPresented"/>)에 부른다 — 결과 연출보다 먼저 울리지 않는다.
+        /// </summary>
+        private void UpdateHeartbeatSound(int value, bool snap)
+        {
+            var state = Session.Zone.StateOf(value);
+            var bed = state switch
+            {
+                HeartbeatState.Stable => UiSoundCue.HeartbeatBase,
+                HeartbeatState.VeryDepressed or HeartbeatState.Depressed => UiSoundCue.HeartbeatDepressed,
+                HeartbeatState.Excited or HeartbeatState.VeryExcited => UiSoundCue.HeartbeatExcited,
+                _ => (UiSoundCue?)null
+            };
+            if (bed.HasValue) UiSoundHooks.SetBed(bed);
+
+            var enteredDepressed = IsDepressed(state) && !IsDepressed(_soundState);
+            _soundState = state;
+            if (enteredDepressed && !snap) UiSoundHooks.Play(UiSoundCue.DepressedStinger);
+        }
+
+        private static bool IsDepressed(HeartbeatState state) => state is HeartbeatState.VeryDepressed or HeartbeatState.Depressed;
 
         /// <summary>나츠가 마지막으로 반응한 시점의 심박수 상태 — 안정 구간에 "새로" 들어섰는지 가리는 기준.</summary>
         private HeartbeatState _natsuState;
@@ -104,6 +140,8 @@ namespace BlueComplex.UI.Presentation
         /// </summary>
         private void OnHeartbeatPresented(int value, bool snap)
         {
+            UpdateHeartbeatSound(value, snap);
+
             if (_natsu == null || snap) return;
             if (_natsu.Current == NatsuExpression.Focus && !IsPresenting) return;
 
@@ -122,6 +160,7 @@ namespace BlueComplex.UI.Presentation
             _pending.Clear(); // 재시작 시 이전 스테이지의 대기 중 연출은 버린다.
             _natsu?.ResetToNormal();
             _natsuState = Session.Zone.StateOf(Session.Heartbeat.Value);
+            UpdateHeartbeatSound(Session.Heartbeat.Value, snap: true); // 새 세션의 첫 배경음(HeartRateController의 스냅 알림보다 먼저 올 수도 있어 여기서도 맞춘다).
 
             // 재시작이 연출 도중이면 옛 코루틴이 새 세션 화면을 계속 만지지 않게 끊고, 떼어져 있던 포스트잇·암전 막을 원래대로 돌린다.
             if (IsPresenting)
@@ -181,6 +220,10 @@ namespace BlueComplex.UI.Presentation
             {
                 _heartRate.SyncTurnState();
                 _complexStatus?.RefreshForTurn();
+
+                // 새 쿼터가 시작되는 순간 — 포스트잇이 새 쿼터 정보로 갱신된다. 스테이지가 끝났으면 다음 쿼터가 없다.
+                if (Session.Runner.Outcome == StageOutcome.InProgress && Session.Runner.CurrentTurnInQuarter == 1)
+                    UiSoundHooks.Play(UiSoundCue.QuarterStart);
             }
 
             var runner = Session.Runner;
