@@ -142,6 +142,104 @@ namespace BlueComplex.Core.Tests
             }
         }
 
+        [Test]
+        public void RefillForNewQuarter_ReusesClueSpentInEarlierQuarters_WhenNothingQualifyingIsLeftInThePool()
+        {
+            // 조건 충족 단서가 딱 3장뿐인 풀 — 1쿼터에 손패로 다 들어와 소진(무덤)된다. 2쿼터 손패에도 다시 3장이 들어와야 한다.
+            var defs = new[] { Sad(0), Sad(1), Sad(2), Happy(0), Happy(1), Happy(2) };
+            var bias = Rule(minClues: 3).For(new KeyZone(34, 36));
+
+            for (var seed = 0; seed < 50; seed++)
+            {
+                var hand = Hand(seed, defs);
+                hand.RefillForNewQuarter(bias);
+                foreach (var card in hand.Cards.ToList()) hand.Use(card);
+
+                hand.RefillForNewQuarter(bias);
+
+                Assert.AreEqual(3, hand.Cards.Count(c => bias.Qualifies(c.Definition)), $"seed={seed}: 소진된 단서도 다시 풀에 올라 강제 배치된다");
+            }
+        }
+
+        // ── 다섯 구간 ──────────────────────────────────────────────────────────
+
+        // 구역 폭 36의 시작 칸(한가운데 칸이 속한 구간): 매우 침체 / 침체 / 안정 / 흥분 / 매우 흥분을 한 번씩 만든다.
+        private static readonly (int StartSlot, HeartbeatState Band)[] AllBands =
+        {
+            (10, HeartbeatState.VeryDepressed), (34, HeartbeatState.Depressed), (62, HeartbeatState.Stable),
+            (131, HeartbeatState.Excited), (155, HeartbeatState.VeryExcited),
+        };
+
+        [Test]
+        public void EveryBandDemandsItsOwnMinimum_AcrossManySeeds()
+        {
+            // 기획 규칙 그대로: 매우 = 최소 2장, 일반 = 최소 1장, 안정 = 조건 없음(완전 랜덤). 풀에는 양쪽 감정이 넉넉히 있다.
+            var rule = new KeyZoneHandBiasRule(Zone, Polarity, new KeyHandBiasSettings(minClues: 1, minTagsNormal: 1, minTagsVery: 1, minCluesVery: 2));
+            var defs = Enumerable.Range(0, 6).Select(Sad).Concat(Enumerable.Range(0, 6).Select(Happy))
+                .Concat(new[] { Clue("anger", EmotionTag.Anger), Clue("fear", EmotionTag.Fear) }).ToArray();
+
+            foreach (var (startSlot, band) in AllBands)
+            {
+                var bias = rule.For(new KeyZone(startSlot, 36));
+                if (band == HeartbeatState.Stable) { Assert.IsNull(bias, "안정 구간은 강제 조건이 없다"); continue; }
+
+                var wanted = band is HeartbeatState.VeryDepressed or HeartbeatState.VeryExcited ? 2 : 1;
+                Assert.AreEqual(wanted, bias.MinClues, band.ToString());
+
+                for (var seed = 0; seed < 300; seed++)
+                {
+                    var hand = Hand(seed, defs);
+                    hand.RefillForNewQuarter(bias);
+                    Assert.GreaterOrEqual(hand.Cards.Count(c => bias.Qualifies(c.Definition)), wanted, $"{band} seed={seed}");
+                }
+            }
+        }
+
+        [Test]
+        public void ExcitedSideIsHappinessLoveAnger_DepressedSideIsSadnessDisgustFear()
+        {
+            var depressed = Rule().For(new KeyZone(34, 36));
+            var excited = Rule().For(new KeyZone(131, 36));
+
+            foreach (var emotion in new[] { EmotionTag.Sadness, EmotionTag.Disgust, EmotionTag.Fear })
+            {
+                Assert.IsTrue(depressed.Qualifies(Clue("c", emotion)), emotion.ToString());
+                Assert.IsFalse(excited.Qualifies(Clue("c", emotion)), emotion.ToString());
+            }
+
+            foreach (var emotion in new[] { EmotionTag.Happiness, EmotionTag.Love, EmotionTag.Anger })
+            {
+                Assert.IsTrue(excited.Qualifies(Clue("c", emotion)), emotion.ToString());
+                Assert.IsFalse(depressed.Qualifies(Clue("c", emotion)), emotion.ToString());
+            }
+        }
+
+        [Test]
+        public void StableBand_LeavesTheRandomDrawUntouched()
+        {
+            var defs = Enumerable.Range(0, 8).Select(Sad).Concat(Enumerable.Range(0, 8).Select(Happy)).ToArray();
+            var stable = Rule().For(new KeyZone(62, 36));
+
+            for (var seed = 0; seed < 30; seed++)
+            {
+                var plain = Hand(seed, defs);
+                plain.RefillForNewQuarter();
+                var biased = Hand(seed, defs);
+                biased.RefillForNewQuarter(stable);
+
+                CollectionAssert.AreEqual(plain.Cards.Select(c => c.Definition.Id).ToList(),
+                    biased.Cards.Select(c => c.Definition.Id).ToList(), $"seed={seed}: 안정 구간은 난수 소비도 그대로다");
+            }
+        }
+
+        [Test]
+        public void MinCluesVery_DefaultsToMinClues()
+        {
+            Assert.AreEqual(3, new KeyHandBiasSettings(3, 1, 1).MinCluesVery);
+            Assert.AreEqual(1, new KeyHandBiasSettings(1, 1, 1, minCluesVery: 2).MinClues);
+            Assert.AreEqual(2, new KeyHandBiasSettings(1, 1, 1, minCluesVery: 2).MinCluesVery);
+        }
+
         // ── 스테이지 연결 ───────────────────────────────────────────────────────
 
         [Test]
