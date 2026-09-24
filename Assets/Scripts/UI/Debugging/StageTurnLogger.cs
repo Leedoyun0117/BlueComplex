@@ -82,7 +82,7 @@ namespace BlueComplex.UI.Debugging
             log.AppendLine($"  쿼터 {report.Quarter} · {report.TurnInQuarter}/{_session.Runner.Schedule.TurnsPerQuarter}턴  키 판정: {judgeText}");
 
             var state = _session.Zone.StateOf(report.HeartbeatValue);
-            log.AppendLine($"  상태: {FormatState(state)}  검열: {FormatCensorship(_session.Censorship.Level)}");
+            log.AppendLine($"  상태: {FormatState(state)}");
 
             log.AppendLine($"  신규 컴플렉스: {(report.SpawnedComplex != null ? report.SpawnedComplex.Definition.DisplayName : "없음")}");
             log.Append($"  결과: {report.Outcome}");
@@ -102,14 +102,6 @@ namespace BlueComplex.UI.Debugging
             HeartbeatState.Stable => "안정",
             HeartbeatState.Excited => "흥분",
             HeartbeatState.VeryExcited => "매우 흥분",
-            _ => "-"
-        };
-
-        private static string FormatCensorship(CensorshipLevel level) => level switch
-        {
-            CensorshipLevel.None => "없음",
-            CensorshipLevel.Partial => "일부",
-            CensorshipLevel.Full => "전체",
             _ => "-"
         };
 

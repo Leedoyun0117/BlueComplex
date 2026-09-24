@@ -14,16 +14,8 @@ namespace BlueComplex.Core.Stability
         VeryExcited
     }
 
-    /// <summary>단서 정보를 얼마나 가릴지의 수준. 무엇을 가릴지는 UI(표시 계층)의 책임이다.</summary>
-    public enum CensorshipLevel
-    {
-        None,
-        Partial,
-        Full
-    }
-
     /// <summary>
-    /// 심박수 구간 정의와 판정을 담당한다. 경계값·검열 수준·컴플렉스 발현 확률은 전부
+    /// 심박수 구간 정의와 판정을 담당한다. 경계값·컴플렉스 발현 확률은 전부
     /// 생성자로 주입 가능하며, 기본값은 기획표를 그대로 옮긴 것이다.
     /// </summary>
     public sealed class HeartbeatZone
@@ -34,15 +26,13 @@ namespace BlueComplex.Core.Stability
             public int Min { get; }
             public int Max { get; }
             public HeartbeatState State { get; }
-            public CensorshipLevel Censorship { get; }
             public double ComplexSpawnChance { get; }
 
-            public Definition(int min, int max, HeartbeatState state, CensorshipLevel censorship, double complexSpawnChance)
+            public Definition(int min, int max, HeartbeatState state, double complexSpawnChance)
             {
                 Min = min;
                 Max = max;
                 State = state;
-                Censorship = censorship;
                 ComplexSpawnChance = complexSpawnChance;
             }
 
@@ -51,21 +41,21 @@ namespace BlueComplex.Core.Stability
 
         public static IReadOnlyList<Definition> DefaultBoundaries { get; } = new[]
         {
-            new Definition(0, 9, HeartbeatState.Fatal, CensorshipLevel.Full, 0.0),
-            new Definition(10, 39, HeartbeatState.VeryDepressed, CensorshipLevel.Full, 0.5),
-            new Definition(40, 70, HeartbeatState.Depressed, CensorshipLevel.Partial, 0.3),
-            new Definition(71, 100, HeartbeatState.Stable, CensorshipLevel.None, 0.0),
-            new Definition(101, 150, HeartbeatState.Excited, CensorshipLevel.Partial, 0.3),
-            new Definition(151, 190, HeartbeatState.VeryExcited, CensorshipLevel.Full, 0.5),
-            new Definition(191, 200, HeartbeatState.Fatal, CensorshipLevel.Full, 0.0)
+            new Definition(0, 9, HeartbeatState.Fatal, 0.0),
+            new Definition(10, 39, HeartbeatState.VeryDepressed, 0.5),
+            new Definition(40, 70, HeartbeatState.Depressed, 0.3),
+            new Definition(71, 100, HeartbeatState.Stable, 0.0),
+            new Definition(101, 150, HeartbeatState.Excited, 0.3),
+            new Definition(151, 190, HeartbeatState.VeryExcited, 0.5),
+            new Definition(191, 200, HeartbeatState.Fatal, 0.0)
         };
 
         /// <summary>기본 구간표에서 컴플렉스 발현 확률만 <paramref name="chances"/>로 바꾼 구간표. 표에 없는 구간은 기본 확률을 유지한다.
-        /// 경계값·검열 수준은 그대로다 — 스테이지 전용 발현 확률표를 만들 때 쓴다.</summary>
+        /// 경계값은 그대로다 — 스테이지 전용 발현 확률표를 만들 때 쓴다.</summary>
         public static IReadOnlyList<Definition> WithSpawnChances(IReadOnlyDictionary<HeartbeatState, double> chances) =>
             DefaultBoundaries
                 .Select(b => chances.TryGetValue(b.State, out var chance)
-                    ? new Definition(b.Min, b.Max, b.State, b.Censorship, chance)
+                    ? new Definition(b.Min, b.Max, b.State, chance)
                     : b)
                 .ToArray();
 
@@ -100,7 +90,6 @@ namespace BlueComplex.Core.Stability
         }
 
         public HeartbeatState StateOf(int heartbeatValue) => Resolve(heartbeatValue).State;
-        public CensorshipLevel CensorshipOf(int heartbeatValue) => Resolve(heartbeatValue).Censorship;
         public double ComplexSpawnChanceOf(int heartbeatValue) => Resolve(heartbeatValue).ComplexSpawnChance;
         public bool IsFatal(int heartbeatValue) => StateOf(heartbeatValue) == HeartbeatState.Fatal;
 

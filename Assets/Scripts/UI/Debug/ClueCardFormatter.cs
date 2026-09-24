@@ -1,35 +1,26 @@
 using System.Text;
 using BlueComplex.Core.Clues;
-using BlueComplex.Core.Stability;
 
 namespace BlueComplex.UI.DebugPlay
 {
     /// <summary>
-    /// 해금 상태(ClueKnowledgeLedger)와 검열 수준을 반영해 단서 카드 텍스트를 만든다.
+    /// 해금 상태(ClueKnowledgeLedger)를 반영해 단서 카드 텍스트를 만든다.
     /// 표시만 담당하고 판정에는 관여하지 않는다.
     /// </summary>
     internal static class ClueCardFormatter
     {
-        private const string CensorBlock = "▓▓▓▓▓▓▓▓";
-
-        public static string Format(ClueInstance card, ClueKnowledgeLedger ledger, CensorshipLevel censorship)
+        public static string Format(ClueInstance card, ClueKnowledgeLedger ledger)
         {
             var def = card.Definition;
             var sb = new StringBuilder();
             sb.AppendLine(def.DisplayName);
-
-            if (censorship == CensorshipLevel.Full)
-            {
-                sb.Append(CensorBlock);
-                return sb.ToString();
-            }
 
             var knowledge = ledger.GetKnowledge(def.Id);
 
             sb.AppendLine($"시간: {(knowledge.TimeRevealed ? DebugKoreanLabels.Times(def.Times) : "?")}");
             sb.AppendLine($"인물: {FormatPersons(def, knowledge)}");
             sb.AppendLine($"감정: {FormatEmotions(def, knowledge)}");
-            sb.Append(censorship == CensorshipLevel.Partial ? CensorBlock : $"\"{def.Story}\"");
+            sb.Append($"\"{def.Story}\"");
 
             return sb.ToString();
         }

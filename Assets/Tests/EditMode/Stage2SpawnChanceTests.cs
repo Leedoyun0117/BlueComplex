@@ -27,7 +27,7 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void Stage2_OnlyChangesSpawnChance_NotZoneBoundariesOrCensorship()
+        public void Stage2_OnlyChangesSpawnChance_NotZoneBoundaries()
         {
             var custom = Create(Stage2Content.Stage2(new DefaultEmotionPolarityTable())).Zone;
             var stock = new HeartbeatZone();
@@ -35,7 +35,6 @@ namespace BlueComplex.Core.Tests
             for (var value = 0; value <= 200; value++)
             {
                 Assert.AreEqual(stock.StateOf(value), custom.StateOf(value), $"심박수 {value}");
-                Assert.AreEqual(stock.CensorshipOf(value), custom.CensorshipOf(value), $"심박수 {value}");
             }
         }
 

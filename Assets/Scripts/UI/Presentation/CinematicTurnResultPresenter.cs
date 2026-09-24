@@ -251,7 +251,7 @@ namespace BlueComplex.UI.Presentation
             yield return PlayDialogue(TurnSummaryFormatter.Build(report));
 
             // 넘어간 턴에도 손패는 연출이 도는 동안 갱신이 미뤄져 있다(ClueHandController.OnHandChanged 참고).
-            _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger, Session.Censorship.Level);
+            _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger);
         }
 
         private IEnumerator PresentRoutine(TurnReport report)
@@ -283,7 +283,7 @@ namespace BlueComplex.UI.Presentation
             var closeTween = _xrayPanel.Close();
             if (closeTween != null) yield return closeTween.WaitForCompletion(true);
 
-            _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger, Session.Censorship.Level);
+            _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger);
         }
 
         /// <summary>발동한 컴플렉스를 우선순위 순서(InterpretationResult.Steps 순서)대로 한 번에 하나씩 빛내고, 그때마다 대사창에 짧은 이벤트 대사를 띄운다.

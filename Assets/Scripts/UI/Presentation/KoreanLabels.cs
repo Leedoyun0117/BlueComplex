@@ -60,14 +60,6 @@ namespace BlueComplex.UI.Presentation
             ? $"{trait.Definition.DisplayName} (안정까지)"
             : $"{trait.Definition.DisplayName} {trait.RemainingTurns}턴";
 
-        public static string Censorship(CensorshipLevel level) => level switch
-        {
-            CensorshipLevel.None => "없음",
-            CensorshipLevel.Partial => "일부",
-            CensorshipLevel.Full => "전체",
-            _ => "-"
-        };
-
         public static string Outcome(StageOutcome outcome) => outcome switch
         {
             StageOutcome.Cleared => "클리어",

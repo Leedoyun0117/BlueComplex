@@ -60,7 +60,7 @@ namespace BlueComplex.UI.Presentation
             _heartRate?.PlayTurnResult(report);
             if (!report.IsPass)
                 _memoryBubble?.SetPersistentSummary(TurnSummaryFormatter.BuildFinalEmotionSummary(report));
-            _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger, Session.Censorship.Level);
+            _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger);
         }
     }
 }
