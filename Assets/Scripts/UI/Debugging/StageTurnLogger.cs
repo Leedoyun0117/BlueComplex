@@ -121,6 +121,9 @@ namespace BlueComplex.UI.Debugging
             _ => "-"
         };
 
+        private static string FormatTimes(IReadOnlyList<TimeTag> times) =>
+            times.Count == 0 ? "-" : string.Join("+", times.Select(FormatTime));
+
         private static string FormatPerson(PersonTag person) => person switch
         {
             PersonTag.Family => "가족",
@@ -154,6 +157,6 @@ namespace BlueComplex.UI.Debugging
         }
 
         private static string FormatTags(TagSet tags) =>
-            $"{FormatTime(tags.Time)}/{FormatPersons(tags.Persons)}/{FormatEmotions(tags.Emotions)}";
+            $"{FormatTimes(tags.Times)}/{FormatPersons(tags.Persons)}/{FormatEmotions(tags.Emotions)}";
     }
 }

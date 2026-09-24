@@ -26,7 +26,7 @@ namespace BlueComplex.UI.DebugPlay
 
             var knowledge = ledger.GetKnowledge(def.Id);
 
-            sb.AppendLine($"시간: {(knowledge.TimeRevealed ? DebugKoreanLabels.Time(def.Time) : "?")}");
+            sb.AppendLine($"시간: {(knowledge.TimeRevealed ? DebugKoreanLabels.Times(def.Times) : "?")}");
             sb.AppendLine($"인물: {FormatPersons(def, knowledge)}");
             sb.AppendLine($"감정: {FormatEmotions(def, knowledge)}");
             sb.Append(censorship == CensorshipLevel.Partial ? CensorBlock : $"\"{def.Story}\"");

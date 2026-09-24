@@ -90,4 +90,97 @@ namespace BlueComplex.Core.Complexes
 
         public void Apply(ComplexContext context) => context.Tags.SetTime(_time);
     }
+
+    /// <summary>시간 태그를 하나 더 붙인다. 기존 시간 태그는 그대로다. (스테이지 2 과한 기대 — "시간 태그 '미래' 추가")</summary>
+    public sealed class AddTime : IComplexEffect
+    {
+        private readonly TimeTag _time;
+        public AddTime(TimeTag time) => _time = time;
+
+        public void Apply(ComplexContext context) => context.Tags.AddTime(_time);
+    }
+
+    /// <summary>감정 태그를 amount개 뺀다. 없으면 아무 일도 없다. (스테이지 2 과거 부정 "슬픔 -1", 피해 망상 "행복 -1")</summary>
+    public sealed class RemoveEmotion : IComplexEffect
+    {
+        private readonly EmotionTag _emotion;
+        private readonly int _amount;
+
+        public RemoveEmotion(EmotionTag emotion, int amount = 1)
+        {
+            _emotion = emotion;
+            _amount = amount;
+        }
+
+        public void Apply(ComplexContext context) => context.Tags.RemoveEmotion(_emotion, _amount);
+    }
+
+    /// <summary>붙어 있는 감정 태그를 전부 배로 만든다(중첩 포함, 슬픔 ×2 → ×4). (스테이지 2 사고 과다 "감정 * 2")</summary>
+    public sealed class DoubleEmotions : IComplexEffect
+    {
+        public void Apply(ComplexContext context)
+        {
+            foreach (var pair in context.Tags.Emotions.ToList())
+                context.Tags.AddEmotion(pair.Key, pair.Value);
+        }
+    }
+
+    /// <summary>
+    /// 해당 극성 감정 태그를 하나하나 한 개씩 더 붙인다 — 중첩된 태그도 낱개마다 세므로 슬픔 ×2는 ×4가 된다.
+    /// (스테이지 2 자책 — "동일한 침체 감정 태그 모두 +1씩 추가 (중복 포함)")
+    /// </summary>
+    public sealed class RepeatEachEmotionOfPolarity : IComplexEffect
+    {
+        private readonly Polarity _polarity;
+        private readonly IEmotionPolarityTable _polarityTable;
+
+        public RepeatEachEmotionOfPolarity(Polarity polarity, IEmotionPolarityTable polarityTable)
+        {
+            _polarity = polarity;
+            _polarityTable = polarityTable;
+        }
+
+        public void Apply(ComplexContext context)
+        {
+            foreach (var pair in context.Tags.Emotions.ToList())
+            {
+                if (_polarityTable.GetPolarity(pair.Key) != _polarity) continue;
+                context.Tags.AddEmotion(pair.Key, pair.Value);
+            }
+        }
+    }
+
+    /// <summary>지정한 감정을 뺀 나머지 감정 태그를 전부 지운다. (스테이지 2 과대 해석 — "다른 감정 태그 모두 제거")</summary>
+    public sealed class KeepOnlyEmotion : IComplexEffect
+    {
+        private readonly EmotionTag _keep;
+        public KeepOnlyEmotion(EmotionTag keep) => _keep = keep;
+
+        public void Apply(ComplexContext context)
+        {
+            foreach (var emotion in context.Tags.Emotions.Keys.ToList())
+            {
+                if (emotion == _keep) continue;
+                context.Tags.RemoveEmotion(emotion, context.Tags.CountOf(emotion));
+            }
+        }
+    }
+
+    /// <summary>시간 태그에 따라 갈라지는 효과. 지정한 시간이 붙어 있으면 <c>ifPresent</c>, 아니면 <c>otherwise</c>. (스테이지 2 사고 과다)</summary>
+    public sealed class ByTime : IComplexEffect
+    {
+        private readonly TimeTag _time;
+        private readonly IComplexEffect _ifPresent;
+        private readonly IComplexEffect _otherwise;
+
+        public ByTime(TimeTag time, IComplexEffect ifPresent, IComplexEffect otherwise)
+        {
+            _time = time;
+            _ifPresent = ifPresent;
+            _otherwise = otherwise;
+        }
+
+        public void Apply(ComplexContext context) =>
+            (context.Tags.HasTime(_time) ? _ifPresent : _otherwise).Apply(context);
+    }
 }

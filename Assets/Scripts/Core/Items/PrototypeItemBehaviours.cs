@@ -45,7 +45,7 @@ namespace BlueComplex.Core.Items
         }
     }
 
-    /// <summary>기억 공감 — 결과에서 지정한 감정들을 amount개씩 제거한다(기획: 공포·슬픔 1씩).</summary>
+    /// <summary>기억 공감 — 결과에서 지정한 감정들을 amount개씩 제거한다(기획: 슬픔 1씩).</summary>
     public sealed class RemoveEmotions : IItemBehaviour, IResultModifier
     {
         private readonly EmotionTag[] _emotions;
@@ -62,6 +62,57 @@ namespace BlueComplex.Core.Items
         public void Modify(TagSet finalTags)
         {
             foreach (var emotion in _emotions) finalTags.RemoveEmotion(emotion, _amount);
+        }
+    }
+
+    /// <summary>
+    /// 무관심 — 최종 결과에 <see cref="Person"/> 태그(기획: 타인)가 붙어 있으면 그 결과의 지정한 감정(기획: 침체 감정 전부)을 통째로 무시한다.
+    /// "타인에 대한 침체 감정"을 "결과에 타인 태그가 있고 침체 감정이 있는 것"으로 옮겼다 — 태그는 감정마다 대상 인물이 따로 없어서 결과 전체의 인물로 본다.
+    /// 무시는 겹친 개수까지 전부 지우는 것이다(기억 공감처럼 1씩이 아니다).
+    /// </summary>
+    public sealed class IgnoreEmotionsTowardPerson : IItemBehaviour, IResultModifier
+    {
+        public PersonTag Person { get; }
+        private readonly EmotionTag[] _emotions;
+
+        public IgnoreEmotionsTowardPerson(PersonTag person, params EmotionTag[] emotions)
+        {
+            Person = person;
+            _emotions = emotions;
+        }
+
+        public void OnActivate(ItemActivationContext context) => context.AddModifier(this);
+
+        public void Modify(TagSet finalTags)
+        {
+            if (!finalTags.HasPerson(Person)) return;
+
+            foreach (var emotion in _emotions) finalTags.RemoveEmotion(emotion, finalTags.CountOf(emotion));
+        }
+    }
+
+    /// <summary>
+    /// 공존감 — 최종 결과에 <see cref="Person"/> 태그(기획: 타인)가 붙어 있으면 그 결과에 지정한 감정(기획: 행복)을 amount개 더한다.
+    /// 무관심과 같은 이유로 "타인에 관한 단서"를 "결과에 타인 태그가 있는 것"으로 본다. 결과 보정 단계에서 더하므로 뒤이어 켜진 논리적 설득이 중복을 접을 수 있다.
+    /// </summary>
+    public sealed class AddEmotionTowardPerson : IItemBehaviour, IResultModifier
+    {
+        public PersonTag Person { get; }
+        private readonly EmotionTag _emotion;
+        private readonly int _amount;
+
+        public AddEmotionTowardPerson(PersonTag person, EmotionTag emotion, int amount)
+        {
+            Person = person;
+            _emotion = emotion;
+            _amount = amount;
+        }
+
+        public void OnActivate(ItemActivationContext context) => context.AddModifier(this);
+
+        public void Modify(TagSet finalTags)
+        {
+            if (finalTags.HasPerson(Person)) finalTags.AddEmotion(_emotion, _amount);
         }
     }
 
@@ -101,7 +152,7 @@ namespace BlueComplex.Core.Items
     public sealed class ReplaceClue : IItemBehaviour, IItemTargeting
     {
         public bool IsValidTarget(ItemTarget target, ItemActivationContext context) =>
-            target is ClueTarget { Card: var card } && context.Hand.Cards.Contains(card) && context.Hand.CanReplaceOne;
+            target is ClueTarget { Card: var card } && context.Hand.CanReplace(card);
 
         public void OnActivate(ItemActivationContext context)
         {

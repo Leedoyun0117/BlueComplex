@@ -105,6 +105,7 @@ namespace BlueComplex.Core.Turn
         private readonly IKeyZonePlacer _keyPlacer;
         private readonly ClueKnowledgeLedger _ledger;
         private readonly IReadOnlyDictionary<string, IReadOnlyList<string>> _itemParameters;
+        private readonly KeyZoneHandBiasRule _handBias;
 
         public int CurrentTurn { get; private set; }
         public QuarterSchedule Schedule => _keys.Schedule;
@@ -135,7 +136,8 @@ namespace BlueComplex.Core.Turn
                           KeyProgress keys,
                           IKeyZonePlacer keyPlacer,
                           ClueKnowledgeLedger ledger,
-                          IReadOnlyDictionary<string, IReadOnlyList<string>> itemParameters = null)
+                          IReadOnlyDictionary<string, IReadOnlyList<string>> itemParameters = null,
+                          KeyZoneHandBiasRule handBias = null)
         {
             _hand = hand;
             _complexBoard = complexBoard;
@@ -152,6 +154,7 @@ namespace BlueComplex.Core.Turn
             _keyPlacer = keyPlacer;
             _ledger = ledger;
             _itemParameters = itemParameters;
+            _handBias = handBias;
         }
 
         public void StartStage()
@@ -179,7 +182,9 @@ namespace BlueComplex.Core.Turn
             // 아이템도 손패와 마찬가지로 쓴 칸만 다른 아이템으로 채운다(안 쓴 아이템은 그대로 유지) — Items.cs의 ItemInventory.Refill 참고.
             if (Schedule.IsQuarterStart(CurrentTurn))
             {
-                _hand.RefillForNewQuarter();
+                // 스테이지가 켜 두었으면 이번 쿼터 키 목표 구간에 맞는 감정의 단서를 손패에 강제로 넣는다(KeyZoneHandBiasRule).
+                var bias = _handBias?.For(_keys.Zones[Schedule.LastTurnOf(Schedule.QuarterOf(CurrentTurn))]);
+                _hand.RefillForNewQuarter(bias);
                 _items.Refill();
                 _keys.OpenQuarter(Schedule.QuarterOf(CurrentTurn));
             }
@@ -265,7 +270,7 @@ namespace BlueComplex.Core.Turn
         ///
         ///  1. 과대 망상  — 단서의 <b>원래</b> 감정 개수 ×2(TraitBoard.ApplyToOriginal). 컴플렉스가 배가된 감정을 보고 해석한다.
         ///  2. 컴플렉스 해석 — 우선순위 순서로. 지속 중인 아이템(감정적 설득)이 지정한 컴플렉스는 건너뛴다.
-        ///  3. 아이템 결과 보정 — 기억 공감(공포·슬픔 1씩 제거), 논리적 설득(중복 감정 하나씩). 지속 중인 아이템의 보정이 걸린 순서대로.
+        ///  3. 아이템 결과 보정 — 기억 공감(슬픔 1씩 제거), 무관심(타인 결과의 침체 감정 무시), 공존감(타인 결과에 행복 1 추가), 논리적 설득(중복 감정 하나씩). 지속 중인 아이템의 보정이 걸린 순서대로.
         ///  4. 환각       — 감정 하나하나의 극성을 뒤집는다(TraitAwareEmotionEvaluator).
         ///  5. 특수 특성  — 뒤집힌 뒤의 극성 기준으로 감정 하나의 영향력을 줄인다(고기능 우울증 = 흥분 ×1/2, 과흥분 = 침체 ×1/2).
         ///  6. 예민/무력  — 합계에 ×3 / ×1/2. 5)와 6)은 곱셈이라 순서를 바꿔도 같다(실수로 계산하고 마지막에 한 번 반올림).
