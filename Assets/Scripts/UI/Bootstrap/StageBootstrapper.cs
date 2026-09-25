@@ -167,7 +167,9 @@ namespace BlueComplex.UI.Bootstrap
             StageDialoguePlayer.GetOrCreate(canvasRoot)?.ResetNow();
 
             // 상시 배경음은 스테이지(재시작 포함)가 시작될 때 처음부터 — 시작 대화 재생 중에도 이미 깔려 있다.
-            UiSoundHooks.StartAmbient(UiSoundCue.AmbientNotes);
+            var ambient = StageSounds.For(config).Ambient;
+            if (ambient.HasValue) UiSoundHooks.StartAmbient(ambient.Value);
+            else UiSoundHooks.StopAmbient();
 
             // StartStage()가 첫 TurnBegan을 곧바로 쏘아 올리므로, 구독자는 그 전에 새 세션을 받아야 한다.
             RaiseSessionStarted();

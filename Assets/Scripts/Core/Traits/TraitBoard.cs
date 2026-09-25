@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BlueComplex.Core.Clues;
 using BlueComplex.Core.Tags;
 
 namespace BlueComplex.Core.Traits
@@ -60,6 +61,9 @@ namespace BlueComplex.Core.Traits
         /// <summary>남은 턴. 특수 특성은 턴으로 줄지 않으므로 항상 <see cref="TraitBoard.UntilCured"/>다.</summary>
         public int RemainingTurns { get; private set; }
 
+        /// <summary>이미 같은 특성이 붙어 있는 상태에서 다시 붙여 갈아끼운 것이면 true — "새로 발현"이 아니라 지속이 갱신된 것이다.</summary>
+        public bool RenewedExisting { get; internal set; }
+
         public bool IsExpired => Definition.Kind == TraitKind.Normal && RemainingTurns <= 0;
 
         public TraitInstance(TraitDefinition definition, int duration)
@@ -91,11 +95,20 @@ namespace BlueComplex.Core.Traits
 
         public event Action<TraitInstance> Granted;
 
-        /// <summary>일반 특성의 지속 턴이 끝나거나 특수 특성이 치유되면 발생한다.</summary>
+        /// <summary>일반 특성의 지속 턴이 끝나거나, 특수 특성이 치유되거나, 아이템이 특성을 지우면(<see cref="RemoveRandom"/>) 발생한다.</summary>
         public event Action<TraitInstance> Expired;
 
-        public TraitBoard(IReadOnlyList<TraitDefinition> catalog = null) =>
+        /// <summary>아이템이 특성을 지웠을 때만 발생한다(<see cref="Expired"/>도 함께 발생) — 지속 턴 만료·치유와 구분해야 하는 쪽(결과 화면의 "새로 발현된 특성")이 쓴다.</summary>
+        public event Action<TraitInstance> Removed;
+
+        private readonly IRandomSource _random;
+
+        /// <param name="random">특성을 랜덤으로 지우는 아이템(논리적 설득)이 쓴다. 없으면 <see cref="RemoveRandom"/>은 쓸 수 없다.</param>
+        public TraitBoard(IReadOnlyList<TraitDefinition> catalog = null, IRandomSource random = null)
+        {
             _catalog = catalog ?? Array.Empty<TraitDefinition>();
+            _random = random;
+        }
 
         public bool Has(string traitId) => _traits.Any(t => t.Definition.Id == traitId);
         public bool Has(TraitDefinition definition) => Has(definition.Id);
@@ -142,7 +155,7 @@ namespace BlueComplex.Core.Traits
             var existing = _traits.FirstOrDefault(t => t.Definition.Id == definition.Id);
             if (existing != null) _traits.Remove(existing);
 
-            var trait = new TraitInstance(definition, duration ?? definition.DefaultDuration);
+            var trait = new TraitInstance(definition, duration ?? definition.DefaultDuration) { RenewedExisting = existing != null };
             _traits.Add(trait);
             Granted?.Invoke(trait);
             return trait;
@@ -171,6 +184,19 @@ namespace BlueComplex.Core.Traits
                 _traits.Remove(expired);
                 Expired?.Invoke(expired);
             }
+        }
+
+        /// <summary>붙어 있는 특성(일반·특수 가리지 않고) 중 하나를 랜덤으로 지운다. 지운 특성을 돌려주고, 붙어 있는 특성이 없으면 아무것도 안 하고 null을 돌려준다.</summary>
+        public TraitInstance RemoveRandom()
+        {
+            if (_traits.Count == 0) return null;
+            if (_random == null) throw new InvalidOperationException("랜덤 원천 없이 만든 TraitBoard라 특성을 랜덤으로 지울 수 없습니다.");
+
+            var removed = _traits[_random.Range(0, _traits.Count)];
+            _traits.Remove(removed);
+            Removed?.Invoke(removed);
+            Expired?.Invoke(removed);
+            return removed;
         }
 
         /// <summary>붙어 있는 특수 특성을 전부 치유한다(안정 구간에 들어서는 즉시 TurnRunner가 부른다). 치유된 특성 수를 돌려준다.</summary>

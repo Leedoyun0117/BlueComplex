@@ -13,6 +13,8 @@ namespace BlueComplex.Core.Stage
 {
     public sealed class StageSession
     {
+        /// <summary>이 세션을 만든 스테이지 설정 — 스테이지별로 달라지는 UI(배경음 등)가 id를 여기서 읽는다.</summary>
+        public StageConfig Config { get; init; }
         public TurnRunner Runner { get; init; }
         public ClueHand Hand { get; init; }
         public ComplexBoard Complexes { get; init; }
@@ -44,7 +46,7 @@ namespace BlueComplex.Core.Stage
             if (startingComplex != null)
                 complexBoard.TryAttach(new ComplexInstance(startingComplex, priority: 0));
 
-            var traits = new TraitBoard(config.Traits);
+            var traits = new TraitBoard(config.Traits, random);
             var heartbeat = new Heartbeat(heartbeatStartValue);
             var zone = config.ComplexSpawnChances == null
                 ? new HeartbeatZone()
@@ -77,6 +79,7 @@ namespace BlueComplex.Core.Stage
 
             return new StageSession
             {
+                Config = config,
                 Runner = runner,
                 Hand = hand,
                 Complexes = complexBoard,

@@ -104,12 +104,16 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void Stage_ItemPool_IsTheEightOfTheStage1Table_WithCoexistenceAndWithoutIndifference()
+        public void Stage_ItemPool_IsTheTwelveOfTheStage1Table()
         {
             var names = PrototypeContent.PrototypeStage(Polarity).ItemPool.Select(i => i.DisplayName).ToList();
 
             CollectionAssert.AreEquivalent(
-                new[] { "극복", "감정적 설득", "기억 공감", "회상", "논리적 설득", "착한 사마리아인", "선택적 기억", "공존감" }, names);
+                new[]
+                {
+                    "극복", "감정적 설득", "기억 공감", "회상", "논리적 설득", "착한 사마리아인", "선택적 기억",
+                    "심호흡", "자아비대", "명상", "공존감", "무관심"
+                }, names);
         }
     }
 }

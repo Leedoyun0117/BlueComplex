@@ -68,6 +68,9 @@ namespace BlueComplex.UI.Motion
 
         /// <summary>플레이 내내 깔리는 배경 곡(Fragile Notes). StartAmbient/StopAmbient로만 켜고 끈다.</summary>
         AmbientNotes,
+
+        /// <summary>스테이지 2의 기본 배경음(ClockTower) — 안정 구간에서 <see cref="HeartbeatBase"/> 자리를 대신한다. 침체·흥분 배경음과 크로스페이드로 오간다.</summary>
+        HeartbeatBaseStage2,
     }
 
     /// <summary>

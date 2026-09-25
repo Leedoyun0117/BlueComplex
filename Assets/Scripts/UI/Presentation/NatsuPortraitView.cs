@@ -14,9 +14,11 @@ namespace BlueComplex.UI.Presentation
     /// 이 컴포넌트는 표정을 "언제" 바꿀지 스스로 정하지 않는다 — <see cref="SetExpression"/>은 CinematicTurnResultPresenter가
     /// 심박수 구간이 바뀌는 시점·키 턴이 시작되는 시점에 부른다(판정은 <see cref="PortraitReactionRules"/>). 여기서 스스로 하는 건
     /// 정해진 표정 안의 프레임 재생뿐이다:
-    ///   Normal: 뜬 눈 한 장, 3초마다 눈을 깜박인다(CloseEyes 1→2→3→2→1).
-    ///   Fury: Confused 5장을 왕복하며 계속 식은땀·입꼬리가 흔들린다.
-    ///   Focus: Focus 1→5(손을 올려 턱을 짚음) 후 마지막 장에서 유지.
+    /// 표정마다 "전환 프레임 → idle 루프" 두 단계다: 전환 프레임이 끝나면 그 표정의 idle이 계속 돈다.
+    ///   Normal: (전환 없음) 뜬 눈 한 장, 일정 간격으로 눈을 깜박인다(CloseEyes 1→2→3→2→1).
+    ///   Fury: 전환 Confused 1→5(식은땀·입꼬리)를 한 번 재생 → idle Confused_Blink 1→2→3→2→1을 일정 간격으로.
+    ///   Focus: 전환 Focus 1→5(손을 올려 턱을 짚음)를 한 번 재생 → idle Focus_Blink 1→2→3→2→1을 일정 간격으로.
+    /// 깜박임 간격·속도는 <see cref="NatsuExpressionSet"/> 에셋의 값이다(인스펙터에서 조절).
     ///   Relief: 집중 중이었다면 TakeOffHand 1→5(손을 뗌)를 먼저 재생하고, 이어서 CloseEyes 1,2,3,4,5,6,5,4,2,1 시퀀스 뒤 Normal로 돌아간다.
     /// 집중에서 Normal로 돌아올 때도 손 떼기(TakeOffHand)를 재생한다.
     ///
@@ -27,8 +29,6 @@ namespace BlueComplex.UI.Presentation
     {
         /// <summary>한 프레임을 보여주는 시간(초). 안도 시퀀스(10스텝)가 1초 안팎이 되게 잡았다.</summary>
         private const float FrameSeconds = 0.1f;
-        private const float BlinkFrameSeconds = 0.05f;
-        private const float BlinkPeriodSeconds = 3f;
         private const float FuryFrameSeconds = 0.18f;
 
         /// <summary>안도 시퀀스의 CloseEyes 프레임(0부터). 기획 원문 "1,2,3,4,5,6,5,4,2,1"을 그대로 옮겼다.</summary>
@@ -112,29 +112,37 @@ namespace BlueComplex.UI.Presentation
             }
         }
 
+        /// <summary>idle 깜박임: 첫 장(뜬 눈)을 보여주고, 간격마다 1→2→3→2→1을 한 번 재생하고 다시 기다린다. 프레임이 없으면 마지막 장 그대로 둔다.</summary>
+        private IEnumerator BlinkLoop(Sprite[] frames)
+        {
+            if (frames == null || frames.Length < 3) yield break;
+
+            Show(frames[0]);
+            var period = new WaitForSecondsRealtime(_set.blinkIntervalSeconds);
+            while (true)
+            {
+                yield return period;
+                yield return Play(frames, BlinkOrder, _set.blinkFrameSeconds);
+            }
+        }
+
         private IEnumerator NormalRoutine(bool fromFocus)
         {
             if (fromFocus) yield return Play(_set.takeOffHand, Enumerable.Range(0, _set.takeOffHand.Length), FrameSeconds);
 
-            Show(_set.closeEyes[0]);
-            var period = new WaitForSecondsRealtime(BlinkPeriodSeconds);
-            while (true)
-            {
-                yield return period;
-                yield return Play(_set.closeEyes, BlinkOrder, BlinkFrameSeconds);
-            }
+            yield return BlinkLoop(_set.closeEyes);
         }
 
         private IEnumerator FuryRoutine()
         {
-            // 1→5→1 왕복. 양 끝 장이 두 번 연달아 나오지 않게 한 주기는 1..5, 4..2로 만든다.
-            var cycle = Enumerable.Range(0, _set.confused.Length).Concat(Enumerable.Range(1, _set.confused.Length - 2).Reverse()).ToArray();
-            while (true) yield return Play(_set.confused, cycle, FuryFrameSeconds);
+            yield return Play(_set.confused, Enumerable.Range(0, _set.confused.Length), FuryFrameSeconds);
+            yield return BlinkLoop(_set.confusedBlink);
         }
 
         private IEnumerator FocusRoutine()
         {
             yield return Play(_set.focus, Enumerable.Range(0, _set.focus.Length), FrameSeconds);
+            yield return BlinkLoop(_set.focusBlink);
         }
 
         private IEnumerator ReliefRoutine(bool fromFocus)

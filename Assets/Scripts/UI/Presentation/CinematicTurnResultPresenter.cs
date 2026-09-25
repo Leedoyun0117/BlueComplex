@@ -116,7 +116,7 @@ namespace BlueComplex.UI.Presentation
             var state = Session.Zone.StateOf(value);
             var bed = state switch
             {
-                HeartbeatState.Stable => UiSoundCue.HeartbeatBase,
+                HeartbeatState.Stable => StageSounds.For(Session.Config).BaseBed,
                 HeartbeatState.VeryDepressed or HeartbeatState.Depressed => UiSoundCue.HeartbeatDepressed,
                 HeartbeatState.Excited or HeartbeatState.VeryExcited => UiSoundCue.HeartbeatExcited,
                 _ => (UiSoundCue?)null
@@ -316,8 +316,10 @@ namespace BlueComplex.UI.Presentation
         private IEnumerator PlaySummaryWithResultTags(TurnReport report)
         {
             var tags = BuildResultTags(report);
+            // 이 턴에 처음 발현된 특성 이름은 감정 칩 바로 위에 함께 뜬다(이미 걸려 있던 특성은 안 뜬다).
+            var traitNames = report.TraitsManifested.Select(t => t.DisplayName).ToList();
             var appearedAt = Time.unscaledTime;
-            var show = _memoryBubble.ShowResultTags(tags);
+            var show = _memoryBubble.ShowResultTags(tags, traitNames);
 
             yield return PlayDialogue(TurnSummaryFormatter.Build(report));
 
@@ -325,7 +327,7 @@ namespace BlueComplex.UI.Presentation
             var resultTagLine = TurnSummaryFormatter.BuildResultTagLine(report);
             if (resultTagLine != null) yield return PlayDialogue(resultTagLine);
 
-            if (tags.Count == 0) yield break;
+            if (tags.Count == 0 && traitNames.Count == 0) yield break;
 
             var readyAt = appearedAt + show.Duration() + UiMotion.Settings.tagHold;
             yield return new WaitUntil(() => Time.unscaledTime >= readyAt);
