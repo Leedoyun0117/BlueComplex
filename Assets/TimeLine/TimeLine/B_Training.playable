@@ -637,11 +637,11 @@ MonoBehaviour:
   m_Tracks:
   - {fileID: 6986847285531586210}
   - {fileID: -4412398765432109878}
-  m_FixedDuration: 0
+  m_FixedDuration: 19.008
   m_EditorSettings:
     m_Framerate: 60
     m_ScenePreview: 1
-  m_DurationMode: 0
+  m_DurationMode: 1
   m_MarkerTrack: {fileID: 0}
 --- !u!114 &6986847285531586210
 MonoBehaviour:
