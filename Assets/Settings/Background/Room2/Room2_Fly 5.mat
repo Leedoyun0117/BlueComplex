@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Room2_Fly
+  m_Name: Room2_Fly 5
   m_Shader: {fileID: 4800000, guid: 2e84b1f7c05d39a4d8b3e6427fa19c50, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -24,7 +24,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
-        m_Texture: {fileID: 2800000, guid: a0658e8f44f7dd9439149cdf1775ce5c, type: 3}
+        m_Texture: {fileID: 2800000, guid: ce5290f61315d894988787c6bf39361a, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _NoiseTex:
@@ -60,7 +60,7 @@ Material:
     - _OrbitSpeed: 0.12
     - _OrbitWobble: 0.25
     - _OrbitWobbleRate: 3
-    - _Seed: 0
+    - _Seed: 41.2
     - _ShadowAlphaCutoff: 0.5
     - _SurfaceGlow: 0.5
     - _SwayFalloff: 2.5
