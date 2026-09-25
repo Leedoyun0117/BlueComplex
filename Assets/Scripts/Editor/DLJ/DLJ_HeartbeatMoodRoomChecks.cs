@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 
 namespace BlueComplex.Editor.DLJ
 {
-    public static class HeartbeatMoodRoomChecks
+    public static class DLJ_HeartbeatMoodRoomChecks
     {
         [MenuItem("Tools/BlueComplex/DLJ/Validate Mood Room Bindings")]
         public static void RunInEditor() => Debug.Log($"[DLJ Mood] {Run()} room checks passed.");
@@ -23,7 +23,7 @@ namespace BlueComplex.Editor.DLJ
             }
             void Edge(Vector3 a, Vector3 b, bool expected, string reason)
             {
-                Check(HeartbeatMoodEffectController.ClipWindowEdge(ref a, ref b, 0.3f, 100f) == expected, reason);
+                Check(DLJ_HeartbeatMoodEffectController.ClipWindowEdge(ref a, ref b, 0.3f, 100f) == expected, reason);
                 if (expected) Check(a.x >= 0 && a.x <= 1 && b.x >= 0 && b.x <= 1
                     && a.y >= 0 && a.y <= 1 && b.y >= 0 && b.y <= 1, reason + " stays inside viewport");
             }
@@ -41,10 +41,10 @@ namespace BlueComplex.Editor.DLJ
             var shader = Shader.Find("BlueComplex/DLJ/HeartbeatMood");
             Check(shader != null, "Mood shader imported");
             var material = new Material(shader);
-            var effect = owner.AddComponent<HeartbeatMoodEffectController>();
+            var effect = owner.AddComponent<DLJ_HeartbeatMoodEffectController>();
             const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
-            void Set(string field, object value) => typeof(HeartbeatMoodEffectController).GetField(field, flags).SetValue(effect, value);
-            void Call(string method) => typeof(HeartbeatMoodEffectController).GetMethod(method, flags).Invoke(effect, null);
+            void Set(string field, object value) => typeof(DLJ_HeartbeatMoodEffectController).GetField(field, flags).SetValue(effect, value);
+            void Call(string method) => typeof(DLJ_HeartbeatMoodEffectController).GetMethod(method, flags).Invoke(effect, null);
             Transform Point(string name, Vector3 position)
             {
                 var point = new GameObject(name).transform;
@@ -61,7 +61,7 @@ namespace BlueComplex.Editor.DLJ
                 lamp.useColorTemperature = true;
                 var windowLight = Point("Room 2 light", new Vector3(1, 1, 10)).gameObject.AddComponent<Light>();
                 windowLight.color = Color.blue;
-                var window = new HeartbeatMoodEffectController.WindowOutline
+                var window = new DLJ_HeartbeatMoodEffectController.WindowOutline
                 {
                     Corners = new List<Transform>
                     {
@@ -70,16 +70,16 @@ namespace BlueComplex.Editor.DLJ
                     },
                     InteriorTarget = Point("Inside", new Vector3(-3, -3, 10))
                 };
-                var rooms = new List<HeartbeatMoodEffectController.RoomBinding>
+                var rooms = new List<DLJ_HeartbeatMoodEffectController.RoomBinding>
                 {
                     new() { Name = "1", SceneCamera = camera, Lights = new() { lamp }, ScatterLights = new() { lamp } },
                     new() { Name = "2", SceneCamera = camera, Lights = new() { windowLight },
-                        Mode = HeartbeatMoodEffectController.ScatterMode.WindowEdges, Windows = new() { window } },
+                        Mode = DLJ_HeartbeatMoodEffectController.ScatterMode.WindowEdges, Windows = new() { window } },
                     new() { Name = "3", SceneCamera = camera }
                 };
                 Set("_rooms", rooms);
                 Set("_runtimeMaterial", material);
-                var state = (HeartbeatMoodEffectState)typeof(HeartbeatMoodEffectController).GetField("_state", flags).GetValue(effect);
+                var state = (DLJ_HeartbeatMoodEffectState)typeof(DLJ_HeartbeatMoodEffectController).GetField("_state", flags).GetValue(effect);
                 state.Show(25, new BlueComplex.Core.Stability.HeartbeatZone(), true);
                 effect.SelectRoom(0);
                 Check(lamp.color == Color.white && !lamp.useColorTemperature, "Selected room turns white");
@@ -97,7 +97,7 @@ namespace BlueComplex.Editor.DLJ
                 var reversedTop = material.GetVectorArray("_WindowDirections")[2];
                 Check(Vector2.Distance(direction, reversedTop) < 0.001f, "Reversed corners preserve outward direction");
                 window.Corners.Reverse();
-                var rotatedNormal = HeartbeatMoodEffectController.WindowOutwardNormal(Vector2.zero, new Vector2(1, 1), 1);
+                var rotatedNormal = DLJ_HeartbeatMoodEffectController.WindowOutwardNormal(Vector2.zero, new Vector2(1, 1), 1);
                 Check(Vector2.Dot(rotatedNormal, new Vector2(1, -1).normalized) > 0.999f, "Rotated edge uses geometric normal");
                 rooms[1].SceneCamera = null;
                 Call("ApplyVisuals");
@@ -162,7 +162,7 @@ namespace BlueComplex.Editor.DLJ
                 var copyGo = new GameObject("Serialized settings copy");
                 copyGo.SetActive(false);
                 copyGo.transform.SetParent(owner.transform);
-                var copy = copyGo.AddComponent<HeartbeatMoodEffectController>();
+                var copy = copyGo.AddComponent<DLJ_HeartbeatMoodEffectController>();
                 EditorJsonUtility.FromJsonOverwrite(EditorJsonUtility.ToJson(effect), copy);
                 Check(!copy.NeedsRoomSettingsInitialization
                     && Mathf.Approximately(copy.Rooms[1].Settings.WaterLightStrength, 0.61f), "Saved settings survive serialization");
@@ -183,13 +183,13 @@ namespace BlueComplex.Editor.DLJ
                 effect.SelectRoom(1);
                 state.Advance(0.1f);
                 Check(Mathf.Approximately(state.Excited, 0.42f), "Room strength and transition apply to current mood");
-                effect.Rooms[2].Mode = HeartbeatMoodEffectController.ScatterMode.WindowEdges;
-                effect.Rooms[2].Settings.WindowStyle = HeartbeatMoodEffectController.WindowLightStyle.SoftBands;
+                effect.Rooms[2].Mode = DLJ_HeartbeatMoodEffectController.ScatterMode.WindowEdges;
+                effect.Rooms[2].Settings.WindowStyle = DLJ_HeartbeatMoodEffectController.WindowLightStyle.SoftBands;
                 effect.SelectRoom(2);
                 Check(material.GetInt("_WindowLightStyle") == 1, "Room 3 activates soft window bands");
                 effect.SelectRoom(1);
                 Check(material.GetInt("_WindowLightStyle") == 0, "Other window rooms keep existing rays");
-                effect.Rooms[0].Settings.WindowStyle = HeartbeatMoodEffectController.WindowLightStyle.SoftBands;
+                effect.Rooms[0].Settings.WindowStyle = DLJ_HeartbeatMoodEffectController.WindowLightStyle.SoftBands;
                 effect.SelectRoom(0);
                 Check(material.GetInt("_WindowLightStyle") == 0, "Lamp rooms never use window band style");
             }

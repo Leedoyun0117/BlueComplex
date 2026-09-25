@@ -82,7 +82,7 @@ namespace BlueComplex.UI.Presentation
         /// 등장 연출은 슬롯 위치를 바꾸지 않고 복제본이 현재 슬롯을 따라가므로 초기화할 오프셋이 없다.</summary>
         public void ForgetLayoutOffset()
         {
-            // ItemArrivalMotion.FollowSlot이 매 프레임 리빌드된 슬롯 위치를 반영한다.
+            // DLJ_ItemArrivalMotion.FollowSlot이 매 프레임 리빌드된 슬롯 위치를 반영한다.
         }
 
         /// <summary>아이템 대상 선택 모드에서 이 카드가 "지금 쓰려는 카드"임을 보인다 — 살짝 들리고 테두리가 금빛이 된다. 끄면 원래대로.</summary>
@@ -171,7 +171,7 @@ namespace BlueComplex.UI.Presentation
             _motion?.Kill();
             HideTooltip();
             _inserting = true;
-            _motion = ItemArrivalMotion.Play((RectTransform)transform, _background, _nameText, _iconImage,
+            _motion = DLJ_ItemArrivalMotion.Play((RectTransform)transform, _background, _nameText, _iconImage,
                 EmptyColor, () => _inserting = false)
                 .AppendCallback(() => UiSoundHooks.Play(UiSoundCue.Pin));
         }

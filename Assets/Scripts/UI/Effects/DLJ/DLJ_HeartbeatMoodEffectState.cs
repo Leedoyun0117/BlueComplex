@@ -4,7 +4,7 @@ using BlueComplex.Core.Stability;
 namespace BlueComplex.UI.Effects.DLJ
 {
     /// <summary>DLJ 연출 전용 상태/시간. Unity 프레임과 분리해 진입 효과 종료·복귀·재진입을 검증한다.</summary>
-    public sealed class HeartbeatMoodEffectState
+    public sealed class DLJ_HeartbeatMoodEffectState
     {
         private enum Mood { Stable, Depressed, Excited }
         private Mood _mood;

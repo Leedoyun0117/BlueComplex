@@ -11,7 +11,7 @@ using Object = UnityEngine.Object;
 namespace BlueComplex.Editor.DLJ
 {
     /// <summary>DLJ: 다중 아틀라스 사용 후 Git 재임포트에 해당하는 직렬화 교체를 재현한다.</summary>
-    public static class TmpFontCacheRefreshChecks
+    public static class DLJ_TmpFontCacheRefreshChecks
     {
         [MenuItem("Tools/BlueComplex/DLJ/Validate TMP Font Cache Refresh")]
         public static void Run()
@@ -56,7 +56,7 @@ namespace BlueComplex.Editor.DLJ
                 }
                 Require(reproduced, "The original GetFallbackMaterial exception must reproduce before repair.");
 
-                TmpFontCacheRefresh.Refresh(font);
+                DLJ_TmpFontCacheRefresh.Refresh(font);
                 Require(!font.characterLookupTable.ContainsKey(cached.unicode), "Stale character must be removed.");
                 Require(font.TryAddCharacters(text), "Characters must be regenerated after repair.");
                 foreach (var character in font.characterLookupTable.Values)
@@ -74,7 +74,7 @@ namespace BlueComplex.Editor.DLJ
                 label.ForceMeshUpdate(true, true);
                 Require(label.textInfo.characterCount == text.Length, "All characters must render after repair.");
 
-                TmpFontCacheRefresh.Refresh(font);
+                DLJ_TmpFontCacheRefresh.Refresh(font);
                 label.ForceMeshUpdate(true, true);
                 Require(label.textInfo.characterCount == text.Length, "Repeated refresh must preserve valid text.");
                 Debug.Log("[DLJ TMP] Reproduced stale-atlas exception; cache refresh and multi-atlas rendering passed.");

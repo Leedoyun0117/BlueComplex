@@ -5,7 +5,7 @@ using BlueComplex.UI.Effects.DLJ;
 namespace BlueComplex.Editor.DLJ
 {
     /// <summary>Unity를 실행하지 않고도 검증 가능한 상태 수명/전환 회귀 체크.</summary>
-    public static class HeartbeatMoodEffectStateChecks
+    public static class DLJ_HeartbeatMoodEffectStateChecks
     {
 #if UNITY_EDITOR
         [UnityEditor.MenuItem("Tools/BlueComplex/DLJ/Validate Mood State Transitions")]
@@ -22,7 +22,7 @@ namespace BlueComplex.Editor.DLJ
                 checks++;
             }
             var zone = new HeartbeatZone();
-            var fx = new HeartbeatMoodEffectState();
+            var fx = new DLJ_HeartbeatMoodEffectState();
 
             // 안정 구간 전체는 중립. 시작값 80 기준 보간으로 71/100에 효과가 새면 실패.
             foreach (var bpm in new[] { 71, 80, 100 })

@@ -10,17 +10,17 @@ using UnityEngine.SceneManagement;
 
 namespace BlueComplex.Editor.DLJ
 {
-    [CustomEditor(typeof(HeartbeatMoodEffectController))]
-    public sealed class HeartbeatMoodEffectEditor : UnityEditor.Editor
+    [CustomEditor(typeof(DLJ_HeartbeatMoodEffectController))]
+    public sealed class DLJ_HeartbeatMoodEffectEditor : UnityEditor.Editor
     {
-        private static readonly string[] RoomInspectorExclusions = typeof(HeartbeatMoodEffectController.MoodSettings)
+        private static readonly string[] RoomInspectorExclusions = typeof(DLJ_HeartbeatMoodEffectController.MoodSettings)
             .GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
             .Select(field => "_" + char.ToLowerInvariant(field.Name[0]) + field.Name.Substring(1))
             .Concat(new[] { "m_Script", "_lights", "_sceneCamera", "_scatterLights" }).ToArray();
 
         public override void OnInspectorGUI()
         {
-            var effect = (HeartbeatMoodEffectController)target;
+            var effect = (DLJ_HeartbeatMoodEffectController)target;
             if (effect.NeedsRoomSettingsInitialization)
             {
                 if (!Application.isPlaying) Undo.RecordObject(effect, "Migrate DLJ room settings");
@@ -74,7 +74,7 @@ namespace BlueComplex.Editor.DLJ
             }
         }
 
-        private static void ValidateRoom(HeartbeatMoodEffectController effect)
+        private static void ValidateRoom(DLJ_HeartbeatMoodEffectController effect)
         {
             if (effect.ActiveRoomIndex < 0 || effect.ActiveRoomIndex >= effect.Rooms.Count)
             {
@@ -85,7 +85,7 @@ namespace BlueComplex.Editor.DLJ
             if (room == null) return;
             if (room.SceneCamera == null)
                 EditorGUILayout.HelpBox("선택한 방의 Scene Camera가 비어 있어. 배경 카메라를 연결해.", MessageType.Warning);
-            if (room.Mode != HeartbeatMoodEffectController.ScatterMode.WindowEdges) return;
+            if (room.Mode != DLJ_HeartbeatMoodEffectController.ScatterMode.WindowEdges) return;
             var edges = 0;
             if (room.Windows != null)
                 foreach (var window in room.Windows)
@@ -97,11 +97,11 @@ namespace BlueComplex.Editor.DLJ
                 }
             if (edges == 0)
                 EditorGUILayout.HelpBox("창문 테두리 지점을 만들고 Scene 뷰에서 실제 창틀 모서리에 맞춰 줘. 빛은 각 테두리의 바깥 방향으로 퍼져.", MessageType.Warning);
-            if (edges > HeartbeatMoodEffectController.MaxWindowEdges)
+            if (edges > DLJ_HeartbeatMoodEffectController.MaxWindowEdges)
                 EditorGUILayout.HelpBox("창문 변은 한 방당 8개까지 표시돼. 초과한 변은 제외돼.", MessageType.Warning);
         }
 
-        public static void CreateRoomList(HeartbeatMoodEffectController effect)
+        public static void CreateRoomList(DLJ_HeartbeatMoodEffectController effect)
         {
             var data = new SerializedObject(effect);
             var rooms = data.FindProperty("_rooms");
@@ -147,7 +147,7 @@ namespace BlueComplex.Editor.DLJ
             for (var i = 0; i < lights.Length; i++) property.GetArrayElementAtIndex(i).objectReferenceValue = lights[i];
         }
 
-        private static void CreateWindowOutline(HeartbeatMoodEffectController effect)
+        private static void CreateWindowOutline(DLJ_HeartbeatMoodEffectController effect)
         {
             if (effect.ActiveRoomIndex < 0 || effect.ActiveRoomIndex >= effect.Rooms.Count) return;
             var room = effect.Rooms[effect.ActiveRoomIndex];
@@ -163,7 +163,7 @@ namespace BlueComplex.Editor.DLJ
             SceneManager.MoveGameObjectToScene(group, effect.gameObject.scene);
             Undo.RegisterCreatedObjectUndo(group, "Add DLJ window outline");
             group.transform.SetParent(room.Root != null ? room.Root.transform : effect.transform, false);
-            var window = new HeartbeatMoodEffectController.WindowOutline();
+            var window = new DLJ_HeartbeatMoodEffectController.WindowOutline();
             var depth = Mathf.Clamp(10f, camera.nearClipPlane + 0.1f, camera.farClipPlane - 0.1f);
             Transform Point(string name, float x, float y)
             {
@@ -177,20 +177,20 @@ namespace BlueComplex.Editor.DLJ
             window.Corners.Add(Point("02 Top Right", 0.9f, 0.85f));
             window.Corners.Add(Point("03 Bottom Right", 0.9f, 0.5f));
             window.Corners.Add(Point("04 Bottom Left", 0.6f, 0.5f));
-            room.Windows ??= new System.Collections.Generic.List<HeartbeatMoodEffectController.WindowOutline>();
+            room.Windows ??= new System.Collections.Generic.List<DLJ_HeartbeatMoodEffectController.WindowOutline>();
             room.Windows.Add(window);
-            room.Mode = HeartbeatMoodEffectController.ScatterMode.WindowEdges;
+            room.Mode = DLJ_HeartbeatMoodEffectController.ScatterMode.WindowEdges;
             EditorUtility.SetDirty(effect);
             EditorSceneManager.MarkSceneDirty(effect.gameObject.scene);
             Selection.activeGameObject = group;
         }
 
         [DrawGizmo(GizmoType.Selected | GizmoType.NonSelected)]
-        private static void DrawWindowGizmos(HeartbeatMoodEffectController effect, GizmoType gizmoType)
+        private static void DrawWindowGizmos(DLJ_HeartbeatMoodEffectController effect, GizmoType gizmoType)
         {
             if (effect.ActiveRoomIndex < 0 || effect.ActiveRoomIndex >= effect.Rooms.Count) return;
             var room = effect.Rooms[effect.ActiveRoomIndex];
-            if (room?.Windows == null || room.Mode != HeartbeatMoodEffectController.ScatterMode.WindowEdges) return;
+            if (room?.Windows == null || room.Mode != DLJ_HeartbeatMoodEffectController.ScatterMode.WindowEdges) return;
             Gizmos.color = new Color(0.3f, 0.8f, 1f, 0.8f);
             foreach (var window in room.Windows)
             {
@@ -218,20 +218,20 @@ namespace BlueComplex.Editor.DLJ
             var renderer = AssetDatabase.LoadAssetAtPath<UniversalRendererData>("Assets/Settings/PC_Renderer.asset");
             var feature = renderer != null ? renderer.rendererFeatures.OfType<FullScreenPassRendererFeature>()
                 .FirstOrDefault(f => f.name == "CRT") : null;
-            var shader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/Shaders/DLJ/HeartbeatMood.shader");
+            var shader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/Shaders/DLJ/DLJ_HeartbeatMood.shader");
             if (feature == null || shader == null)
             {
-                Debug.LogError("[DLJ Mood] PC_Renderer의 CRT 패스 또는 HeartbeatMood.shader를 찾지 못했어.");
+                Debug.LogError("[DLJ Mood] PC_Renderer의 CRT 패스 또는 DLJ_HeartbeatMood.shader를 찾지 못했어.");
                 return;
             }
             var roots = scene.GetRootGameObjects();
-            var effect = roots.SelectMany(r => r.GetComponentsInChildren<HeartbeatMoodEffectController>(true)).FirstOrDefault();
+            var effect = roots.SelectMany(r => r.GetComponentsInChildren<DLJ_HeartbeatMoodEffectController>(true)).FirstOrDefault();
             if (effect == null)
             {
                 var go = new GameObject("DLJ Heartbeat Mood Effects");
                 SceneManager.MoveGameObjectToScene(go, scene);
                 Undo.RegisterCreatedObjectUndo(go, "Add DLJ Mood Effects");
-                effect = Undo.AddComponent<HeartbeatMoodEffectController>(go);
+                effect = Undo.AddComponent<DLJ_HeartbeatMoodEffectController>(go);
             }
             Undo.RecordObject(effect, "Connect DLJ Mood Effects");
             var serialized = new SerializedObject(effect);

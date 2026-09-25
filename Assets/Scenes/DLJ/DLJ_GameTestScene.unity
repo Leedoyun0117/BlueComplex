@@ -5138,10 +5138,10 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2ae3747e47e076c7e40cfb4c536de518, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Effects.DLJ.HeartbeatMoodEffectController
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Effects.DLJ.DLJ_HeartbeatMoodEffectController
   _rooms:
   - Name: "\uBC29 1"
-    Root: {fileID: 0}
+    Root: {fileID: 2054903983}
     SceneCamera: {fileID: 1154547344}
     Lights:
     - {fileID: 466152631}
@@ -5182,6 +5182,8 @@ MonoBehaviour:
       WindowBandTint: {r: 1, g: 0.97, b: 0.88, a: 1}
       WindowShaftGrouping: 0.75
       WindowShaftVerticalBias: 0.52
+      WindowShaftTopLength: 0.18
+      WindowShaftBottomLength: 0.85
       WindowShaftAmbientStrength: 0.2
       ChromaticSeconds: 3.5
       ChromaticFadeSeconds: 1
@@ -5235,6 +5237,8 @@ MonoBehaviour:
       WindowBandTint: {r: 1, g: 0.97, b: 0.88, a: 1}
       WindowShaftGrouping: 0.75
       WindowShaftVerticalBias: 0.52
+      WindowShaftTopLength: 0.18
+      WindowShaftBottomLength: 0.85
       WindowShaftAmbientStrength: 0.2
       ChromaticSeconds: 3.5
       ChromaticFadeSeconds: 1
@@ -5250,7 +5254,7 @@ MonoBehaviour:
       GlitchDisplacement: 0.012
     SettingsInitialized: 1
   - Name: "\uBC29 3"
-    Root: {fileID: 0}
+    Root: {fileID: 502492429}
     SceneCamera: {fileID: 1154547344}
     Lights:
     - {fileID: 466152631}
@@ -5318,7 +5322,7 @@ MonoBehaviour:
       GlitchSeconds: 2
       GlitchDisplacement: 0.012
     SettingsInitialized: 1
-  _activeRoomIndex: 2
+  _activeRoomIndex: 0
   _crtFeature: {fileID: 8139080203877313755, guid: f288ae1f4751b564a96ac7587541f7a2, type: 2}
   _effectShader: {fileID: 4800000, guid: 37d5d4f3d6ef4f2cc68ff99bff8dc381, type: 3}
   _basePreset: {fileID: 11400000, guid: fa73395ad0244e042958793c5481a4f8, type: 2}
