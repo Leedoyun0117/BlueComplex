@@ -410,13 +410,14 @@ namespace BlueComplex.EditorTools
             var tablet = Ensure(root.transform, "Tablet");
             TopLeft(tablet, new Vector2(0.5f, 0.5f));
             tablet.sizeDelta = new Vector2(500.6f, 500.6f);
-            Remove(tablet, "Frame"); // 예전(꽉 찬 사각형 한 장)·손그림 원 버전 잔재를 걷어내고 아래 네 막대로 대신한다.
-            var frameTop = EnsureImage(tablet, "FrameTop", XrayMetal, new Vector2(0f, 0.94f), new Vector2(1f, 1f), raycast: true);
-            var frameBottom = EnsureImage(tablet, "FrameBottom", XrayMetal, new Vector2(0f, 0f), new Vector2(1f, 0.06f), raycast: true);
-            var frameLeft = EnsureImage(tablet, "FrameLeft", XrayMetal, new Vector2(0f, 0.06f), new Vector2(0.06f, 0.94f), raycast: true);
-            var frameRight = EnsureImage(tablet, "FrameRight", XrayMetal, new Vector2(0.94f, 0.06f), new Vector2(1f, 0.94f), raycast: true);
-            foreach (var bar in new[] { frameTop, frameBottom, frameLeft, frameRight }) MockupStyle.AddPaperEdge(bar.gameObject);
-            var frame = frameTop; // _frame 참조용 대표 한 장(네 막대 다 같은 색·역할이라 어느 쪽이든 상관없다).
+            // 바깥 테두리는 사용자가 준 도트 프레임(어두운 회색 틀, 안쪽은 뚫림) 한 장이다 — 예전의 막대 네 개(FrameTop/Bottom/Left/Right)와
+            // 손그림 원 잔재는 걷어낸다. 정사각 판에 맞추려고 9분할(Sliced)로 늘려서 모서리 두께는 원본 그대로 두고 가운데(뚫린 부분)만 늘어난다.
+            // 안쪽은 알파가 0이라 예전과 똑같이 유리 너머로 유키 초상화·뇌가 비친다.
+            foreach (var stale in new[] { "Frame", "FrameTop", "FrameBottom", "FrameLeft", "FrameRight" }) Remove(tablet, stale);
+            var frame = EnsureImage(tablet, "Frame", Color.white, Vector2.zero, Vector2.one, raycast: true);
+            frame.sprite = LoadArtSprite(XrayFrameFolder, XrayFrameFile);
+            frame.type = Image.Type.Sliced;
+            frame.transform.SetAsFirstSibling(); // 유리·뇌보다 뒤에 그린다.
             // Glass 자체는 다시 투명(드래그 판정 전용) — 파란 색조는 GlassTint로 뺐다. Glass가 Content보다 먼저 그려져서 그 파란기가
             // 뇌(Content 자식)는 안 물들이고 캐릭터만 물들였었는데, "뇌도 파랗게" 요청으로 뇌 위에 한 번 더 덮는 레이어가 필요해졌다.
             var glass = EnsureImage(tablet, "Glass", Color.clear, new Vector2(0.06f, 0.06f), new Vector2(0.94f, 0.94f), raycast: true);
@@ -551,6 +552,10 @@ namespace BlueComplex.EditorTools
             handleRect.SetSiblingIndex(2);
             tablet.SetSiblingIndex(3);
         }
+
+        /// <summary>엑스레이 판넬 바깥 프레임 아트(Assets/Art/UI/xray_frame.png, 9분할 경계는 임포트 메타에 있다).</summary>
+        private const string XrayFrameFolder = "Assets/Art/UI/";
+        private const string XrayFrameFile = "xray_frame.png";
 
         private static Sprite LoadBrainSprite(string fileName) => LoadArtSprite(BrainArtImporter.Folder, fileName);
 

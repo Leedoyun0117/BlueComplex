@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Audio;
 
 namespace BlueComplex.Audio
 {
@@ -22,11 +23,12 @@ namespace BlueComplex.Audio
         private float _seam = 3f;
         private float _lastTime;
 
-        public AmbientLayer(AudioSource a, AudioSource b)
+        public AmbientLayer(AudioSource a, AudioSource b, AudioMixerGroup outputGroup)
         {
             _sources = new[] { a, b };
             foreach (var source in _sources)
             {
+                source.outputAudioMixerGroup = outputGroup;
                 source.playOnAwake = false;
                 source.spatialBlend = 0f;
                 source.loop = false; // 루프는 직접 이어 붙인다.
@@ -55,7 +57,7 @@ namespace BlueComplex.Audio
             _active = -1;
         }
 
-        public void Tick(float deltaTime, float master)
+        public void Tick(float deltaTime)
         {
             SeamIfNeeded();
 
@@ -63,7 +65,7 @@ namespace BlueComplex.Audio
             {
                 var source = _sources[i];
                 _gain[i] = Mathf.MoveTowards(_gain[i], _goal[i], _fadeSeconds[i] > 0f ? deltaTime / _fadeSeconds[i] : 1f);
-                source.volume = _gain[i] * _volume * master;
+                source.volume = _gain[i] * _volume;
 
                 // 완전히 사라진 소스는 멈춘다(재생 위치를 붙들고 있지 않게).
                 if (_goal[i] <= 0f && _gain[i] <= 0f && source.isPlaying) source.Stop();
