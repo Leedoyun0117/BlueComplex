@@ -1,7 +1,7 @@
 using System;
 using BlueComplex.UI.Layout;
+using BlueComplex.UI.Motion;
 using BlueComplex.UI.Rendering;
-using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -19,7 +19,7 @@ namespace BlueComplex.UI.Presentation
     /// 알아서 한다.)
     /// </summary>
     [RequireComponent(typeof(ClueCardView))]
-    public sealed class ClueCardDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler
+    public sealed class ClueCardDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler, IPointerEnterHandler
     {
         [SerializeField] private CanvasGroup _canvasGroup;
 
@@ -94,7 +94,7 @@ namespace BlueComplex.UI.Presentation
         public void MarkHandled() => _accepted = true;
 
         /// <summary>Unity가 드래그 임계값을 안 넘은 press+release만 클릭으로 판정해준다 — 드래그와
-        /// 따로 가드할 필요가 없다.</summary>
+        /// 따로 가드할 필요가 없다. 짧게 눌러 스토리 보기(기획서) — 버튼 클릭음이 난다.</summary>
         public void OnPointerClick(PointerEventData eventData)
         {
             if (_view.IsEmpty) return;
@@ -102,9 +102,19 @@ namespace BlueComplex.UI.Presentation
             // 아이템 대상 선택 중이면 클릭은 대상 선택이다(단서 정보 책을 열지 않는다).
             if (ItemTargetSelector.TryPick(_view.Card)) return;
 
-            var font = _canvasRect.GetComponentInChildren<TMP_Text>(true)?.font;
-            var book = ClueBookPanel.GetOrCreate(_canvasRect, font);
-            book.Show(_view.ViewModel);
+            UiSoundHooks.Play(UiSoundCue.ButtonClick);
+            var book = ClueBookPanel.GetOrCreate(_canvasRect);
+            var icon = UiIcons.Get(_view.Card.Definition.Id);
+            // 손패 안에서 카드가 놓인 자리(1부터) — 슬롯이 고정이라(ClueCardTray) 화면에 보이는 순서 그대로다.
+            var clueNumber = _view.transform.GetSiblingIndex() + 1;
+            book.Show(_view.ViewModel, icon, clueNumber);
+        }
+
+        /// <summary>단서에 마우스를 올리면 종이 집는 소리가 난다(기획서).</summary>
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            if (_view.IsEmpty) return;
+            UiSoundHooks.Play(UiSoundCue.ClueTake);
         }
 
         private Vector3? BubbleCenterWorld()

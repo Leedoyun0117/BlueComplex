@@ -3,9 +3,8 @@ using UnityEngine;
 namespace BlueComplex.UI.Background
 {
     /// <summary>
-    /// 낡은 천장 램프 소켓에서 새어 나오는 아주 옅은 연기. 항상 은은하게 위로 흐르고,
-    /// 정전 순간(<see cref="Burst"/>)에는 잠깐 더 진하게 뿜는다 — <see cref="LampLightDriver"/>의
-    /// 조명 시퀀스와는 느슨하게만 엮인, 스스로 완결된 이펙트다.
+    /// 낡은 천장 램프 소켓에서 새어 나오는 연기. 평소에는 나오지 않고, 정전 순간에만
+    /// <see cref="Burst"/>로 한 번 뿜는다(<see cref="LampLightDriver"/>의 정전 시퀀스가 호출).
     ///
     /// 파티클 모듈과 소프트 원형 텍스처를 전부 Awake에서 코드로 만든다 — 씬 파일에 파티클 커브를
     /// 손으로 심거나 별도 PNG를 아트로 받을 필요가 없다(에디터에서는 정지 화면으로 보이고,
@@ -14,9 +13,7 @@ namespace BlueComplex.UI.Background
     [RequireComponent(typeof(ParticleSystem))]
     public sealed class LampSmokeEmitter : MonoBehaviour
     {
-        [Header("은은한 상시 연기")]
-        [Tooltip("초당 발생량. 아주 적어도 된다 — '조금이라도 자연스럽게' 나오면 충분하다.")]
-        [SerializeField, Range(0f, 5f)] private float _ambientRatePerSecond = 1.2f;
+        [Header("연기 모양")]
         [SerializeField] private float _lifetime = 3.5f;
         [SerializeField] private float _riseSpeed = 0.35f;
         [SerializeField] private float _startSize = 0.35f;
@@ -29,8 +26,8 @@ namespace BlueComplex.UI.Background
         [SerializeField] private int _burstCount = 10;
 
         [Header("정렬")]
-        [Tooltip("배경 레이어(BaseRenderQueue+i, Lamp=3005, Things=3006) 사이에 끼워 넣는 큐. " +
-                 "램프 아트보다 앞, 테이블 위 사물/인물보다는 뒤에 그려지게 Things와 같은 값을 쓴다.")]
+        [Tooltip("배경 레이어(BaseRenderQueue+i, Lamp=3005, Things=3006) 사이에 끼워 넣는 큐. Things와 같은 값을 쓴다. " +
+                 "다만 실제 앞뒤는 렌더러 sortingOrder(Things 순번)가 먼저 정한다 — Configure 참고.")]
         [SerializeField] private int _renderQueue = 3006;
 
         private static Material _cachedMaterial;
@@ -72,7 +69,7 @@ namespace BlueComplex.UI.Background
 
             var emission = _ps.emission;
             emission.enabled = true;
-            emission.rateOverTime = _ambientRatePerSecond;
+            emission.rateOverTime = 0f; // 상시 발생 없음 — 정전 순간 Burst()의 Emit으로만 나온다.
 
             var shape = _ps.shape;
             shape.enabled = true;
@@ -128,6 +125,9 @@ namespace BlueComplex.UI.Background
             psRenderer.material = GetSmokeMaterial(_renderQueue);
             psRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             psRenderer.receiveShadows = false;
+            // 레이어 quad는 sortingOrder가 렌더 큐보다 우선한다 — 0으로 두면 모든 레이어 뒤로 가려진다(BackgroundSorting 참고).
+            // Things와 같은 순번이면 램프 아트(5)보다 앞, 인물(7·8)·그림자 오버레이(9)보다는 뒤에 그려진다.
+            psRenderer.sortingOrder = BackgroundSorting.ThingsLayerOrder(this);
         }
 
         private static Material GetSmokeMaterial(int renderQueue)
@@ -146,8 +146,9 @@ namespace BlueComplex.UI.Background
             return material;
         }
 
-        /// <summary>부드러운 원형 알파 폴오프 텍스처를 코드로 굽는다 — 별도 연기 아트 없이 자연스러운 뭉치 모양을 낸다.</summary>
-        private static Texture2D GetSmokeTexture()
+        /// <summary>부드러운 원형 알파 폴오프 텍스처를 코드로 굽는다 — 별도 연기 아트 없이 자연스러운 뭉치 모양을 낸다.
+        /// 컵 김(<see cref="CupSteamEmitter"/>)도 같은 퍼프를 쓴다.</summary>
+        internal static Texture2D GetSmokeTexture()
         {
             if (_cachedTexture != null) return _cachedTexture;
 

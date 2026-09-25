@@ -1,5 +1,4 @@
 using BlueComplex.Core.Clues;
-using BlueComplex.Core.Stability;
 using BlueComplex.Core.Stage;
 using BlueComplex.UI.Layout;
 using UnityEngine;
@@ -19,19 +18,17 @@ namespace BlueComplex.UI.Presentation
         {
             session.Hand.CardAdded += OnHandChanged;
             session.Hand.CardDestroyed += OnHandChanged;
-            session.Censorship.LevelChanged += OnCensorshipChanged;
         }
 
         protected override void Unsubscribe(StageSession session)
         {
             session.Hand.CardAdded -= OnHandChanged;
             session.Hand.CardDestroyed -= OnHandChanged;
-            session.Censorship.LevelChanged -= OnCensorshipChanged;
         }
 
         protected override void Render()
         {
-            _tray.RefreshAll(Session.Hand.Cards, Session.Ledger, Session.Censorship.Level);
+            _tray.RefreshAll(Session.Hand.Cards, Session.Ledger);
         }
 
         private ITurnResultPresenter _presenter;
@@ -45,7 +42,5 @@ namespace BlueComplex.UI.Presentation
 
             Render();
         }
-
-        private void OnCensorshipChanged(CensorshipLevel level) => Render();
     }
 }

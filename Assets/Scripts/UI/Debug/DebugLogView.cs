@@ -115,7 +115,7 @@ namespace BlueComplex.UI.DebugPlay
         private static string FormatFinalTags(TurnReport report)
         {
             var tags = report.FinalTags;
-            var time = DebugKoreanLabels.Time(tags.Time);
+            var time = DebugKoreanLabels.Times(tags.Times);
             var persons = tags.Persons.Count == 0 ? "-" : string.Join(",", tags.Persons.Select(DebugKoreanLabels.Person));
             var emotions = tags.Emotions.Count == 0
                 ? "-"

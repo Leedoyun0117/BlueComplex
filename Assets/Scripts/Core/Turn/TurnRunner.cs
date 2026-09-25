@@ -44,6 +44,10 @@ namespace BlueComplex.Core.Turn
 
         /// <summary>이 턴에 컴플렉스 초과로 새로 붙은 특수 특성(없으면 null). 초과했어도 그 구간 쪽 특수 특성이 카탈로그에 없으면 null.</summary>
         public TraitDefinition SpecialTraitGranted { get; }
+
+        /// <summary>이 턴의 결과에 "처음" 나타나는 특성들(발현 순서) — 지난 턴 결과 이후 이번 턴 결과까지 새로 붙은 것: 아이템 사용으로 발현한 일반 특성과 이 턴에 컴플렉스 초과로
+        /// 붙은 특수 특성. 이미 걸려 있던 특성(지속 턴이 남은 채 이어지는 것)은 들어 있지 않다. 결과 화면이 특성 이름 태그를 띄우는 기준이다.</summary>
+        public IReadOnlyList<TraitDefinition> TraitsManifested { get; }
         public StageOutcome Outcome { get; }
 
         /// <summary>이 턴이 쿼터의 마지막 턴이라 키를 판정했다면 그 결과. 아니면 null.</summary>
@@ -64,7 +68,8 @@ namespace BlueComplex.Core.Turn
                           StageOutcome outcome,
                           KeyJudgement? keyResult,
                           bool complexOverflowed = false,
-                          TraitDefinition specialTraitGranted = null)
+                          TraitDefinition specialTraitGranted = null,
+                          IReadOnlyList<TraitDefinition> traitsManifested = null)
         {
             Turn = turn;
             Quarter = quarter;
@@ -77,6 +82,7 @@ namespace BlueComplex.Core.Turn
             SpawnedComplex = spawnedComplex;
             ComplexOverflowed = complexOverflowed;
             SpecialTraitGranted = specialTraitGranted;
+            TraitsManifested = traitsManifested ?? Array.Empty<TraitDefinition>();
             Outcome = outcome;
             KeyResult = keyResult;
         }
@@ -105,6 +111,7 @@ namespace BlueComplex.Core.Turn
         private readonly IKeyZonePlacer _keyPlacer;
         private readonly ClueKnowledgeLedger _ledger;
         private readonly IReadOnlyDictionary<string, IReadOnlyList<string>> _itemParameters;
+        private readonly KeyZoneHandBiasRule _handBias;
 
         public int CurrentTurn { get; private set; }
         public QuarterSchedule Schedule => _keys.Schedule;
@@ -135,7 +142,8 @@ namespace BlueComplex.Core.Turn
                           KeyProgress keys,
                           IKeyZonePlacer keyPlacer,
                           ClueKnowledgeLedger ledger,
-                          IReadOnlyDictionary<string, IReadOnlyList<string>> itemParameters = null)
+                          IReadOnlyDictionary<string, IReadOnlyList<string>> itemParameters = null,
+                          KeyZoneHandBiasRule handBias = null)
         {
             _hand = hand;
             _complexBoard = complexBoard;
@@ -152,7 +160,20 @@ namespace BlueComplex.Core.Turn
             _keyPlacer = keyPlacer;
             _ledger = ledger;
             _itemParameters = itemParameters;
+            _handBias = handBias;
+
+            _traits.Granted += trait =>
+            {
+                // 이미 걸려 있던 특성을 다시 붙여 갈아끼운 것(예: 초과가 계속돼 특수 특성이 매 턴 다시 붙는 경우)은 새로 발현한 게 아니다.
+                if (!trait.RenewedExisting) _manifested.Add(trait.Definition);
+            };
+
+            // 발현한 뒤 결과가 나오기 전에 아이템(논리적 설득)이 지운 특성은 결과에 한 번도 걸리지 않았으니 새로 발현된 것으로 안 친다.
+            _traits.Removed += trait => _manifested.Remove(trait.Definition);
         }
+
+        /// <summary>지난 턴 결과 이후 새로 붙은 특성 — 다음 TurnReport가 가져가며 비운다(<see cref="TurnReport.TraitsManifested"/>).</summary>
+        private readonly List<TraitDefinition> _manifested = new();
 
         public void StartStage()
         {
@@ -162,6 +183,10 @@ namespace BlueComplex.Core.Turn
             // 모든 쿼터의 목표 구역을 스테이지 시작 시점에 한꺼번에 확정한다 — 플레이어는 처음부터 전부 볼 수 있다.
             _keys.PrepareZones(_keyPlacer.PlaceAll(_heartbeat.Value, _keys.KeyTurns));
 
+            // 아이템도 손패처럼 쿼터마다 빈 칸을 채운다 — 스테이지 시작 시점의 첫 지급은 여기서 이루어진다
+            // (이후 쿼터 경계 리필은 BeginTurn의 쿼터 시작 처리에서 이루어진다).
+            _items.Refill();
+
             BeginTurn();
         }
 
@@ -169,13 +194,17 @@ namespace BlueComplex.Core.Turn
         {
             CurrentTurn++;
 
-            // 손패와 아이템은 쿼터가 시작될 때만 채운다. 쿼터 중에는 낸/쓴 만큼 줄어든 채로 진행된다.
-            // 아이템은 스테이지 시작(첫 쿼터)에 칸 수만큼 지급되고, 이후로는 쓴 칸만 다음 쿼터 시작에 다시 채워진다(안 쓴 아이템은 그대로).
+            // 손패는 쿼터가 시작될 때만 채운다. 쿼터 중에는 낸 만큼 줄어든 채로 진행된다.
+            // RefillForNewQuarter로 채운다 — 지난 쿼터에 낸 단서까지 풀로 되돌려 손패가 항상 가득 차게 한다
+            // (저작된 단서 수가 스테이지 전체 턴 수보다 적기 때문. ClueHand 클래스 주석 참고).
+            // 아이템도 손패와 마찬가지로 쓴 칸만 다른 아이템으로 채운다(안 쓴 아이템은 그대로 유지) — Items.cs의 ItemInventory.Refill 참고.
             if (Schedule.IsQuarterStart(CurrentTurn))
             {
-                _hand.Refill();
-                _keys.OpenQuarter(Schedule.QuarterOf(CurrentTurn));
+                // 스테이지가 켜 두었으면 이번 쿼터 키 목표 구간에 맞는 감정의 단서를 손패에 강제로 넣는다(KeyZoneHandBiasRule).
+                var bias = _handBias?.For(_keys.Zones[Schedule.LastTurnOf(Schedule.QuarterOf(CurrentTurn))]);
+                _hand.RefillForNewQuarter(bias);
                 _items.Refill();
+                _keys.OpenQuarter(Schedule.QuarterOf(CurrentTurn));
             }
 
             TurnBegan?.Invoke(CurrentTurn);
@@ -259,7 +288,7 @@ namespace BlueComplex.Core.Turn
         ///
         ///  1. 과대 망상  — 단서의 <b>원래</b> 감정 개수 ×2(TraitBoard.ApplyToOriginal). 컴플렉스가 배가된 감정을 보고 해석한다.
         ///  2. 컴플렉스 해석 — 우선순위 순서로. 지속 중인 아이템(감정적 설득)이 지정한 컴플렉스는 건너뛴다.
-        ///  3. 아이템 결과 보정 — 기억 공감(공포·슬픔 1씩 제거), 논리적 설득(중복 감정 하나씩). 지속 중인 아이템의 보정이 걸린 순서대로.
+        ///  3. 아이템 결과 보정 — 기억 공감(슬픔 1씩 제거), 무관심(타인 결과의 침체 감정 무시), 공존감(타인 결과에 행복 1 추가), 논리적 설득(중복 감정 하나씩). 지속 중인 아이템의 보정이 걸린 순서대로.
         ///  4. 환각       — 감정 하나하나의 극성을 뒤집는다(TraitAwareEmotionEvaluator).
         ///  5. 특수 특성  — 뒤집힌 뒤의 극성 기준으로 감정 하나의 영향력을 줄인다(고기능 우울증 = 흥분 ×1/2, 과흥분 = 침체 ×1/2).
         ///  6. 예민/무력  — 합계에 ×3 / ×1/2. 5)와 6)은 곱셈이라 순서를 바꿔도 같다(실수로 계산하고 마지막에 한 번 반올림).
@@ -321,8 +350,12 @@ namespace BlueComplex.Core.Turn
 
             Outcome = JudgeOutcome();
 
+            // 같은 특성이 (만료 후 다시 붙는 등으로) 두 번 기록됐어도 결과엔 한 번만.
+            var manifested = _manifested.Distinct().ToList();
+            _manifested.Clear();
+
             var report = new TurnReport(CurrentTurn, Schedule.QuarterOf(CurrentTurn), Schedule.TurnInQuarter(CurrentTurn),
-                clue, interpretation, finalTags, delta, _heartbeat.Value, spawned, Outcome, keyResult, overflowed, specialTrait?.Definition);
+                clue, interpretation, finalTags, delta, _heartbeat.Value, spawned, Outcome, keyResult, overflowed, specialTrait?.Definition, manifested);
             TurnResolved?.Invoke(report);
 
             if (Outcome == StageOutcome.InProgress) BeginTurn();

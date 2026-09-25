@@ -31,6 +31,9 @@ namespace BlueComplex.UI.Presentation
         private ITurnResultPresenter _presenter;
         private QuarterHud _quarterHud;
 
+        /// <summary>DLJ: 화면에 심박수를 반영하는 시점. 상태 이펙트도 태그/파형 연출과 동기화한다.</summary>
+        public event System.Action<int, bool> HeartbeatPresented;
+
         private QuarterHud Hud => _quarterHud != null ? _quarterHud : _quarterHud = QuarterHud.GetOrCreate(transform.root);
 
         protected override void Subscribe(StageSession session)
@@ -75,7 +78,7 @@ namespace BlueComplex.UI.Presentation
         }
 
         /// <summary>BPM 숫자·상태 배지·심전도 파형을 한 번에 갱신한다 — 셋 다 같은 시점(Presenter가 정한다)에 바뀌고 같은 시간 동안 넘어가야 어긋나 보이지 않는다.
-        /// 파형이 불규칙해지는 구간은 코어 구간표의 검열 수준이 아니라 상태(매우 침체·매우 흥분·즉사)로 정한다.</summary>
+        /// 파형이 불규칙해지는 구간은 심박수 상태(매우 침체·매우 흥분·즉사)로 정한다.</summary>
         private void ShowBpm(int value, bool snap)
         {
             var state = Session.Zone.StateOf(value);
@@ -84,6 +87,7 @@ namespace BlueComplex.UI.Presentation
 
             _bpm.SetValue(value, color, KoreanLabels.State(state), animate: !snap);
             _bar.SetPulse(value, color, irregular, snap);
+            HeartbeatPresented?.Invoke(value, snap);
         }
 
         /// <summary>코어의 현재 턴 상태(현재 쿼터의 목표 구역, 쿼터 내 턴 위치)를 바와 쿼터 HUD에 반영한다.
@@ -98,8 +102,9 @@ namespace BlueComplex.UI.Presentation
             if (quarter > 0 && Session.Keys.Zones.TryGetValue(Session.Keys.Schedule.LastTurnOf(quarter), out var found))
                 zone = found;
 
+            var isKeyTurn = quarter > 0 && runner.CurrentTurnInQuarter == Session.Keys.Schedule.TurnsPerQuarter;
             _bar.SetTargetZone(quarter, zone);
-            _bar.SetKeyTurn(quarter > 0 && runner.CurrentTurnInQuarter == Session.Keys.Schedule.TurnsPerQuarter);
+            _bar.SetKeyTurn(isKeyTurn);
             Hud.Sync(quarter, runner.CurrentTurnInQuarter);
         }
 

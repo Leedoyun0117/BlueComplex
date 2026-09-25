@@ -45,7 +45,7 @@ namespace BlueComplex.Core.Items
         }
     }
 
-    /// <summary>기억 공감 — 결과에서 지정한 감정들을 amount개씩 제거한다(기획: 공포·슬픔 1씩).</summary>
+    /// <summary>기억 공감 — 결과에서 지정한 감정들을 amount개씩 제거한다(기획: 슬픔 1씩).</summary>
     public sealed class RemoveEmotions : IItemBehaviour, IResultModifier
     {
         private readonly EmotionTag[] _emotions;
@@ -65,6 +65,57 @@ namespace BlueComplex.Core.Items
         }
     }
 
+    /// <summary>
+    /// 무관심 — 최종 결과에 <see cref="Person"/> 태그(기획: 타인)가 붙어 있으면 그 결과의 지정한 감정(기획: 침체 감정 전부)을 통째로 무시한다.
+    /// "타인에 대한 침체 감정"을 "결과에 타인 태그가 있고 침체 감정이 있는 것"으로 옮겼다 — 태그는 감정마다 대상 인물이 따로 없어서 결과 전체의 인물로 본다.
+    /// 무시는 겹친 개수까지 전부 지우는 것이다(기억 공감처럼 1씩이 아니다).
+    /// </summary>
+    public sealed class IgnoreEmotionsTowardPerson : IItemBehaviour, IResultModifier
+    {
+        public PersonTag Person { get; }
+        private readonly EmotionTag[] _emotions;
+
+        public IgnoreEmotionsTowardPerson(PersonTag person, params EmotionTag[] emotions)
+        {
+            Person = person;
+            _emotions = emotions;
+        }
+
+        public void OnActivate(ItemActivationContext context) => context.AddModifier(this);
+
+        public void Modify(TagSet finalTags)
+        {
+            if (!finalTags.HasPerson(Person)) return;
+
+            foreach (var emotion in _emotions) finalTags.RemoveEmotion(emotion, finalTags.CountOf(emotion));
+        }
+    }
+
+    /// <summary>
+    /// 공존감 — 최종 결과에 <see cref="Person"/> 태그(기획: 타인)가 붙어 있으면 그 결과에 지정한 감정(기획: 행복)을 amount개 더한다.
+    /// 무관심과 같은 이유로 "타인에 관한 단서"를 "결과에 타인 태그가 있는 것"으로 본다. 결과 보정 단계에서 더하므로 뒤이어 켜진 논리적 설득이 중복을 접을 수 있다.
+    /// </summary>
+    public sealed class AddEmotionTowardPerson : IItemBehaviour, IResultModifier
+    {
+        public PersonTag Person { get; }
+        private readonly EmotionTag _emotion;
+        private readonly int _amount;
+
+        public AddEmotionTowardPerson(PersonTag person, EmotionTag emotion, int amount)
+        {
+            Person = person;
+            _emotion = emotion;
+            _amount = amount;
+        }
+
+        public void OnActivate(ItemActivationContext context) => context.AddModifier(this);
+
+        public void Modify(TagSet finalTags)
+        {
+            if (finalTags.HasPerson(Person)) finalTags.AddEmotion(_emotion, _amount);
+        }
+    }
+
     /// <summary>회상 — 손패를 전부 풀에 되돌리고 다시 뽑는다.</summary>
     public sealed class RedrawHand : IItemBehaviour
     {
@@ -79,13 +130,16 @@ namespace BlueComplex.Core.Items
         public void Modify(TagSet finalTags) => finalTags.CollapseDuplicates();
     }
 
-    /// <summary>착한 사마리아인 — 심박수가 <see cref="Side"/> 구간에 있을 때만 <see cref="Amount"/>만큼 올린다(기획: 침체면 +10). 아니면 심박수는 그대로다.</summary>
-    public sealed class RaiseHeartbeatInZone : IItemBehaviour
+    /// <summary>
+    /// 착한 사마리아인·심호흡 — 심박수가 <see cref="Side"/> 구간에 있을 때만 <see cref="Amount"/>만큼 바꾼다(사마리아인: 침체면 +10, 심호흡: 흥분이면 -10).
+    /// 아니면 심박수는 그대로다. 구간 판정은 사용하는 시점의 심박수 기준이다.
+    /// </summary>
+    public sealed class ChangeHeartbeatInZone : IItemBehaviour
     {
         public Polarity Side { get; }
         public int Amount { get; }
 
-        public RaiseHeartbeatInZone(Polarity side, int amount)
+        public ChangeHeartbeatInZone(Polarity side, int amount)
         {
             Side = side;
             Amount = amount;
@@ -97,11 +151,65 @@ namespace BlueComplex.Core.Items
         }
     }
 
+    /// <summary>
+    /// 자아비대 — 이번 턴 결과 감정 전체(태그마다 겹친 개수 포함)에 <see cref="Factor"/>를 곱한다. 시간·인물 태그는 그대로다.
+    /// 결과 보정 단계(계산 순서 3)에서 걸리므로 그 앞의 컴플렉스 해석 결과가 곱해지고, 같은 단계의 다른 보정과는 켜진 순서대로 섞인다.
+    /// </summary>
+    public sealed class MultiplyEmotions : IItemBehaviour, IResultModifier
+    {
+        public int Factor { get; }
+
+        public MultiplyEmotions(int factor) => Factor = factor;
+
+        public void OnActivate(ItemActivationContext context) => context.AddModifier(this);
+
+        public void Modify(TagSet finalTags)
+        {
+            foreach (var (emotion, count) in finalTags.Emotions.ToList())
+                finalTags.AddEmotion(emotion, count * (Factor - 1));
+        }
+    }
+
+    /// <summary>
+    /// 명상 — 결과 감정 중 <see cref="Leading"/> 극성(기획: 흥분)의 개수가 반대 극성보다 <b>많을 때만</b> 지정한 감정(기획: 슬픔)을 amount개 더한다. 같거나 적으면 그대로다.
+    /// 개수는 겹친 태그까지 센다(심박수 계산이 감정 태그 하나하나를 더하는 것과 같은 단위). 극성은 환각이 뒤집기 전의 원래 극성이다(보정 단계가 환각 앞이다).
+    /// </summary>
+    public sealed class AddEmotionWhenPolarityLeads : IItemBehaviour, IResultModifier
+    {
+        public Polarity Leading { get; }
+        private readonly EmotionTag _emotion;
+        private readonly int _amount;
+        private readonly IEmotionPolarityTable _polarityTable;
+
+        public AddEmotionWhenPolarityLeads(Polarity leading, EmotionTag emotion, int amount, IEmotionPolarityTable polarityTable)
+        {
+            Leading = leading;
+            _emotion = emotion;
+            _amount = amount;
+            _polarityTable = polarityTable;
+        }
+
+        public void OnActivate(ItemActivationContext context) => context.AddModifier(this);
+
+        public void Modify(TagSet finalTags)
+        {
+            var leading = 0;
+            var other = 0;
+            foreach (var (emotion, count) in finalTags.Emotions)
+            {
+                if (_polarityTable.GetPolarity(emotion) == Leading) leading += count;
+                else other += count;
+            }
+
+            if (leading > other) finalTags.AddEmotion(_emotion, _amount);
+        }
+    }
+
     /// <summary>선택적 기억 — 고른 보유 단서를 풀에서 뽑은 랜덤 단서로 바꾼다(고른 단서는 풀로 돌아간다). 풀이 비어 있으면 바꿀 수 없다.</summary>
     public sealed class ReplaceClue : IItemBehaviour, IItemTargeting
     {
         public bool IsValidTarget(ItemTarget target, ItemActivationContext context) =>
-            target is ClueTarget { Card: var card } && context.Hand.Cards.Contains(card) && context.Hand.CanReplaceOne;
+            target is ClueTarget { Card: var card } && context.Hand.CanReplace(card);
 
         public void OnActivate(ItemActivationContext context)
         {

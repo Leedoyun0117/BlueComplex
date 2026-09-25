@@ -14,6 +14,9 @@ namespace BlueComplex.UI.DebugPlay
             _ => "-"
         };
 
+        public static string Times(System.Collections.Generic.IReadOnlyList<TimeTag> times) =>
+            times.Count == 0 ? "-" : string.Join(",", System.Linq.Enumerable.Select(times, Time));
+
         public static string Person(PersonTag person) => person switch
         {
             PersonTag.Family => "가족",
@@ -42,14 +45,6 @@ namespace BlueComplex.UI.DebugPlay
             HeartbeatState.Stable => "안정",
             HeartbeatState.Excited => "흥분",
             HeartbeatState.VeryExcited => "매우 흥분",
-            _ => "-"
-        };
-
-        public static string Censorship(CensorshipLevel level) => level switch
-        {
-            CensorshipLevel.None => "없음",
-            CensorshipLevel.Partial => "일부",
-            CensorshipLevel.Full => "전체",
             _ => "-"
         };
 

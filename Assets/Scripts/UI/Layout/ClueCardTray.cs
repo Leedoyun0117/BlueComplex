@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using BlueComplex.Core.Clues;
-using BlueComplex.Core.Stability;
 using BlueComplex.UI.Presentation;
 using UnityEngine;
 
@@ -16,15 +15,15 @@ namespace BlueComplex.UI.Layout
 
         public ClueCardView GetCard(int index) => _cards[index];
 
-        /// <summary>손패 전체를 현재 해금/검열 상태로 다시 그린다. 남는 슬롯은 비운다.</summary>
-        public void RefreshAll(IReadOnlyList<ClueInstance> handCards, ClueKnowledgeLedger ledger, CensorshipLevel censorship)
+        /// <summary>손패 전체를 현재 해금 상태로 다시 그린다. 남는 슬롯은 비운다.</summary>
+        public void RefreshAll(IReadOnlyList<ClueInstance> handCards, ClueKnowledgeLedger ledger)
         {
             for (var i = 0; i < _cards.Length; i++)
             {
                 if (i < handCards.Count)
                 {
                     var card = handCards[i];
-                    _cards[i].Render(card, ClueCardFormatter.Format(card, ledger, censorship));
+                    _cards[i].Render(card, ClueCardFormatter.Format(card, ledger));
                 }
                 else
                 {

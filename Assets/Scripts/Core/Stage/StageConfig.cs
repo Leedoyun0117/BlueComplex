@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BlueComplex.Core.Clues;
 using BlueComplex.Core.Complexes;
 using BlueComplex.Core.Items;
@@ -23,15 +24,34 @@ namespace BlueComplex.Core.Stage
         /// <summary>키 구역 폭(심박수 칸 수).</summary>
         public int KeyWidth { get; }
 
+        /// <summary>구간 확률에 곱하는 발현 배율. <see cref="ComplexSpawnChances"/>가 있으면 쓰이지 않는다.</summary>
         public double ComplexWeight { get; }
+
+        /// <summary>
+        /// null이 아니면 이 스테이지 전용 구간별 발현 확률표(최종 확률 그대로 — <see cref="ComplexWeight"/>는 곱하지 않는다).
+        /// 표에 없는 구간은 <see cref="HeartbeatZone"/> 기본 확률을 쓴다. null이면 기본 확률표 × <see cref="ComplexWeight"/>.
+        /// </summary>
+        public IReadOnlyDictionary<HeartbeatState, double> ComplexSpawnChances { get; }
 
         /// <summary>컴플렉스가 동시에 붙을 수 있는 최대 수(최대 중첩). 이 수를 넘겨 새 컴플렉스가 나타나면 특수 특성 발현 조건이 된다.</summary>
         public int MaxComplexSlots { get; }
 
         public IReadOnlyList<ClueDefinition> Clues { get; }
         public IReadOnlyList<ComplexDefinition> ComplexPool { get; }
+
+        /// <summary>고정 시작 컴플렉스. 비어 있고 <see cref="RandomStartingComplex"/>도 꺼져 있으면 컴플렉스 없이 시작한다.</summary>
         public ComplexDefinition StartingComplex { get; }
+
+        /// <summary>
+        /// 켜면 스테이지를 만들 때(<see cref="StageFactory.Create"/>) 시작 컴플렉스를 <see cref="ComplexPool"/>에서 시드 난수로 하나 고른다 —
+        /// 같은 시드면 같은 컴플렉스, 다른 시드면 (대체로) 다른 컴플렉스. <see cref="StartingComplex"/>가 채워져 있으면 그쪽이 우선한다.
+        /// </summary>
+        public bool RandomStartingComplex { get; }
+
         public IReadOnlyList<ItemDefinition> ItemPool { get; }
+
+        /// <summary>null이 아니면 쿼터 손패를 채울 때 그 쿼터 키 목표 구간에 맞는 감정의 단서를 강제로 포함한다(<see cref="KeyZoneHandBiasRule"/>).</summary>
+        public KeyHandBiasSettings KeyHandBias { get; }
 
         /// <summary>이 스테이지에 나오는 특성 목록(일반 + 특수). 아이템과 컴플렉스 초과가 id·구간 방향으로 여기서 찾는다.</summary>
         public IReadOnlyList<TraitDefinition> Traits { get; }
@@ -59,7 +79,10 @@ namespace BlueComplex.Core.Stage
                            int maxComplexSlots = ComplexBoard.DefaultMaxSlots,
                            IReadOnlyList<TraitDefinition> traits = null,
                            int itemSlots = ItemInventory.DefaultCapacity,
-                           IReadOnlyDictionary<string, IReadOnlyList<string>> itemParameters = null)
+                           IReadOnlyDictionary<string, IReadOnlyList<string>> itemParameters = null,
+                           bool randomStartingComplex = false,
+                           KeyHandBiasSettings keyHandBias = null,
+                           IReadOnlyDictionary<HeartbeatState, double> complexSpawnChances = null)
         {
             if (maxComplexSlots < 1)
                 throw new ArgumentOutOfRangeException(nameof(maxComplexSlots), "최대 중첩은 1 이상이어야 합니다.");
@@ -67,6 +90,10 @@ namespace BlueComplex.Core.Stage
             if (requiredKeys > quarterCount)
                 throw new ArgumentException(
                     $"필요 키({requiredKeys})가 쿼터 수({quarterCount})보다 많으면 클리어할 수 없습니다.", nameof(requiredKeys));
+
+            var loneSet = clues?.Where(c => c.SetId != null).GroupBy(c => c.SetId).FirstOrDefault(g => g.Count() < 2);
+            if (loneSet != null)
+                throw new ArgumentException($"set '{loneSet.Key}' 는 단서가 2개 이상이어야 합니다.", nameof(clues));
 
             Id = id;
             DisplayName = displayName;
@@ -81,7 +108,10 @@ namespace BlueComplex.Core.Stage
             Clues = clues;
             ComplexPool = complexPool;
             StartingComplex = startingComplex;
+            RandomStartingComplex = randomStartingComplex;
             ItemPool = itemPool;
+            KeyHandBias = keyHandBias;
+            ComplexSpawnChances = complexSpawnChances;
         }
     }
 }

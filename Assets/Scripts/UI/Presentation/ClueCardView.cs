@@ -39,9 +39,7 @@ namespace BlueComplex.UI.Presentation
             SetIcon(card.Definition.Id);
             if (_attributesText != null)
             {
-                _attributesText.text = vm.AttributesHidden
-                    ? string.Empty
-                    : $"시간: {vm.TimeText}\n인물: {string.Join(", ", vm.PersonTexts)}\n감정: {string.Join(", ", vm.EmotionTexts)}";
+                _attributesText.text = $"시간: {vm.TimeText}\n인물: {string.Join(", ", vm.PersonTexts)}\n감정: {string.Join(", ", vm.EmotionTexts)}";
             }
 
             if (_storyText != null) _storyText.text = vm.StoryText;
@@ -96,6 +94,9 @@ namespace BlueComplex.UI.Presentation
             background.type = _background.type;
             background.color = _background.color;
 
+            // 원본 카드와 같은 윤곽 무늬여야 집어 들었을 때 종이가 바뀌어 보이지 않는다(시드 공유).
+            var sourceSkin = _background.GetComponent<PaperPanel>();
+            if (sourceSkin != null) PaperPanel.Skin(background, _background.material, sourceSkin.Seed);
             MockupStyle.AddPaperEdge(root);
 
             if (_iconImage != null && _iconImage.enabled) Instantiate(_iconImage.gameObject, rect, false);

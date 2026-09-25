@@ -14,8 +14,9 @@ using BlueComplex.Core.Turn;
 namespace BlueComplex.Core.Tests
 {
     /// <summary>
-    /// 기획서 "아이템과 특성": 아이템 보유/충전 규칙(시작 4개, 쿼터 시작에만 채움), 아이템 7종 효과, 특성 6종 효과와 계산 순서,
-    /// 컴플렉스 최대 중첩 초과 → 특수 특성 발현·치유.
+    /// 기획서 "아이템과 특성": 아이템 보유/충전 규칙(스테이지 시작 때 4개 지급, 이후 쿼터가 바뀔 때마다 쓴 칸만 다른 아이템으로
+    /// 채워지고 안 쓴 아이템은 그대로 유지됨 — 매 쿼터 전체를 새로 뽑는 손패와는 "쓴 칸만" 채운다는 점이 다르다),
+    /// 아이템 7종 효과, 특성 6종 효과와 계산 순서, 컴플렉스 최대 중첩 초과 → 특수 특성 발현·치유.
     /// </summary>
     public class ItemAndTraitRulesTests
     {
@@ -72,17 +73,24 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void ItemPool_HasTheSevenItemsOfTheDesignDoc()
+        public void ItemPools_FollowTheStageTables()
         {
-            var ids = PrototypeContent.Items().Select(i => i.DisplayName).ToList();
+            var common = new[] { "극복", "감정적 설득", "기억 공감", "회상", "논리적 설득", "착한 사마리아인", "선택적 기억", "심호흡", "자아비대", "명상" };
 
-            CollectionAssert.AreEquivalent(
-                new[] { "극복", "감정적 설득", "기억 공감", "회상", "논리적 설득", "착한 사마리아인", "선택적 기억" }, ids);
+            CollectionAssert.AreEquivalent(common, PrototypeContent.CommonItems().Select(i => i.DisplayName).ToList());
+            CollectionAssert.AreEquivalent(common.Append("공존감").Append("무관심").ToList(),
+                PrototypeContent.Stage1Items().Select(i => i.DisplayName).ToList(), "스테이지 1 표: 12종 전부(공용 10종 + 공존감 + 무관심).");
+            CollectionAssert.AreEquivalent(common.Append("공존감").Append("무관심").ToList(),
+                Stage2Content.Stage2(Polarity).ItemPool.Select(i => i.DisplayName).ToList(), "스테이지 2 표(09/25): 스테이지 1과 같은 12종.");
+            CollectionAssert.AreEquivalent(common.Append("무관심").Append("공존감").ToList(),
+                PrototypeContent.Items().Select(i => i.DisplayName).ToList(), "전체 목록 12종은 id 조회용이다.");
         }
 
         [Test]
-        public void UsedSlots_AreRefilledOnlyAtNextQuarterStart_AndUnusedItemsStay()
+        public void UsedSlot_IsRefilledAtNextQuarterStart_AndUnusedItemsStay()
         {
+            // 쓴 칸은 쿼터가 바뀌는 순간(다음 쿼터 시작) 다른 아이템으로 채워진다 — 안 쓴 아이템은 그대로 유지된다.
+            // 매 쿼터 전체를 새로 뽑는 손패(ClueHand.RefillForNewQuarter)와 달리, 여기선 "쓴 칸만" 채운다.
             var session = Start(PrototypeContent.PrototypeStage(Polarity), seed: 5);
             var runner = session.Runner;
 
@@ -91,25 +99,28 @@ namespace BlueComplex.Core.Tests
             runner.UseItem(used);
             Assert.AreEqual(3, session.Items.Held.Count);
 
-            var gained = 0;
-            session.Items.Gained += _ => gained++;
+            var gained = new List<ItemDefinition>();
+            session.Items.Gained += gained.Add;
 
-            for (var turn = 1; turn <= 3; turn++)
+            for (var turn = 1; turn <= 3; turn++) // 1쿼터 남은 턴 진행 — 4번째(마지막) 카드가 2쿼터 경계를 넘긴다
             {
                 runner.PlayClue(session.Hand.Cards[0]);
-                Assert.AreEqual(3, session.Items.Held.Count, $"쿼터 중(턴 {turn} 뒤)에는 아이템을 채우지 않는다.");
+                Assert.AreEqual(3, session.Items.Held.Count, $"턴 {turn} 뒤에는 아직 같은 쿼터라 채워지지 않는다.");
             }
 
-            Assert.AreEqual(0, gained, "매 턴 지급은 없다.");
-
-            runner.PlayClue(session.Hand.Cards[0]); // 4턴 = 1쿼터 마지막 턴 → 다음 턴이 2쿼터 시작
-
+            runner.PlayClue(session.Hand.Cards[0]); // 1쿼터 마지막 턴 → 2쿼터 시작으로 넘어가며 쓴 칸이 채워진다
             Assert.AreEqual(2, runner.CurrentQuarter);
-            Assert.AreEqual(4, session.Items.Held.Count, "쓴 칸은 다음 쿼터 시작에 채워진다.");
-            Assert.AreEqual(1, gained);
-            CollectionAssert.IsSubsetOf(unused, session.Items.Held.ToList(), "쓰지 않은 아이템은 그대로 유지된다.");
-            CollectionAssert.DoesNotContain(session.Items.Held.Where(i => !unused.Contains(i)).ToList(), used,
-                "채워지는 아이템은 방금 쓴 것과 '다른' 아이템이다.");
+            Assert.AreEqual(4, session.Items.Held.Count, "쿼터가 바뀌면 쓴 칸이 다시 채워진다.");
+            Assert.AreEqual(1, gained.Count, "쓴 칸 하나만큼만 채워진다.");
+            Assert.AreNotEqual(used, gained[0], "직전에 쓴 종류는 되도록 피한다.");
+            CollectionAssert.IsSubsetOf(unused, session.Items.Held.ToList());
+
+            gained.Clear();
+            for (var turn = 5; turn <= 8; turn++) session.Runner.PlayClue(session.Hand.Cards[0]); // 2쿼터 전체(아무것도 안 씀)
+
+            Assert.AreEqual(3, runner.CurrentQuarter);
+            Assert.AreEqual(4, session.Items.Held.Count);
+            Assert.AreEqual(0, gained.Count, "이미 가득 찬 칸은 쿼터가 바뀌어도 다시 채워지지 않는다.");
         }
 
         [Test]
@@ -120,7 +131,8 @@ namespace BlueComplex.Core.Tests
 
             for (var turn = 1; turn <= 4; turn++) session.Runner.PlayClue(session.Hand.Cards[0]);
 
-            CollectionAssert.AreEqual(before, session.Items.Held.ToList());
+            Assert.AreEqual(2, session.Runner.CurrentQuarter, "4턴 뒤에는 2쿼터가 시작되어 있어야 한다.");
+            CollectionAssert.AreEqual(before, session.Items.Held.ToList(), "칸이 이미 가득 차 있으면 쿼터가 바뀌어도 바뀌는 게 없다.");
         }
 
         // ------------------------------------------------------------------
@@ -131,7 +143,7 @@ namespace BlueComplex.Core.Tests
         public void Overcome_HalvesTheChosenComplexDuration_RoundedUp()
         {
             var overcome = Item("item_overcome");
-            var session = Start(Config(new[] { overcome }, starting: PrototypeContent.AntiPast(Polarity)));
+            var session = Start(Config(new[] { overcome }, starting: PrototypeContent.Optimism())); // 지속 3턴 컴플렉스
             var complex = session.Complexes.Slots[0];
             Assert.AreEqual(3, complex.RemainingTurns);
 
@@ -142,6 +154,17 @@ namespace BlueComplex.Core.Tests
 
             Assert.AreEqual(2, complex.RemainingTurns, "3턴의 절반은 올림해 2턴.");
             Assert.AreEqual(1, changed);
+        }
+
+        [Test]
+        public void Overcome_GrantsSensitive()
+        {
+            var overcome = Item("item_overcome");
+            var session = Start(Config(new[] { overcome }, starting: PrototypeContent.Optimism()));
+
+            session.Runner.UseItem(overcome, ItemTarget.Of(session.Complexes.Slots[0]));
+
+            Assert.IsTrue(session.Traits.Has(PrototypeContent.TraitSensitive));
         }
 
         [Test]
@@ -196,7 +219,7 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void MemoryEmpathy_RemovesFearAndSadnessOneEach_AndGrantsHallucination()
+        public void MemoryEmpathy_RemovesOnlySadnessOneEach_AndGrantsHallucination()
         {
             var empathy = Item("item_empathy");
             var session = Start(Config(new[] { empathy }));
@@ -206,10 +229,78 @@ namespace BlueComplex.Core.Tests
             var tags = new TagSet(emotions: new[] { EmotionTag.Fear, EmotionTag.Fear, EmotionTag.Sadness, EmotionTag.Anger });
             session.ActiveItems.Modify(tags);
 
-            Assert.AreEqual(1, tags.CountOf(EmotionTag.Fear), "공포 2개 중 1개만 제거");
+            Assert.AreEqual(2, tags.CountOf(EmotionTag.Fear), "공포는 건드리지 않는다(기획: 슬픔 감정만)");
             Assert.AreEqual(0, tags.CountOf(EmotionTag.Sadness));
             Assert.AreEqual(1, tags.CountOf(EmotionTag.Anger));
             Assert.IsTrue(session.Traits.Has(PrototypeContent.TraitHallucination));
+
+            var stacked = new TagSet(emotions: new[] { EmotionTag.Sadness, EmotionTag.Sadness });
+            session.ActiveItems.Modify(stacked);
+            Assert.AreEqual(1, stacked.CountOf(EmotionTag.Sadness), "슬픔은 1씩 제거된다");
+        }
+
+        [Test]
+        public void Indifference_IgnoresDepressedEmotionsOfAResultWithOtherPerson_AndGrantsLethargy()
+        {
+            var indifference = Item("item_indifference");
+            var session = Start(Config(new[] { indifference }));
+
+            session.Runner.UseItem(indifference);
+
+            var toOther = new TagSet(TimeTag.Past, new[] { PersonTag.Other, PersonTag.Family },
+                new[] { EmotionTag.Sadness, EmotionTag.Sadness, EmotionTag.Disgust, EmotionTag.Fear, EmotionTag.Happiness, EmotionTag.Anger });
+            session.ActiveItems.Modify(toOther);
+            Assert.AreEqual(0, toOther.CountOf(EmotionTag.Sadness), "겹친 개수까지 전부 무시");
+            Assert.AreEqual(0, toOther.CountOf(EmotionTag.Disgust));
+            Assert.AreEqual(0, toOther.CountOf(EmotionTag.Fear));
+            Assert.AreEqual(1, toOther.CountOf(EmotionTag.Happiness), "흥분 감정은 그대로");
+            Assert.AreEqual(1, toOther.CountOf(EmotionTag.Anger));
+
+            var notOther = new TagSet(TimeTag.Past, new[] { PersonTag.Family }, new[] { EmotionTag.Sadness });
+            session.ActiveItems.Modify(notOther);
+            Assert.AreEqual(1, notOther.CountOf(EmotionTag.Sadness), "타인이 아닌 결과는 그대로");
+
+            Assert.IsTrue(session.Traits.Has(PrototypeContent.TraitLethargy));
+        }
+
+        [Test]
+        public void Coexistence_AddsOneHappinessToAResultWithOtherPerson_AndGrantsNoTrait()
+        {
+            var coexistence = Item("item_coexistence");
+            var session = Start(Config(new[] { coexistence }));
+
+            session.Runner.UseItem(coexistence);
+
+            var toOther = new TagSet(TimeTag.Past, new[] { PersonTag.Other }, new[] { EmotionTag.Happiness, EmotionTag.Sadness });
+            session.ActiveItems.Modify(toOther);
+            Assert.AreEqual(2, toOther.CountOf(EmotionTag.Happiness), "타인 결과에는 행복이 1 더해진다");
+            Assert.AreEqual(1, toOther.CountOf(EmotionTag.Sadness), "다른 감정은 그대로");
+
+            var noHappiness = new TagSet(TimeTag.Present, new[] { PersonTag.Other, PersonTag.Friend }, new[] { EmotionTag.Fear });
+            session.ActiveItems.Modify(noHappiness);
+            Assert.AreEqual(1, noHappiness.CountOf(EmotionTag.Happiness), "행복이 없던 결과에도 1이 붙는다");
+
+            var notOther = new TagSet(TimeTag.Past, new[] { PersonTag.Family }, new[] { EmotionTag.Sadness });
+            session.ActiveItems.Modify(notOther);
+            Assert.AreEqual(0, notOther.CountOf(EmotionTag.Happiness), "타인이 아닌 결과는 그대로");
+
+            Assert.AreEqual(0, session.Traits.Traits.Count(), "공존감은 특성을 부여하지 않는다");
+        }
+
+        [Test]
+        public void Coexistence_LastsOneTurn()
+        {
+            var coexistence = Item("item_coexistence");
+            var session = Start(Config(new[] { coexistence }, clues: Enumerable.Range(0, 12).Select(i =>
+                new ClueDefinition($"o{i}", $"o{i}", "", TimeTag.Past, new[] { PersonTag.Other }, new[] { EmotionTag.Sadness })).ToList()),
+                heartbeat: 100);
+
+            session.Runner.UseItem(coexistence);
+            var first = session.Runner.PlayClue(session.Hand.Cards[0]);
+            Assert.AreEqual(0, first.HeartbeatDelta, "슬픔(-10) + 공존감 행복(+10) = 0");
+
+            var second = session.Runner.PlayClue(session.Hand.Cards[0]);
+            Assert.AreEqual(-10, second.HeartbeatDelta, "다음 턴에는 효과가 끝나 있다");
         }
 
         [Test]
@@ -263,6 +354,129 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
+        public void DeepBreath_LowersTenOnlyWhileExcited_AndAlwaysGrantsLethargy()
+        {
+            var deepBreath = Item("item_deep_breath");
+
+            var excited = Start(Config(new[] { deepBreath }), heartbeat: 120);
+            excited.Runner.UseItem(deepBreath);
+            Assert.AreEqual(110, excited.Heartbeat.Value, "흥분 구간(100~130)이면 10 내려간다.");
+            Assert.IsTrue(excited.Traits.Has(PrototypeContent.TraitLethargy));
+
+            var veryExcited = Start(Config(new[] { deepBreath }), heartbeat: 150);
+            veryExcited.Runner.UseItem(deepBreath);
+            Assert.AreEqual(140, veryExcited.Heartbeat.Value, "매우 흥분 구간에서도 흥분이다.");
+
+            var stable = Start(Config(new[] { deepBreath }), heartbeat: 80);
+            stable.Runner.UseItem(deepBreath);
+            Assert.AreEqual(80, stable.Heartbeat.Value, "흥분이 아니면 심박수는 그대로다.");
+            Assert.IsTrue(stable.Traits.Has(PrototypeContent.TraitLethargy), "특성 부여는 조건과 무관하다(사마리아인과 같은 해석).");
+
+            var depressed = Start(Config(new[] { deepBreath }), heartbeat: 50);
+            depressed.Runner.UseItem(deepBreath);
+            Assert.AreEqual(50, depressed.Heartbeat.Value, "침체 구간에서는 내려가지 않는다.");
+        }
+
+        [Test]
+        public void DeepBreath_NeedsNoTarget_AndHasOnlyAnImmediateEffect()
+        {
+            var deepBreath = Item("item_deep_breath");
+            var session = Start(Config(new[] { deepBreath }), heartbeat: 120);
+
+            Assert.AreEqual(ItemTargetKind.None, deepBreath.TargetKind);
+            Assert.AreEqual(0, deepBreath.Duration, "즉시 효과뿐이다(지속 효과 없음).");
+            Assert.IsTrue(session.Runner.CanUseItem(deepBreath));
+            Assert.Throws<ArgumentException>(() => session.Runner.UseItem(deepBreath, ItemTarget.Of(session.Hand.Cards[0])));
+        }
+
+        [Test]
+        public void EgoInflation_DoublesEveryEmotionOfTheResult_AndGrantsNoTrait()
+        {
+            var ego = Item("item_ego_inflation");
+            var session = Start(Config(new[] { ego }));
+
+            session.Runner.UseItem(ego);
+
+            var tags = new TagSet(TimeTag.Past, new[] { PersonTag.Family },
+                new[] { EmotionTag.Sadness, EmotionTag.Sadness, EmotionTag.Anger, EmotionTag.Happiness });
+            session.ActiveItems.Modify(tags);
+
+            Assert.AreEqual(4, tags.CountOf(EmotionTag.Sadness), "겹친 개수까지 통째로 두 배");
+            Assert.AreEqual(2, tags.CountOf(EmotionTag.Anger));
+            Assert.AreEqual(2, tags.CountOf(EmotionTag.Happiness));
+            Assert.IsTrue(tags.HasPerson(PersonTag.Family), "인물 태그는 그대로");
+            Assert.AreEqual(TimeTag.Past, tags.Time, "시간 태그는 그대로");
+            Assert.AreEqual(0, session.Traits.Traits.Count, "자아비대는 특성을 부여하지 않는다.");
+        }
+
+        [Test]
+        public void EgoInflation_NeedsNoTarget_AndLastsOneTurn()
+        {
+            var ego = Item("item_ego_inflation");
+            var session = Start(Config(new[] { ego }, clues: Enumerable.Range(0, 12).Select(i => Clue($"h{i}", EmotionTag.Happiness)).ToList()),
+                heartbeat: 100);
+
+            Assert.AreEqual(ItemTargetKind.None, ego.TargetKind, "이번 턴 결과에 바로 걸린다 — 대상 선택이 없다.");
+            Assert.Throws<ArgumentException>(() => session.Runner.UseItem(ego, ItemTarget.Of(session.Hand.Cards[0])));
+
+            session.Runner.UseItem(ego);
+            var first = session.Runner.PlayClue(session.Hand.Cards[0]);
+            Assert.AreEqual(20, first.HeartbeatDelta, "행복 1개(+10)가 두 배 = +20");
+
+            var second = session.Runner.PlayClue(session.Hand.Cards[0]);
+            Assert.AreEqual(10, second.HeartbeatDelta, "다음 턴에는 효과가 끝나 있다.");
+        }
+
+        [Test]
+        public void Meditation_AddsSadnessOnlyWhenExcitedEmotionsOutnumberDepressedOnes_AndGrantsSensitive()
+        {
+            var meditation = Item("item_meditation");
+            var session = Start(Config(new[] { meditation }));
+
+            session.Runner.UseItem(meditation);
+            Assert.IsTrue(session.Traits.Has(PrototypeContent.TraitSensitive));
+
+            var excitedLeads = new TagSet(emotions: new[] { EmotionTag.Happiness, EmotionTag.Anger, EmotionTag.Fear });
+            session.ActiveItems.Modify(excitedLeads);
+            Assert.AreEqual(1, excitedLeads.CountOf(EmotionTag.Sadness), "흥분 2 > 침체 1 → 슬픔 +1");
+
+            var onlyExcited = new TagSet(emotions: new[] { EmotionTag.Love });
+            session.ActiveItems.Modify(onlyExcited);
+            Assert.AreEqual(1, onlyExcited.CountOf(EmotionTag.Sadness), "침체가 없어도 흥분이 많으면 붙는다.");
+
+            var tie = new TagSet(emotions: new[] { EmotionTag.Happiness, EmotionTag.Disgust });
+            session.ActiveItems.Modify(tie);
+            Assert.AreEqual(0, tie.CountOf(EmotionTag.Sadness), "같으면 붙지 않는다(더 많아야 한다).");
+
+            var depressedLeads = new TagSet(emotions: new[] { EmotionTag.Happiness, EmotionTag.Fear, EmotionTag.Sadness });
+            session.ActiveItems.Modify(depressedLeads);
+            Assert.AreEqual(1, depressedLeads.CountOf(EmotionTag.Sadness), "침체가 많으면 그대로(원래 슬픔 1개)");
+
+            var stacked = new TagSet(emotions: new[] { EmotionTag.Happiness, EmotionTag.Happiness, EmotionTag.Sadness });
+            session.ActiveItems.Modify(stacked);
+            Assert.AreEqual(2, stacked.CountOf(EmotionTag.Sadness), "겹친 개수까지 센다: 흥분 2 > 침체 1 → 슬픔 1 → 2");
+
+            var empty = new TagSet();
+            session.ActiveItems.Modify(empty);
+            Assert.AreEqual(0, empty.CountOf(EmotionTag.Sadness), "감정이 없으면 그대로");
+        }
+
+        [Test]
+        public void Meditation_InARealTurn_AddsSadness_ThenSensitiveTriplesTheResult()
+        {
+            var meditation = Item("item_meditation");
+            var session = Start(Config(new[] { meditation },
+                clues: Enumerable.Range(0, 12).Select(i => Clue($"e{i}", EmotionTag.Happiness, EmotionTag.Love)).ToList()),
+                heartbeat: 100);
+
+            session.Runner.UseItem(meditation);
+            var report = session.Runner.PlayClue(session.Hand.Cards[0]);
+
+            Assert.AreEqual(1, report.FinalTags.CountOf(EmotionTag.Sadness));
+            Assert.AreEqual(30, report.HeartbeatDelta, "(행복 +10, 사랑 +10, 슬픔 -10) = +10, 예민 x3 = +30");
+        }
+
+        [Test]
         public void SelectiveMemory_SwapsTheChosenClueForARandomOne_InPlace()
         {
             var selective = Item("item_selective_memory");
@@ -283,6 +497,17 @@ namespace BlueComplex.Core.Tests
             Assert.AreNotEqual(chosen.Definition.Id, hand.Cards[2].Definition.Id, "방금 고른 단서가 그대로 다시 나오지 않는다.");
             CollectionAssert.AreEqual(new[] { chosen }, destroyed);
             CollectionAssert.AreEqual(new[] { hand.Cards[2] }, added);
+        }
+
+        [Test]
+        public void SelectiveMemory_GrantsHallucination()
+        {
+            var selective = Item("item_selective_memory");
+            var session = Start(Config(new[] { selective }));
+
+            session.Runner.UseItem(selective, ItemTarget.Of(session.Hand.Cards[0]));
+
+            Assert.IsTrue(session.Traits.Has(PrototypeContent.TraitHallucination));
         }
 
         [Test]
@@ -433,6 +658,34 @@ namespace BlueComplex.Core.Tests
             Assert.AreEqual(5, first.HeartbeatDelta, "무력: 분노 +10이 절반");
             Assert.AreEqual(10, second.HeartbeatDelta, "특성은 한 턴만 간다");
             Assert.IsFalse(session.Traits.Has(PrototypeContent.TraitLethargy));
+        }
+
+        [Test]
+        public void TraitsManifested_ListsTheItemTrait_OnlyInTheFirstReportAfterUse()
+        {
+            var samaritan = Item("item_samaritan");
+            var clues = new[] { Clue("a", EmotionTag.Anger), Clue("b", EmotionTag.Anger), Clue("c", EmotionTag.Anger), Clue("d", EmotionTag.Anger) };
+            var session = Start(Config(new[] { samaritan }, clues: clues), heartbeat: 50);
+
+            session.Runner.UseItem(samaritan);
+            var first = session.Runner.PlayClue(session.Hand.Cards[0]);
+            var second = session.Runner.PlayClue(session.Hand.Cards[0]);
+
+            CollectionAssert.AreEqual(new[] { PrototypeContent.TraitLethargy }, first.TraitsManifested.Select(t => t.Id).ToArray());
+            Assert.IsEmpty(second.TraitsManifested, "이미 걸려 있던(또는 만료된) 특성은 다음 결과에 안 뜬다.");
+        }
+
+        [Test]
+        public void TraitsManifested_IncludesTheOverflowSpecialTrait_OnTheTurnItAppears_ButNotAfter()
+        {
+            var session = FullBoardSession(heartbeat: 55);
+
+            var first = session.Runner.PlayClue(session.Hand.Cards[0]);
+            var second = session.Runner.PlayClue(session.Hand.Cards[0]);
+
+            CollectionAssert.AreEqual(new[] { PrototypeContent.TraitHighFunctioningDepression }, first.TraitsManifested.Select(t => t.Id).ToArray());
+            Assert.IsFalse(second.TraitsManifested.Any(t => t.Id == PrototypeContent.TraitHighFunctioningDepression),
+                "특수 특성이 계속 걸려 있어도 최초 발현 턴에만 뜬다.");
         }
 
         // ------------------------------------------------------------------

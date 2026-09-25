@@ -13,6 +13,8 @@ namespace BlueComplex.Core.Stage
 {
     public sealed class StageSession
     {
+        /// <summary>이 세션을 만든 스테이지 설정 — 스테이지별로 달라지는 UI(배경음 등)가 id를 여기서 읽는다.</summary>
+        public StageConfig Config { get; init; }
         public TurnRunner Runner { get; init; }
         public ClueHand Hand { get; init; }
         public ComplexBoard Complexes { get; init; }
@@ -22,7 +24,6 @@ namespace BlueComplex.Core.Stage
         public TraitBoard Traits { get; init; }
         public KeyProgress Keys { get; init; }
         public ClueKnowledgeLedger Ledger { get; init; }
-        public CensorshipState Censorship { get; init; }
         public ActiveItemBoard ActiveItems { get; init; }
     }
 
@@ -41,15 +42,16 @@ namespace BlueComplex.Core.Stage
             var hand = new ClueHand(pool);
 
             var complexBoard = new ComplexBoard(config.MaxComplexSlots);
-            if (config.StartingComplex != null)
-                complexBoard.TryAttach(new ComplexInstance(config.StartingComplex, priority: 0));
+            var startingComplex = ChooseStartingComplex(config, random);
+            if (startingComplex != null)
+                complexBoard.TryAttach(new ComplexInstance(startingComplex, priority: 0));
 
-            var traits = new TraitBoard(config.Traits);
+            var traits = new TraitBoard(config.Traits, random);
             var heartbeat = new Heartbeat(heartbeatStartValue);
-            var zone = new HeartbeatZone();
+            var zone = config.ComplexSpawnChances == null
+                ? new HeartbeatZone()
+                : new HeartbeatZone(HeartbeatZone.WithSpawnChances(config.ComplexSpawnChances));
             var evaluator = new TraitAwareEmotionEvaluator(polarityTable, traits);
-
-            var censorship = new CensorshipState(heartbeat, zone);
 
             var activeItems = new ActiveItemBoard();
             var items = new ItemInventory(config.ItemPool, random, config.ItemSlots);
@@ -62,7 +64,7 @@ namespace BlueComplex.Core.Stage
                 complexBoard,
                 new ComplexResolver(complexBoard),
                 new ComplexSpawner(config.ComplexPool, random),
-                new ZoneBasedSpawnPolicy(random, zone, config.ComplexWeight),
+                new ZoneBasedSpawnPolicy(random, zone, config.ComplexSpawnChances == null ? config.ComplexWeight : 1.0),
                 heartbeat,
                 zone,
                 evaluator,
@@ -72,10 +74,12 @@ namespace BlueComplex.Core.Stage
                 keys,
                 keyPlacer,
                 ledger,
-                config.ItemParameters);
+                config.ItemParameters,
+                config.KeyHandBias == null ? null : new KeyZoneHandBiasRule(zone, polarityTable, config.KeyHandBias));
 
             return new StageSession
             {
+                Config = config,
                 Runner = runner,
                 Hand = hand,
                 Complexes = complexBoard,
@@ -85,9 +89,17 @@ namespace BlueComplex.Core.Stage
                 Traits = traits,
                 Keys = keys,
                 Ledger = ledger,
-                Censorship = censorship,
                 ActiveItems = activeItems
             };
+        }
+
+        /// <summary>고정 시작 컴플렉스가 있으면 그것, 없고 무작위가 켜져 있으면 풀에서 시드 난수로 하나. 난수는 스테이지당 한 번만 쓴다.</summary>
+        private static ComplexDefinition ChooseStartingComplex(StageConfig config, IRandomSource random)
+        {
+            if (config.StartingComplex != null) return config.StartingComplex;
+            if (!config.RandomStartingComplex || config.ComplexPool.Count == 0) return null;
+
+            return config.ComplexPool[random.Range(0, config.ComplexPool.Count)];
         }
 
         /// <summary>

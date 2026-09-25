@@ -228,22 +228,30 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void StageStart_PrototypeZones_AreAllOnTheReachableSide_AndSpreadApart_AcrossManySeeds()
+        public void StageStart_PrototypeZones_SpreadApartWithinEachSide_AndAreReproducible_AcrossManySeeds()
         {
-            // 프로토타입 카드 풀로는 우측(131~)에 닿을 수 없어 분산을 강제하지 않는다 — 대신 좌측 안에서 위치를 벌린다.
+            // 좌/우는 쿼터마다 독립 동전이라 한쪽에 몰릴 수 있다 — 같은 쪽에 놓인 구역끼리는 위치를 벌리고, 같은 시드는 같은 배치여야 한다.
             var polarityTable = new DefaultEmotionPolarityTable();
 
             for (var seed = 0; seed < 300; seed++)
             {
                 var config = PrototypeContent.PrototypeStage(polarityTable);
                 var session = StageFactory.Create(config, new SystemRandomSource(seed), new ClueKnowledgeLedger(), polarityTable);
+                var again = StageFactory.Create(config, new SystemRandomSource(seed), new ClueKnowledgeLedger(), polarityTable);
 
                 session.Runner.StartStage();
+                again.Runner.StartStage();
 
-                var starts = session.Keys.Zones.Values.Select(z => z.StartSlot).OrderBy(x => x).ToList();
-                Assert.IsTrue(session.Keys.Zones.Values.All(z => z.StartSlot < 100), $"seed={seed}: 도달 불가인 우측 구역이 있다.");
-                for (var i = 1; i < starts.Count; i++)
-                    Assert.GreaterOrEqual(starts[i] - starts[i - 1], 6, $"seed={seed}: 구역 시작 위치 {string.Join(",", starts)} 가 서로 붙어 있다.");
+                foreach (var pair in session.Keys.Zones)
+                    Assert.AreEqual(pair.Value, again.Keys.Zones[pair.Key], $"seed={seed}: 같은 시드인데 배치가 다르다.");
+
+                foreach (var isLeft in new[] { true, false })
+                {
+                    var starts = session.Keys.Zones.Values.Where(z => (z.StartSlot < 100) == isLeft).Select(z => z.StartSlot).OrderBy(x => x).ToList();
+                    for (var i = 1; i < starts.Count; i++)
+                        Assert.GreaterOrEqual(starts[i] - starts[i - 1], 6,
+                            $"seed={seed}: {(isLeft ? "좌" : "우")}측 구역 시작 위치 {string.Join(",", starts)} 가 서로 붙어 있다.");
+                }
             }
         }
     }
