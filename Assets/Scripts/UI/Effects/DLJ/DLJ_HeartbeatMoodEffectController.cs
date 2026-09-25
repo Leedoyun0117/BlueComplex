@@ -15,7 +15,7 @@ namespace BlueComplex.UI.Effects.DLJ
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("BlueComplex/DLJ/Heartbeat Mood Effects")]
-    public sealed class HeartbeatMoodEffectController : MonoBehaviour
+    public sealed class DLJ_HeartbeatMoodEffectController : MonoBehaviour
     {
         public enum ScatterMode { Lamps, WindowEdges }
         public enum WindowLightStyle { FineRays, SoftBands, RoomShafts, CenterShafts, WindowGlow }
@@ -333,7 +333,7 @@ namespace BlueComplex.UI.Effects.DLJ
         private bool _boundRoomEnabled;
         private bool _boundUsesRooms;
         private readonly HeartbeatZone _previewZone = new();
-        private readonly HeartbeatMoodEffectState _state = new();
+        private readonly DLJ_HeartbeatMoodEffectState _state = new();
         private Material _originalMaterial;
         private Material _runtimeMaterial;
         private StageSession _session;

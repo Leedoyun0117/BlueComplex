@@ -9,7 +9,7 @@ using Object = UnityEngine.Object;
 namespace BlueComplex.UI.Effects.DLJ
 {
     /// <summary>UI 연출 기획: 빈칸 옆에서 확대 → 접근 → 빠른 삽입. 슬롯의 레이아웃은 유지한다.</summary>
-    public static class ItemArrivalMotion
+    public static class DLJ_ItemArrivalMotion
     {
         public static Sequence Play(RectTransform slot, Image background, TMP_Text label, Image icon,
             Color emptyColor, Action onFinished)
@@ -60,7 +60,7 @@ namespace BlueComplex.UI.Effects.DLJ
             if (icon != null) icon.enabled = false;
             if (group != null) { group.blocksRaycasts = false; group.interactable = false; }
 
-            var total = Mathf.Max(0.24f, ItemArrivalSettings.Settings.duration);
+            var total = Mathf.Max(0.24f, DLJ_ItemArrivalSettings.Settings.duration);
             var width = Mathf.Max(1f, slot.rect.width);
             var offset = new Vector3(-width * 1.12f, slot.rect.height * 0.08f, 0f);
             var approach = new Vector3(-width * 0.16f, 0f, 0f);

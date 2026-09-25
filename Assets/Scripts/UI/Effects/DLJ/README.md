@@ -133,11 +133,11 @@ DLJ 테스트 씬은 `Lamp Point Light`만 연결하여 위쪽 막대/책상 테
 
 ## 구조
 
-- `HeartbeatMoodEffectController.cs`: 이벤트 연결, 런타임 머티리얼, 광원 복원, 표시 전용 미리보기.
-- `HeartbeatMoodEffectState.cs`: 프레임과 독립적인 상태 전환·타이머.
-- `Assets/Shaders/DLJ/HeartbeatMood.shader`: 기존 CRT/UI 합성을 보존한 단일 패스 전용 셰이더.
-- `Assets/Scripts/Editor/DLJ/HeartbeatMoodEffectEditor.cs`: 씬 설정 메뉴와 미리보기 인스펙터.
-- `HeartbeatMoodEffectStateChecks.cs`: 상태 전환/글리치 2초·색수차 3.5초 만료/감쇠/복귀/재진입 회귀 체크.
+- `DLJ_HeartbeatMoodEffectController.cs`: 이벤트 연결, 런타임 머티리얼, 광원 복원, 표시 전용 미리보기.
+- `DLJ_HeartbeatMoodEffectState.cs`: 프레임과 독립적인 상태 전환·타이머.
+- `Assets/Shaders/DLJ/DLJ_HeartbeatMood.shader`: 기존 CRT/UI 합성을 보존한 단일 패스 전용 셰이더.
+- `Assets/Scripts/Editor/DLJ/DLJ_HeartbeatMoodEffectEditor.cs`: 씬 설정 메뉴와 미리보기 인스펙터.
+- `DLJ_HeartbeatMoodEffectStateChecks.cs`: 상태 전환/글리치 2초·색수차 3.5초 만료/감쇠/복귀/재진입 회귀 체크.
 
 `HeartRateController.HeartbeatPresented` 이벤트에서 파형·태그 표시와 같은 시점에 동작.
 심박수 UI가 없는 디버그 씬에서는 `TurnResolved`에 연결. 코어 규칙 변경 없음.

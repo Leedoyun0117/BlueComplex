@@ -5,7 +5,7 @@ using UnityEditor;
 namespace BlueComplex.Editor.DLJ
 {
     /// <summary>DLJ: Git으로 동적 폰트가 교체되면 직렬화되지 않은 TMP 조회 캐시도 갱신한다.</summary>
-    public sealed class TmpFontCacheRefresh : AssetPostprocessor
+    public sealed class DLJ_TmpFontCacheRefresh : AssetPostprocessor
     {
         [InitializeOnLoadMethod]
         private static void Initialize()
