@@ -53,7 +53,7 @@ namespace BlueComplex.Core.Stage
                 SetApplication),
 
             new ClueDefinition("s2_water_cup", "물이 담긴 컵",
-                "물이 담긴 컵\n\n마실 수 없어..",
+                "물이 담긴 컵\n\n뭔가 두려워. 마실 수 없어..",
                 new[] { TimeTag.Past },
                 new[] { PersonTag.Family },
                 new[] { EmotionTag.Sadness, EmotionTag.Fear }),
@@ -92,15 +92,15 @@ namespace BlueComplex.Core.Stage
                 new[] { PersonTag.Friend },
                 new[] { EmotionTag.Love, EmotionTag.Sadness }),
 
-            // 원문: UI상 표시 "//", 태그 칸 비어 있음. 스테이지 1의 시계 재사용인지 스테이지 2 전용 미기재인지 판단이 안 서 비워 둔다(임의로 채우지 않는다).
+            // 09/25 노션에서 비어 있던 시계 칸이 채워졌다(스테이지 1의 시계와는 다른 스테이지 2 전용 항목).
             new ClueDefinition("s2_clock", "시계",
-                string.Empty,
-                System.Array.Empty<TimeTag>(),
-                NoPerson,
-                System.Array.Empty<EmotionTag>()),
+                "시계\n\n항상 움직이는 시곗 바늘을 보면, B씨와 연결된 느낌이 들어.",
+                new[] { TimeTag.Present },
+                new[] { PersonTag.Other },
+                new[] { EmotionTag.Happiness }),
 
             new ClueDefinition("s2_rainwater_bowl", "빗물이 고인 그릇",
-                "빗물\n\n비 따위는 평생 안와도 돼.",
+                "빗물이 고인 그릇\n\n지금도 조금씩 차오르고 있어. 비 따위는 평생 안 와도 돼.",
                 new[] { TimeTag.Present },
                 NoPerson,
                 new[] { EmotionTag.Disgust },
@@ -110,7 +110,19 @@ namespace BlueComplex.Core.Stage
                 "흰 꽃\n\n부모님이 받아주실까?",
                 new[] { TimeTag.Past },
                 new[] { PersonTag.Family },
-                new[] { EmotionTag.Sadness })
+                new[] { EmotionTag.Sadness }),
+
+            new ClueDefinition("s2_baguette", "바게트",
+                "바게트\n\nB씨가 저녁 식사를 위해 만들어 주셨어. 고소한 냄새가 기분을 좋게 만들어.",
+                new[] { TimeTag.Present },
+                new[] { PersonTag.Other },
+                new[] { EmotionTag.Happiness }),
+
+            new ClueDefinition("s2_fountain_pen", "만년필",
+                "만년필\n\nB씨가 지원서에 서명한 만년필이야. 오래된 흔적이 보여.",
+                new[] { TimeTag.Past },
+                new[] { PersonTag.Other },
+                new[] { EmotionTag.Happiness })
         };
 
         // ── 스테이지 2 컴플렉스 13종. 지속 시간(턴)은 표의 "지속 턴 수"다. ─────────────────────────
@@ -167,7 +179,7 @@ namespace BlueComplex.Core.Stage
             "stage2_rationalization",
             "합리화 컴플렉스",
             "가족과 관련된 감정의 주체를 타인으로 변형해 합리화합니다.",
-            defaultDuration: 3,
+            defaultDuration: 5,
             new IComplexCondition[]
             {
                 new HasPerson(PersonTag.Family),
@@ -194,12 +206,12 @@ namespace BlueComplex.Core.Stage
                 new RepeatEachEmotionOfPolarity(Polarity.Depressed, polarityTable)
             });
 
-        /// <summary>현재 + 행복/사랑 → 시간 태그 '미래' 추가.</summary>
+        /// <summary>현재 + 행복/사랑 → 시간 태그 '미래' 추가 + 행복 +2.</summary>
         public static ComplexDefinition OverExpectation() => new(
             "stage2_over_expectation",
             "과한 기대 컴플렉스",
-            "현재의 행복이 미래까지 이어질 것이라고 강하게 확신합니다.",
-            defaultDuration: 4,
+            "현재의 행복이 미래까지 이어질 것이라고 기대하며, 강한 행복을 느낀다.",
+            defaultDuration: 3,
             new IComplexCondition[]
             {
                 new TimeIs(TimeTag.Present),
@@ -207,7 +219,8 @@ namespace BlueComplex.Core.Stage
             },
             new IComplexEffect[]
             {
-                new AddTime(TimeTag.Future)
+                new AddTime(TimeTag.Future),
+                new AddEmotion(EmotionTag.Happiness, 2)
             });
 
         /// <summary>인물 태그 2개 이상 + 감정 태그 → 슬픔 +1.</summary>
@@ -226,19 +239,19 @@ namespace BlueComplex.Core.Stage
                 new AddEmotion(EmotionTag.Sadness, 1)
             });
 
-        /// <summary>감정 태그 수가 침체 ≥ 흥분 → 분노 +1.</summary>
+        /// <summary>침체 + 흥분 감정이 동시에 → 행복을 (단서의 흥분 태그 개수, 중첩 포함) × 2만큼 추가. 개수는 추가 전 값이다.</summary>
         public static ComplexDefinition SelfAnger(IEmotionPolarityTable polarityTable) => new(
             "stage2_self_anger",
             "자기 분노 컴플렉스",
-            "감정이 침체 쪽으로 기울어 있다면 자신의 모습에 분노합니다.",
+            "침체와 흥분 감정을 동시에 느끼고 있다면 흥분 감정을 더 깊게 느낀다.",
             defaultDuration: 4,
             new IComplexCondition[]
             {
-                new DepressedNotFewerThanExcited(polarityTable)
+                new HasBothPolarities(polarityTable)
             },
             new IComplexEffect[]
             {
-                new AddEmotion(EmotionTag.Anger, 1)
+                new AddEmotionPerEmotionOfPolarity(EmotionTag.Happiness, Polarity.Excited, 2, polarityTable)
             });
 
         /// <summary>표의 상세 정보가 `타인 → 타인→가족`으로만 적혀 있어 "타인 태그가 있으면 무조건 가족으로 변환"으로 옮겼다.</summary>
@@ -246,7 +259,7 @@ namespace BlueComplex.Core.Stage
             "stage2_transference",
             "전이 컴플렉스",
             "타인에게 가족의 모습을 겹쳐 본다.",
-            defaultDuration: 2,
+            defaultDuration: 4,
             new IComplexCondition[]
             {
                 new HasPerson(PersonTag.Other)

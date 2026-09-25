@@ -60,7 +60,7 @@ namespace BlueComplex.Core.Tests
             new ClueRow { Name = "B의 편지", SetId = "set1", Times = new[] { Past }, Persons = new[] { Other, Family }, Emotions = new[] { Sad },
                 RawUi = "유키, 이번 주말에 가족들과 바닷가로 놀러가는 거 어떠니? 어제 가봤는데 날씨가 정말 좋더구나.<br>…<br>네가 하고싶어했던 ‘숨바꼭질’ 놀이를 해보렴. 바닷가에서 놀다가 아무도 모르게 바위 뒤에 숨는거지. <br>네가 가족과의 추억을 더 만들면 좋겠어. 그게 내 기쁨이란다.<br><br>B씨가. 19XX.3.18<br><br>//<br><br>B씨는 날씨를 몰랐던 거겠지. 그래도.. 내 잘못은 아닐거야." },
             new ClueRow { Name = "물이 담긴 컵", SetId = null, Times = new[] { Past }, Persons = new[] { Family }, Emotions = new[] { Sad, Fear },
-                RawUi = "물이 담긴 컵<br><br>//<br>마실 수 없어.. " },
+                RawUi = "물이 담긴 컵<br><br>//<br>뭔가 두려워. 마실 수 없어.. " },
             new ClueRow { Name = "TV 뉴스", SetId = "set3", Times = new[] { Past }, Persons = new[] { Family, Other }, Emotions = new[] { Sad, Fear, Disgust },
                 RawUi = "TV 재난 보도 채널<br><br>두 달전, 지역을 강타한 폭풍의 여파가 아직도 가시지 않고 있습니다. 폭풍의 징조는 몇 주 전부터 예고되었지만, 충분한 준비에도 불구하고 치명적인 피해를 피할 수 없었습니다.<br>—…<br>19XX년 4월 19일 뉴스를 마칩니다.<br><br>//<br><br>그 날 바닷가에 가는게 아니었는데. 내가 정말 멍청했어.. 이제 되돌릴수도 없지만.. 겁쟁이 같이 구하러 뛰어들지도 못했으면서 뭘 후회 하는 걸까?" },
             new ClueRow { Name = "식탁 맡의 쪽지", SetId = "set2", Times = new[] { Past, Present }, Persons = new[] { Other }, Emotions = new[] { Happy },
@@ -69,13 +69,16 @@ namespace BlueComplex.Core.Tests
                 RawUi = "두 인물의 사진이 담긴 액자. 겉면이 깨지고 사진이 나뒹굴고있다.<br><br>//<br><br>B씨는 이 사람들이 악마와 같다고 매일 말하는데, 악마가 뭘까?<br><br>B씨를 화나게 했다면 좋은 사람들은 아니겠지. 이 사람은 왜 이렇게 무섭게 생긴거야?  으, 나중에 만날 일이 없으면 좋겠어.<br>" },
             new ClueRow { Name = "시든 꽃", SetId = null, Times = new[] { Past }, Persons = new[] { Friend }, Emotions = new[] { Love, Sad },
                 RawUi = "시든 꽃<br><br>//<br><br>마지막으로 본 지 한 달이 넘은 것 같아. 그 학교에서도 잘 지내고 있을까? 다시 만나고 싶어." },
-            // 원문: UI상 표시 "//", 태그 칸 비어 있음 — 임의로 채우지 않는다.
-            new ClueRow { Name = "시계", SetId = null, Times = new TimeTag[0], Persons = new PersonTag[0], Emotions = new EmotionTag[0],
-                RawUi = "//" },
+            new ClueRow { Name = "시계", SetId = null, Times = new[] { Present }, Persons = new[] { Other }, Emotions = new[] { Happy },
+                RawUi = "시계<br><br>//<br><br>항상 움직이는 시곗 바늘을 보면, B씨와 연결된 느낌이 들어. " },
             new ClueRow { Name = "빗물이 고인 그릇", SetId = "set3", Times = new[] { Present }, Persons = new PersonTag[0], Emotions = new[] { Disgust },
-                RawUi = "빗물<br><br>//<br><br>비 따위는 평생 안와도 돼. " },
+                RawUi = "빗물이 고인 그릇<br><br>//<br><br>지금도 조금씩 차오르고 있어. 비 따위는 평생 안 와도 돼. " },
             new ClueRow { Name = "흰 꽃", SetId = null, Times = new[] { Past }, Persons = new[] { Family }, Emotions = new[] { Sad },
-                RawUi = "흰 꽃<br><br>//<br><br>부모님이 받아주실까? " }
+                RawUi = "흰 꽃<br><br>//<br><br>부모님이 받아주실까? " },
+            new ClueRow { Name = "바게트", SetId = null, Times = new[] { Present }, Persons = new[] { Other }, Emotions = new[] { Happy },
+                RawUi = "바게트<br><br>//<br><br>B씨가 저녁 식사를 위해 만들어 주셨어. 고소한 냄새가 기분을 좋게 만들어." },
+            new ClueRow { Name = "만년필", SetId = null, Times = new[] { Past }, Persons = new[] { Other }, Emotions = new[] { Happy },
+                RawUi = "만년필<br><br>//<br><br>B씨가 지원서에 서명한 만년필이야. 오래된 흔적이 보여." }
         };
 
         /// <summary>노션 UI 칸 → 게임 텍스트. &lt;br&gt;&lt;br&gt; = 빈 줄, &lt;br&gt; = 줄바꿈, "//"는 사물 설명과 혼잣말 사이 칸(스테이지 1은 빈 줄)이라 사라지고 양옆이 이어진다.</summary>
@@ -95,11 +98,11 @@ namespace BlueComplex.Core.Tests
         private static ClueDefinition ClueNamed(string name) => Stage2Content.Clues().Single(c => c.DisplayName == name);
 
         [Test]
-        public void Clues_AreExactlyTheTwelveFromTheStageTable()
+        public void Clues_AreExactlyTheFourteenFromTheStageTable()
         {
             var clues = Stage2Content.Clues();
 
-            Assert.AreEqual(12, ClueTable.Length);
+            Assert.AreEqual(14, ClueTable.Length);
             Assert.AreEqual(ClueTable.Length, clues.Count);
             CollectionAssert.AreEquivalent(ClueTable.Select(r => r.Name).ToList(), clues.Select(c => c.DisplayName).ToList());
             Assert.AreEqual(clues.Count, clues.Select(c => c.Id).Distinct().Count(), "단서 id는 서로 달라야 한다.");
@@ -121,15 +124,20 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void Clock_IsLeftEmptyBecauseTheTableGivesNothingButTheSlashSlash()
+        public void NewClues_BaguetteFountainPenAndClock_AreOrdinaryCluesWithoutASet()
         {
-            var clock = ClueNamed("시계");
+            foreach (var name in new[] { "바게트", "만년필", "시계" })
+            {
+                var clue = ClueNamed(name);
+                Assert.IsNull(clue.SetId, $"{name}: set에 속하지 않는다.");
+                CollectionAssert.AreEquivalent(new[] { Other }, clue.Persons, name);
+                CollectionAssert.AreEquivalent(new[] { Happy }, clue.Emotions, name);
+            }
 
-            Assert.AreEqual(string.Empty, clock.Story);
-            Assert.AreEqual(0, clock.Times.Count);
-            Assert.AreEqual(0, clock.Persons.Count);
-            Assert.AreEqual(0, clock.Emotions.Count);
-            Assert.IsNull(clock.SetId);
+            CollectionAssert.AreEqual(new[] { Present }, ClueNamed("바게트").Times);
+            CollectionAssert.AreEqual(new[] { Past }, ClueNamed("만년필").Times);
+            CollectionAssert.AreEqual(new[] { Present }, ClueNamed("시계").Times);
+            Assert.AreEqual(1, Stage2Content.Clues().Count(c => c.DisplayName == "시계"), "시계는 새로 추가가 아니라 기존 항목을 채운 것이다.");
         }
 
         [Test]
@@ -181,7 +189,7 @@ namespace BlueComplex.Core.Tests
                 CollectionAssert.AreEquivalent(new[] { a, b }, members, setId);
             }
 
-            Assert.AreEqual(6, clues.Count(c => c.SetId == null), "set에 속하지 않는 단서는 6개다.");
+            Assert.AreEqual(8, clues.Count(c => c.SetId == null), "set에 속하지 않는 단서는 8개다.");
         }
 
         [Test]
@@ -263,12 +271,12 @@ namespace BlueComplex.Core.Tests
             ("과거 부정 컴플렉스", "stage2_past_denial", "과거의 슬픔을 부정하여, 느끼지 않는다.", 5),
             ("착한아이 컴플렉스", "stage2_kind_child", "타인의 슬픔에 자신 또한 동화되어 깊은 슬픔을 느낍니다.", 3),
             ("복합 감정 컴플렉스", "stage2_mixed_emotion", "한 번에 여러 감정이 들어오면, 분노를 느낍니다.", 2),
-            ("합리화 컴플렉스", "stage2_rationalization", "가족과 관련된 감정의 주체를 타인으로 변형해 합리화합니다.", 3),
+            ("합리화 컴플렉스", "stage2_rationalization", "가족과 관련된 감정의 주체를 타인으로 변형해 합리화합니다.", 5),
             ("자책 컴플렉스", "stage2_self_blame", "가족과 관련된 침체되는 감정을 자책하며 더 깊게 느낍니다.", 3),
-            ("과한 기대 컴플렉스", "stage2_over_expectation", "현재의 행복이 미래까지 이어질 것이라고 강하게 확신합니다.", 4),
+            ("과한 기대 컴플렉스", "stage2_over_expectation", "현재의 행복이 미래까지 이어질 것이라고 기대하며, 강한 행복을 느낀다.", 3),
             ("의식 분산 컴플렉스", "stage2_scattered_mind", "두 명 이상의 인물에 대한 감정을 느끼면, 의식이 분산되어 침체됩니다.", 3),
-            ("자기 분노 컴플렉스", "stage2_self_anger", "감정이 침체 쪽으로 기울어 있다면 자신의 모습에 분노합니다.", 4),
-            ("전이 컴플렉스", "stage2_transference", "타인에게 가족의 모습을 겹쳐 본다.", 2),
+            ("자기 분노 컴플렉스", "stage2_self_anger", "침체와 흥분 감정을 동시에 느끼고 있다면 흥분 감정을 더 깊게 느낀다.", 4),
+            ("전이 컴플렉스", "stage2_transference", "타인에게 가족의 모습을 겹쳐 본다.", 4),
             ("불신 컴플렉스", "stage2_distrust", "가까운 사람의 애정을 두려움으로 받아들인다.", 5),
             ("과대 해석 컴플렉스", "stage2_over_interpretation", "가까운 사람의 사랑을 느끼면, 다른 감정은 모두 무시하고, 사랑만 받아들입니다.", 3),
             ("피해 망상 컴플렉스", "stage2_persecution", "가까운 사람에게 슬픔을 느끼면 행복한 감정은 잊고, 슬픔을 더 깊게 느낍니다.", 3),
@@ -457,21 +465,24 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void OverExpectation_PresentAndHappinessOrLove_AddsFutureKeepingPresent()
+        public void OverExpectation_PresentAndHappinessOrLove_AddsFutureKeepingPresent_AndHappinessPlusTwo()
         {
             var complex = Complex("stage2_over_expectation");
 
             var tags = Make(new[] { Present }, new PersonTag[0], Love);
             Assert.IsTrue(Apply(complex, tags));
             CollectionAssert.AreEqual(new[] { Present, Future }, tags.Times, "미래가 '추가'된다 — 현재는 그대로");
+            AssertEmotions(tags, "사랑만 있어도 행복이 +2 (없던 행복이 생긴다)", (Love, 1), (Happy, 2));
 
             var pastPresent = Make(new[] { Past, Present }, new[] { Other }, Happy);
             Assert.IsTrue(Apply(complex, pastPresent));
             CollectionAssert.AreEqual(new[] { Past, Present, Future }, pastPresent.Times);
+            AssertEmotions(pastPresent, "행복 1 → 3", (Happy, 3));
 
             var alreadyFuture = Make(new[] { Present, Future }, new PersonTag[0], Happy);
             Assert.IsTrue(Apply(complex, alreadyFuture));
             CollectionAssert.AreEqual(new[] { Present, Future }, alreadyFuture.Times, "이미 있는 태그는 중복되지 않는다");
+            AssertEmotions(alreadyFuture, "시간 태그가 이미 있어도 행복은 +2", (Happy, 3));
 
             Assert.IsFalse(Apply(complex, Make(new[] { Present }, new PersonTag[0], Sad)), "행복/사랑이 없으면 발동하지 않는다");
             Assert.IsFalse(Apply(complex, Make(new[] { Past }, new PersonTag[0], Happy)), "현재가 아니면 발동하지 않는다");
@@ -491,24 +502,29 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void SelfAnger_DepressedNotFewerThanExcited_AddsAnger()
+        public void SelfAnger_DepressedAndExcitedTogether_AddsHappinessTwiceTheExcitedTagCount()
         {
             var complex = Complex("stage2_self_anger");
 
-            var sadOnly = Make(new[] { Past }, new PersonTag[0], Sad);
-            Assert.IsTrue(Apply(complex, sadOnly));
-            AssertEmotions(sadOnly, "침체 1 > 흥분 0", (Sad, 1), (Anger, 1));
+            var oneEach = Make(new[] { Past }, new PersonTag[0], Sad, Happy);
+            Assert.IsTrue(Apply(complex, oneEach));
+            AssertEmotions(oneEach, "흥분 1개 × 2 → 행복 +2", (Sad, 1), (Happy, 3));
 
-            var equal = Make(new[] { Past }, new PersonTag[0], Sad, Happy);
-            Assert.IsTrue(Apply(complex, equal));
-            AssertEmotions(equal, "침체 1 = 흥분 1 도 발동", (Sad, 1), (Happy, 1), (Anger, 1));
+            var twoKinds = Make(new[] { Past }, new PersonTag[0], Fear, Happy, Love);
+            Assert.IsTrue(Apply(complex, twoKinds));
+            AssertEmotions(twoKinds, "흥분 2개(행복·사랑) × 2 → 행복 +4", (Fear, 1), (Happy, 5), (Love, 1));
 
-            var stacked = Make(new[] { Past }, new PersonTag[0], Sad, Sad, Happy, Love);
-            Assert.IsTrue(Apply(complex, stacked), "겹친 태그도 하나씩 센다: 침체 2 = 흥분 2");
+            var stacked = Make(new[] { Past }, new PersonTag[0], Disgust, Love, Love);
+            Assert.IsTrue(Apply(complex, stacked));
+            AssertEmotions(stacked, "겹친 흥분 태그도 하나씩 센다: 사랑 2개 × 2 → 행복 +4", (Disgust, 1), (Love, 2), (Happy, 4));
 
-            Assert.IsFalse(Apply(complex, Make(new[] { Past }, new PersonTag[0], Sad, Happy, Love)), "침체 1 < 흥분 2");
-            Assert.IsFalse(Apply(complex, Make(new[] { Past }, new PersonTag[0], Happy)), "흥분만");
-            Assert.IsFalse(Apply(complex, Make(new[] { Past }, new PersonTag[0])), "감정이 하나도 없으면 기울어 있다고 보지 않는다");
+            var withAnger = Make(new[] { Past }, new PersonTag[0], Sad, Anger);
+            Assert.IsTrue(Apply(complex, withAnger));
+            AssertEmotions(withAnger, "분노도 흥분 감정이다: 분노 1개 × 2 → 행복 +2", (Sad, 1), (Anger, 1), (Happy, 2));
+
+            Assert.IsFalse(Apply(complex, Make(new[] { Past }, new PersonTag[0], Sad, Fear)), "침체만");
+            Assert.IsFalse(Apply(complex, Make(new[] { Past }, new PersonTag[0], Happy, Love)), "흥분만");
+            Assert.IsFalse(Apply(complex, Make(new[] { Past }, new PersonTag[0])), "감정이 하나도 없으면 발동하지 않는다");
         }
 
         [Test]
@@ -632,7 +648,7 @@ namespace BlueComplex.Core.Tests
             Assert.AreEqual(5, config.Quarters.QuarterCount);
             Assert.AreEqual(3, config.Quarters.TurnsPerQuarter);
             Assert.AreEqual(3, config.RequiredKeys);
-            Assert.AreEqual(12, config.Clues.Count);
+            Assert.AreEqual(14, config.Clues.Count);
             Assert.AreEqual(13, config.ComplexPool.Count);
             Assert.LessOrEqual(config.Quarters.TurnsPerQuarter, ClueHand.HandSize,
                 "손패는 쿼터 시작에만 채워지므로 쿼터당 턴 수가 손패 크기를 넘으면 마지막 턴에 낼 카드가 없다.");
