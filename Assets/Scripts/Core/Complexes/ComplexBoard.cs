@@ -35,13 +35,19 @@ namespace BlueComplex.Core.Complexes
     {
         public TagSet Original { get; }
         public TagSet Final { get; }
+        /// <summary>해석한 순서(평가 순서)의 단계들.</summary>
         public IReadOnlyList<InterpretationStep> Steps { get; }
 
-        public InterpretationResult(TagSet original, TagSet final, IReadOnlyList<InterpretationStep> steps)
+        /// <summary>해석 당시 보드의 컴플렉스를 화면에 보이는 순서(<see cref="ComplexBoard.InPriorityOrder"/>)로 늘어놓은 것. 뇌 영역 배치처럼 "어느 컴플렉스가 어느 칸인가"는 이 순서를 따라야
+        /// 평가 순서가 달라져도 칸이 뒤바뀌지 않는다.</summary>
+        public IReadOnlyList<ComplexInstance> DisplayOrder { get; }
+
+        public InterpretationResult(TagSet original, TagSet final, IReadOnlyList<InterpretationStep> steps, IReadOnlyList<ComplexInstance> displayOrder = null)
         {
             Original = original;
             Final = final;
             Steps = steps;
+            DisplayOrder = displayOrder ?? steps.Select(step => step.Complex).ToList();
         }
     }
 
@@ -88,6 +94,25 @@ namespace BlueComplex.Core.Complexes
         public IEnumerable<ComplexInstance> InPriorityOrder() =>
             _slots.OrderBy(s => s.Priority).ToList();
 
+        /// <summary>
+        /// 해석(평가) 순서. 기본은 <see cref="InPriorityOrder"/>와 같고, <see cref="ComplexDefinition.EvaluatedRightAfterId"/>가 있는 컴플렉스만 앵커 컴플렉스 바로 뒤로 옮긴다.
+        /// 옮겨지는 컴플렉스 말고는 서로의 상대 순서가 그대로다. UI(뇌 영역 배치·목록)는 이 순서가 아니라 <see cref="InPriorityOrder"/>를 쓴다.
+        /// </summary>
+        public IReadOnlyList<ComplexInstance> InEvaluationOrder()
+        {
+            var ordered = InPriorityOrder().ToList();
+            foreach (var follower in ordered.Where(c => c.Definition.EvaluatedRightAfterId != null).ToList())
+            {
+                var anchorId = follower.Definition.EvaluatedRightAfterId;
+                if (!ordered.Any(c => c.Definition.Id == anchorId)) continue;
+
+                ordered.Remove(follower);
+                ordered.Insert(ordered.FindIndex(c => c.Definition.Id == anchorId) + 1, follower);
+            }
+
+            return ordered;
+        }
+
         public void TickDurations()
         {
             foreach (var slot in _slots) slot.Tick();
@@ -126,7 +151,7 @@ namespace BlueComplex.Core.Complexes
             var context = new ComplexContext(working);
             var steps = new List<InterpretationStep>();
 
-            foreach (var complex in _board.InPriorityOrder())
+            foreach (var complex in _board.InEvaluationOrder())
             {
                 if (filter != null && filter.ShouldIgnore(complex))
                 {
@@ -145,7 +170,7 @@ namespace BlueComplex.Core.Complexes
                     context.MatchedEmotions.ToList()));
             }
 
-            return new InterpretationResult(original, working, steps);
+            return new InterpretationResult(original, working, steps, _board.InPriorityOrder().ToList());
         }
     }
 

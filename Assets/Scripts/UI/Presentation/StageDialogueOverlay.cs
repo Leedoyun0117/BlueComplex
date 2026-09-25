@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using BlueComplex.UI.Layout;
 using BlueComplex.UI.Motion;
@@ -71,6 +72,39 @@ namespace BlueComplex.UI.Presentation
             _group.DOKill();
             _group.blocksRaycasts = false;
             yield return _group.DOFade(0f, settings.keyTurnFade).SetEase(Ease.InOutSine).SetUpdate(true).SetTarget(_group).WaitForCompletion(true);
+            gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// 자기 암전 막 없이 줄만 재생한다 — 이미 다른 막(스테이지 클리어의 자물쇠 화면)이 화면을 어둡게 덮고 있을 때 쓴다.
+        /// 한 줄이 끝날 때마다 <paramref name="onLineDone"/>에 진행도(끝난 줄 수 / 전체 줄 수, 0~1)를 알려 주어, 부른 쪽이 화면을 그만큼씩 밝힐 수 있다.
+        /// 줄을 넘기는 클릭은 이 오브젝트가 받는다(투명한 막이 클릭을 받는다).
+        /// </summary>
+        public IEnumerator PlayLinesOver(DialogueVariant variant, Action<float> onLineDone)
+        {
+            if (variant.lines == null || variant.lines.Length == 0) yield break;
+
+            gameObject.SetActive(true);
+            transform.SetAsLastSibling();
+            _dim.color = Color.clear;
+            _group.DOKill();
+            _group.alpha = 1f;
+            _group.blocksRaycasts = true;
+            _textGroup.alpha = 0f;
+
+            _textGroup.DOKill();
+            yield return _textGroup.DOFade(1f, 0.2f).SetUpdate(true).SetTarget(_textGroup).WaitForCompletion(true);
+
+            for (var i = 0; i < variant.lines.Length; i++)
+            {
+                yield return PlayLine(variant.lines[i]);
+                onLineDone?.Invoke((i + 1f) / variant.lines.Length);
+            }
+
+            yield return _textGroup.DOFade(0f, 0.2f).SetUpdate(true).SetTarget(_textGroup).WaitForCompletion(true);
+
+            _group.blocksRaycasts = false;
+            _group.alpha = 0f;
             gameObject.SetActive(false);
         }
 

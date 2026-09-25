@@ -32,6 +32,9 @@ namespace BlueComplex.Core.Clues
         private readonly Dictionary<string, ClueKnowledge> _persistent = new();
         private readonly List<(string ClueId, InterpretationStep Step)> _pending = new();
 
+        /// <summary>아직 <see cref="CommitRun"/>으로 확정되지 않은 이번 런의 관찰 수(검사·디버그용).</summary>
+        public int PendingCount => _pending.Count;
+
         public ClueKnowledge GetKnowledge(string clueId)
         {
             if (!_persistent.TryGetValue(clueId, out var knowledge))
@@ -65,5 +68,9 @@ namespace BlueComplex.Core.Clues
 
             _pending.Clear();
         }
+
+        /// <summary>런이 끝나지 않은 채 버려질 때(StageEnded를 거치지 않는 재시작) 아직 확정 안 된 관찰을 버린다 — 안 그러면 다음 런의 CommitRun에 딸려 들어간다.
+        /// 이미 확정된 영구 지식(<see cref="CommitRun"/>)은 건드리지 않는다.</summary>
+        public void DiscardPending() => _pending.Clear();
     }
 }

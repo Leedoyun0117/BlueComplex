@@ -20,6 +20,9 @@ namespace BlueComplex.Core.Stage
         public const string SetBrokenFrame = "stage2_set2";
         public const string SetRain = "stage2_set3";
 
+        /// <summary>실험용 임시 단서(set3 세 번째)의 id. 기획서 표에 없는 항목이라 표 대조 테스트는 이 id를 뺀다.</summary>
+        public const string DummyClueId = "s2_set3_dummy";
+
         public static IReadOnlyList<ClueDefinition> Clues() => new[]
         {
             new ClueDefinition("s2_application_form", "지원 신청서",
@@ -92,18 +95,27 @@ namespace BlueComplex.Core.Stage
                 new[] { PersonTag.Friend },
                 new[] { EmotionTag.Love, EmotionTag.Sadness }),
 
-            // 09/25 노션에서 비어 있던 시계 칸이 채워졌다(스테이지 1의 시계와는 다른 스테이지 2 전용 항목).
+            // 09/25 노션에서 비어 있던 시계 칸이 채워졌고(09:19 본에서 사랑 태그가 더해졌다), 스테이지 1의 시계와는 다른 스테이지 2 전용 항목이다.
             new ClueDefinition("s2_clock", "시계",
-                "시계\n\n항상 움직이는 시곗 바늘을 보면, B씨와 연결된 느낌이 들어.",
+                "시계\n\n항상 움직이는 시곗 바늘을 보면, B씨와 연결된 느낌이 들어. 조금의 애정이 느껴지기도 해.",
                 new[] { TimeTag.Present },
                 new[] { PersonTag.Other },
-                new[] { EmotionTag.Happiness }),
+                new[] { EmotionTag.Happiness, EmotionTag.Love }),
 
             new ClueDefinition("s2_rainwater_bowl", "빗물이 고인 그릇",
                 "빗물이 고인 그릇\n\n지금도 조금씩 차오르고 있어. 비 따위는 평생 안 와도 돼.",
                 new[] { TimeTag.Present },
                 NoPerson,
                 new[] { EmotionTag.Disgust },
+                SetRain),
+
+            // 실험용 임시 단서 — 최종 콘텐츠 아님. set3가 침체 태그뿐이라 흥분 쪽으로 못 가는 문제가 실제로 우측 성공률을 막는지 확인하려고 둔다.
+            // 효과가 확인되면 정식 이름·스토리로 교체하고, 아니면 이 항목과 DummyClueId를 지운다.
+            new ClueDefinition(DummyClueId, "임시 단서",
+                "임시 단서 — 콘텐츠 미정",
+                new[] { TimeTag.Past },
+                new[] { PersonTag.Family },
+                new[] { EmotionTag.Happiness, EmotionTag.Love },
                 SetRain),
 
             new ClueDefinition("s2_white_flower", "흰 꽃",
@@ -159,11 +171,11 @@ namespace BlueComplex.Core.Stage
                 new AddEmotion(EmotionTag.Sadness, 3)
             });
 
-        /// <summary>감정 태그 2개 이상(서로 다른 감정 종류) → 분노 +1.</summary>
+        /// <summary>감정 태그 2개 이상(서로 다른 감정 종류) → 분노 +3. (09/25 09:40 본에서 +2 → +3)</summary>
         public static ComplexDefinition MixedEmotion() => new(
             "stage2_mixed_emotion",
             "복합 감정 컴플렉스",
-            "한 번에 여러 감정이 들어오면, 분노를 느낍니다.",
+            "한 번에 여러 감정이 들어오면, 깊은 분노를 느낍니다.",
             defaultDuration: 2,
             new IComplexCondition[]
             {
@@ -171,14 +183,14 @@ namespace BlueComplex.Core.Stage
             },
             new IComplexEffect[]
             {
-                new AddEmotion(EmotionTag.Anger, 1)
+                new AddEmotion(EmotionTag.Anger, 3)
             });
 
-        /// <summary>가족 + 감정 태그 → 가족을 타인으로.</summary>
+        /// <summary>가족 + 감정 태그 → 타인 +1. (09/25 09:40 본에서 "가족 → 타인 변형"이 "타인 추가"로 바뀌었다 — 가족 태그는 그대로 남는다.)</summary>
         public static ComplexDefinition Rationalization() => new(
             "stage2_rationalization",
             "합리화 컴플렉스",
-            "가족과 관련된 감정의 주체를 타인으로 변형해 합리화합니다.",
+            "가족과 관련된 감정의 주체에 타인을 더해 합리화합니다.",
             defaultDuration: 5,
             new IComplexCondition[]
             {
@@ -187,7 +199,7 @@ namespace BlueComplex.Core.Stage
             },
             new IComplexEffect[]
             {
-                new ConvertMatchedPersonsTo(PersonTag.Other)
+                new AddPerson(PersonTag.Other)
             });
 
         /// <summary>가족 + 침체 감정 → 해당 침체 감정 태그를 낱개(중첩 포함)마다 하나씩 더.</summary>
@@ -239,7 +251,7 @@ namespace BlueComplex.Core.Stage
                 new AddEmotion(EmotionTag.Sadness, 1)
             });
 
-        /// <summary>침체 + 흥분 감정이 동시에 → 행복을 (단서의 흥분 태그 개수, 중첩 포함) × 2만큼 추가. 개수는 추가 전 값이다.</summary>
+        /// <summary>침체 + 흥분 감정이 동시에 → 행복을 (단서의 흥분 태그 개수, 중첩 포함) × 3만큼 추가. 개수는 추가 전 값이다.</summary>
         public static ComplexDefinition SelfAnger(IEmotionPolarityTable polarityTable) => new(
             "stage2_self_anger",
             "자기 분노 컴플렉스",
@@ -251,10 +263,10 @@ namespace BlueComplex.Core.Stage
             },
             new IComplexEffect[]
             {
-                new AddEmotionPerEmotionOfPolarity(EmotionTag.Happiness, Polarity.Excited, 2, polarityTable)
+                new AddEmotionPerEmotionOfPolarity(EmotionTag.Happiness, Polarity.Excited, 3, polarityTable)
             });
 
-        /// <summary>표의 상세 정보가 `타인 → 타인→가족`으로만 적혀 있어 "타인 태그가 있으면 무조건 가족으로 변환"으로 옮겼다.</summary>
+        /// <summary>타인 → 가족 +1. 표의 상세 정보가 `타인 → 가족 + 1`이라 "타인 태그가 있으면 무조건 가족 태그를 더한다"로 옮겼다(09/25 09:40 본에서 "변형"이 "추가"로 바뀌었다 — 타인 태그는 그대로 남는다).</summary>
         public static ComplexDefinition Transference() => new(
             "stage2_transference",
             "전이 컴플렉스",
@@ -266,7 +278,7 @@ namespace BlueComplex.Core.Stage
             },
             new IComplexEffect[]
             {
-                new ConvertMatchedPersonsTo(PersonTag.Family)
+                new AddPerson(PersonTag.Family)
             });
 
         /// <summary>연인 + 사랑 → 사랑을 공포로.</summary>
@@ -320,22 +332,37 @@ namespace BlueComplex.Core.Stage
                 new AddEmotion(EmotionTag.Sadness, 1)
             });
 
-        /// <summary>과거 + 감정 → 감정 * 2 / 과거가 아니면(미래 또는 현재) + 감정 → 슬픔 +1.
-        /// UI 표시 "과거의 감정이 아니라면 슬픔을 느낍니다"를 근거로 두 갈래를 배타로 옮겼다(과거+현재 단서는 배로만 느낀다).</summary>
+        /// <summary>과거 + 감정 → 감정 * 2. (09/25 09:19 본에서 "과거가 아니면 슬픔 +1" 분기가 빠졌다 — 과거가 아닌 단서에는 아무 일도 없다.)</summary>
         public static ComplexDefinition Overthinking() => new(
             "stage2_overthinking",
             "사고 과다 컴플렉스",
-            "과거의 감정을 배로 느낍니다. 과거의 감정이 아니라면 슬픔을 느낍니다.",
+            "과거의 감정을 배로 느낍니다.",
             defaultDuration: 4,
             new IComplexCondition[]
             {
-                new TimeIsAnyOf(TimeTag.Past, TimeTag.Present, TimeTag.Future),
+                new TimeIs(TimeTag.Past),
                 HasAnyEmotion.Any()
             },
             new IComplexEffect[]
             {
-                new ByTime(TimeTag.Past, new DoubleEmotions(), new AddEmotion(EmotionTag.Sadness, 1))
+                new DoubleEmotions()
             });
+
+        /// <summary>가족 태그가 2개 이상 → 행복 +3. 단서 원본은 가족 태그가 하나뿐이라 전이(가족 +1)가 앞서 걸린 뒤에야 성립한다 — 그래서 평가 순서를 전이 바로 뒤로 고정했다(<see cref="ComplexDefinition.EvaluatedRightAfterId"/>; 화면에 보이는 순서는 그대로).</summary>
+        public static ComplexDefinition FamilyLove() => new(
+            "stage2_family_love",
+            "가족애 컴플렉스",
+            "기억에 가족이 강하게 남아있다면, 깊은 행복을 느낍니다.",
+            defaultDuration: 3,
+            new IComplexCondition[]
+            {
+                new PersonCountOfAtLeast(PersonTag.Family, 2)
+            },
+            new IComplexEffect[]
+            {
+                new AddEmotion(EmotionTag.Happiness, 3)
+            },
+            evaluatedRightAfterId: "stage2_transference");
 
         public static IReadOnlyList<ComplexDefinition> Complexes(IEmotionPolarityTable polarityTable) => new[]
         {
@@ -351,7 +378,8 @@ namespace BlueComplex.Core.Stage
             Distrust(),
             OverInterpretation(),
             Persecution(),
-            Overthinking()
+            Overthinking(),
+            FamilyLove()
         };
 
         /// <summary>스테이지 2 전용 컴플렉스 발현 확률(최종 값). 기본표(50/30/0/30/50%)에 배율을 곱한 값이 아니라 구간별로 직접 지정한다.</summary>

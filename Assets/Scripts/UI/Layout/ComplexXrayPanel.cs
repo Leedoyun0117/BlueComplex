@@ -178,6 +178,26 @@ namespace BlueComplex.UI.Layout
             return _foldTween;
         }
 
+        /// <summary>재시작용 초기화: 열림/끌기 트윈을 끊고 애니메이션 없이 바로 접힌 자세로 돌린다(<see cref="Close"/>는 접히는 동안 시간이 걸리고 소리도 낸다).
+        /// 초상화 표정도 무표정으로 — 다음에 열릴 때 <see cref="Open"/>이 하는 것과 같다.</summary>
+        public void ResetNow()
+        {
+            if (_rect == null) return; // Awake 전(첫 바인드가 이 컴포넌트보다 먼저) — 아직 펼쳐진 적이 없다.
+
+            DOTween.Kill(this);
+            _foldTween = null;
+            _dragTween = null;
+
+            IsOpen = false;
+            _fold = 0f;
+            _dragBlend = 0f;
+            _dragging = false;
+            if (_tabletGroup != null) _tabletGroup.blocksRaycasts = true;
+
+            _portrait?.ResetToNeutral();
+            ApplyPose();
+        }
+
         private void OnFoldButton()
         {
             if (IsTurnPresenting) return;

@@ -130,6 +130,9 @@ namespace BlueComplex.UI.Presentation
 
         private static bool IsDepressed(HeartbeatState state) => state is HeartbeatState.VeryDepressed or HeartbeatState.Depressed;
 
+        /// <summary>마지막으로 포스트잇이 갱신된 시점(또는 세션 시작·턴 밖 변화)의 심박수 구간 — 이번 턴에 구간이 "바뀌었는지" 가리는 기준.</summary>
+        private HeartbeatState _postitState;
+
         /// <summary>나츠가 마지막으로 반응한 시점의 심박수 상태 — 안정 구간에 "새로" 들어섰는지 가리는 기준.</summary>
         private HeartbeatState _natsuState;
 
@@ -141,6 +144,9 @@ namespace BlueComplex.UI.Presentation
         private void OnHeartbeatPresented(int value, bool snap)
         {
             UpdateHeartbeatSound(value, snap);
+
+            // 턴 결과 밖(아이템 사용, 스냅)에서 구간이 바뀐 것은 심박수 변화 연출의 대상이 아니다 — 기준선만 따라간다. 턴 결과가 연출되는 동안은 기준선을 그대로 둔다.
+            if (!IsPresenting) _postitState = Session.Zone.StateOf(value);
 
             if (_natsu == null || snap) return;
             if (_natsu.Current == NatsuExpression.Focus && !IsPresenting) return;
@@ -160,6 +166,7 @@ namespace BlueComplex.UI.Presentation
             _pending.Clear(); // 재시작 시 이전 스테이지의 대기 중 연출은 버린다.
             _natsu?.ResetToNormal();
             _natsuState = Session.Zone.StateOf(Session.Heartbeat.Value);
+            _postitState = _natsuState;
             UpdateHeartbeatSound(Session.Heartbeat.Value, snap: true); // 새 세션의 첫 배경음(HeartRateController의 스냅 알림보다 먼저 올 수도 있어 여기서도 맞춘다).
 
             // 재시작이 연출 도중이면 옛 코루틴이 새 세션 화면을 계속 만지지 않게 끊고, 떼어져 있던 포스트잇·암전 막을 원래대로 돌린다.
@@ -170,6 +177,14 @@ namespace BlueComplex.UI.Presentation
             }
 
             PostitDirector.GetOrCreate(transform.root).ResetAll();
+            HeartbeatFocusDirector.GetOrCreate(transform.root).ResetAll();
+
+            // 옛 연출이 남긴 화면 상태도 되돌린다 — 코루틴만 끊으면 칩·열린 판넬·풍선 선·요약 글자·타이핑 중이던 대사가 새 판 위에 그대로 남는다.
+            // 이 뷰들은 트윈/자체 타이핑으로 도므로 StopAllCoroutines로는 안 멈춘다. IsPresenting과 무관하게 항상 되돌린다(연출이 끝난 뒤의 잔상도 지운다).
+            _memoryBubble?.ResetNow();
+            _xrayPanel?.ResetNow();
+            _dialogue?.ResetNow();
+
             _brain.Refresh(Session.Complexes.InPriorityOrder().ToList());
         }
 
@@ -227,15 +242,22 @@ namespace BlueComplex.UI.Presentation
             }
 
             var runner = Session.Runner;
+            var stateNow = Session.Zone.StateOf(Session.Heartbeat.Value);
+            var stateBefore = _postitState;
+            _postitState = stateNow;
+
             if (runner.Outcome != StageOutcome.InProgress)
             {
                 RefreshContent();
                 yield break;
             }
 
-            var keyTurn = runner.CurrentTurnInQuarter == Session.Keys.Schedule.TurnsPerQuarter;
+            var plan = TurnTransitionRules.Plan(runner.CurrentTurnInQuarter, Session.Keys.Schedule.TurnsPerQuarter, stateBefore, stateNow);
+            var focus = plan.HeartbeatChanged ? HeartbeatFocusDirector.GetOrCreate(transform.root).Play() : null;
+            var keyTurn = plan.KeyTurn;
+
             yield return PostitDirector.GetOrCreate(transform.root)
-                .PlayRefresh(_monologueSpeaker, keyTurn ? _keyTurnMonologue : null, RefreshContent);
+                .PlayRefresh(_monologueSpeaker, keyTurn ? _keyTurnMonologue : null, RefreshContent, focus);
 
             // 키 턴이 시작된다 — 암전이 걷힌 뒤(화면에 보일 때) 나츠가 턱을 짚고 집중한다. 이 집중은 그 키 턴의 결과(심박수 반영)가 풀어 준다.
             if (keyTurn) _natsu?.SetExpression(NatsuExpression.Focus);
@@ -268,8 +290,9 @@ namespace BlueComplex.UI.Presentation
 
             // TickDurations/스폰은 Resolve 이후에 일어나 이 시점의 보드에는 이미 만료된 컴플렉스가 없다 — 그대로 배치하면 마지막 턴에
             // 발동한 컴플렉스(지속 1턴짜리는 항상)가 영역을 못 찾아 발광·대사가 통째로 빠진다. 그래서 발광 동안은 해석 당시의
-            // 컴플렉스(Steps, 우선순위 순서)로 배치하고, 반응이 끝난 뒤에 최신 보드로 맞춘다.
-            _brain.Refresh(report.Interpretation.Steps.Select(step => step.Complex).ToList());
+            // 컴플렉스(DisplayOrder, 화면에 보이는 우선순위 순서 — 평가 순서와 다를 수 있어 Steps 순서로 배치하면 칸이 뒤바뀐다)로 배치하고,
+            // 반응이 끝난 뒤에 최신 보드로 맞춘다.
+            _brain.Refresh(report.Interpretation.DisplayOrder);
             yield return PlayComplexReactions(report);
             _brain.Refresh(Session.Complexes.InPriorityOrder().ToList());
 
@@ -286,7 +309,7 @@ namespace BlueComplex.UI.Presentation
             _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger);
         }
 
-        /// <summary>발동한 컴플렉스를 우선순위 순서(InterpretationResult.Steps 순서)대로 한 번에 하나씩 빛내고, 그때마다 대사창에 짧은 이벤트 대사를 띄운다.
+        /// <summary>발동한 컴플렉스를 평가 순서(InterpretationResult.Steps 순서)대로 한 번에 하나씩 빛내고, 그때마다 대사창에 짧은 이벤트 대사를 띄운다.
         /// 대사가 다 나와야(클릭으로 건너뛰어도 된다) 다음 컴플렉스로 넘어간다 — 발광과 대사가 서로 끊기지 않는다.</summary>
         private IEnumerator PlayComplexReactions(TurnReport report)
         {
