@@ -380,10 +380,8 @@ namespace BlueComplex.Core.Stage
         /// <summary>스테이지 1 아이템 풀 — 기획서 스테이지 1 표 그대로 12종(공용 10종 + 공존감 + 무관심).</summary>
         public static IReadOnlyList<ItemDefinition> Stage1Items() => CommonItems().Append(Coexistence()).Append(Indifference()).ToArray();
 
-        /// <summary>
-        /// 스테이지 2 아이템 풀 — 기획서 스테이지 2에는 아이템 표가 없어 기존 구성(공존감은 없고 무관심은 있다)을 유지한다: 공용 10종 + 무관심 = 11종.
-        /// </summary>
-        public static IReadOnlyList<ItemDefinition> Stage2Items() => CommonItems().Append(Indifference()).ToArray();
+        /// <summary>스테이지 2 아이템 풀 — 기획서 스테이지 2 표(09/25) 그대로 12종. 스테이지 1과 같은 목록이다(공용 10종 + 공존감 + 무관심).</summary>
+        public static IReadOnlyList<ItemDefinition> Stage2Items() => CommonItems().Append(Coexistence()).Append(Indifference()).ToArray();
 
         /// <summary>아이템 전체 목록 12종(id로 찾을 때 쓴다). 스테이지 풀은 <see cref="Stage1Items"/>·<see cref="Stage2Items"/>다.</summary>
         public static IReadOnlyList<ItemDefinition> Items() => Stage1Items();
