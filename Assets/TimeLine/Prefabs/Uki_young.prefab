@@ -34,8 +34,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 1794.7, y: 180.142}
+  m_AnchoredPosition: {x: 0, y: 40}
+  m_SizeDelta: {x: 880, y: 170}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!222 &8904509579112288237
 CanvasRenderer:
@@ -92,12 +92,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 72
-  m_fontSizeBase: 36
+  m_fontSize: 31
+  m_fontSizeBase: 31
   m_fontWeight: 400
   m_enableAutoSizing: 1
   m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMax: 31
   m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
@@ -310,6 +310,8 @@ PlayableDirector:
   m_SceneBindings:
   - key: {fileID: -8887954955884442160, guid: 6a7ec421098166946bf1df38780592f8, type: 2}
     value: {fileID: 7352983590789869341}
+  - key: {fileID: -4412398765432109876, guid: 6a7ec421098166946bf1df38780592f8, type: 2}
+    value: {fileID: 7352983590789869341}
   m_ExposedReferences:
     m_References: []
 --- !u!114 &5007450216525799163
@@ -459,9 +461,9 @@ RectTransform:
   m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 2178679999794780485}
   - {fileID: 4359300918217835586}
   - {fileID: 7400185876365063969}
+  - {fileID: 2178679999794780485}
   - {fileID: 4027750518740841728}
   m_Father: {fileID: 6293702700316047144}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -713,10 +715,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_FadeSystemSignal
   canvasGroups:
+  - {fileID: 150276938027782785}
   - {fileID: 808936916507461725}
   - {fileID: 2940301339861393591}
-  - {fileID: 150276938027782785}
-  fadeDuration: 0.5
+  fadeDuration: 1.2
 --- !u!114 &7835733187971232220
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -731,9 +733,29 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TypingTextSignal
   text: {fileID: 2772539605590323886}
   lines:
-  - b
-  - v
-  - f
-  - s
+  - "아이스크림 트럭은 늘 하굣길 한 복판에 서 있었다."
+  - "하얀 소프트를 먹고 싶어서 부모님께 용돈을 받아볼까 했지만\n집으로 날아드는 미납 문서들의 수를 새어보곤 그만 두었다."
+  - "가끔 집으로 새카만 양복을 입은 사람들이 찾아왔는데,"
+  - "그 때 마다 부모님은 연신 죄송하다는 말을 반복하며\n집으로 들어오려는 그들을 억지로 밀어내었다."
+  - "그 날도 상상으로 수백 번을 먹은\n소프트를 쳐다보고 있었다."
+  - "아이스크림 트럭의 밝은 음악과 탈콤한 시럽 냄새가\n멀리까지 전해졌다."
+  - "그런 내 옆으로 어떤 남자가 다가왔다."
+  - "”혹시 아이스크림이 먹고 싶어서\n매일 서 있는 거니?”"
+  - "20대 정도 되어 보이는 남자였다."
+  - "나는 아이스크림이 너무 먹고 싶었기에\n나도 모르게 대답했다."
+  - "”..네.”"
+  - "그러자 남자는 나를 지나쳐\n가게 주인에게 돈을 내밀었다."
+  - "곳 이어 그는 아이스크림 두 개를 양 손에 들고\n하나를 내게 건냈다."
+  - "”여기를 매일 지나치는데, 항상 서 있더라고.”"
+  - "”나중에도 먹고 싶으면 여기서 기다리고 있어.”"
+  - "”와! 감사합니다!”"
+  - "나는 너무나 기뻤다."
+  - "태어나서 처음으로 맛보는 아이스크림은\n내 상상 보다 달콤했다."
+  - "하지만 기쁨은 그리 오래가지 않았다."
+  - "이렇게 맛있는 음식을 나만 먹는 것은\n말이 되지 않았다."
+  - "”저기, 무슨 일 있니?”"
+  - "갑자기 울음을 터뜨리는 내 모습에\n남자는 당황한 듯 물었다."
+  - "”아니요.. 그냥, 아무것도 아니에요.”"
+  - "남자는 몇 초간 굳어있다가 주머니에서 꺼낸 종이 조각에\n무언가를 날려쓴 후 다시 집어넣었다."
   charInterval: 0.05
   clearOnEnable: 1
