@@ -33,6 +33,14 @@ namespace BlueComplex.UI.Motion
         public float keyBounce = 0.22f;
         [Tooltip("닿는 순간 밝아졌다가 원래 색으로 돌아오는 시간.")]
         public float keyFlash = 0.38f;
+        [Tooltip("키 카드가 단서 패널 뒤에서 미끄러져 올라와 열리는 시간.")]
+        public float keyDrawerOpen = 0.30f;
+        [Tooltip("키 카드가 단서 패널 뒤로 다시 들어가는 시간.")]
+        public float keyDrawerClose = 0.24f;
+        [Tooltip("포인터가 열림 영역을 벗어난 뒤 닫히기 시작하기까지의 유예(초) — 열림 영역과 카드 사이를 오가는 동안 깜박이지 않게.")]
+        public float keyDrawerCloseDelay = 0.25f;
+        [Tooltip("키를 얻어 열쇠가 찍힌 뒤 카드가 스스로 열려 있는 시간(초). 포인터가 올라와 있으면 닫히지 않는다.")]
+        public float keyPeekHold = 1.4f;
 
         [Header("단서 카드")]
         public float clueHover = 0.14f;
@@ -88,7 +96,11 @@ namespace BlueComplex.UI.Motion
         [Header("아이템 패널")]
         [Tooltip("사용한 카드가 구겨져 사라지는 시간.")]
         public float itemUse = 0.5f;
-        [Tooltip("새 카드가 빈 칸에 끼워지는 시간.")]
+        [Tooltip("빈 칸 옆에서 튀어나온 카드가 매우 작은 상태에서 빠르게 커지는 시간.")]
+        public float itemPop = 0.14f;
+        [Tooltip("커진 카드가 튀어나오는 옆자리(캔버스 픽셀, 가로 오프셋) — 이 자리에서 시작해 빈 칸 쪽으로 움직인다.")]
+        public float itemPopOffset = 70f;
+        [Tooltip("커진 카드가 빈 칸 쪽으로 움직여 빠르게 끼워지는 시간(찰칵 소리는 이 끝에서 난다).")]
         public float itemInsert = 0.42f;
         [Tooltip("대상 선택 모드에서 고를 수 있는 대상의 강조 테두리가 한 번 깜박이는(밝았다 어두워지는) 시간.")]
         public float targetPulse = 0.7f;

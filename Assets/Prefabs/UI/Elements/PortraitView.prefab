@@ -91,6 +91,9 @@ MonoBehaviour:
   _image: {fileID: 20818469215966562}
   _neutral: {fileID: 21300000, guid: 41cdddc7979b464aac7e8c2dcd030b97, type: 3}
   _reactive: {fileID: 21300000, guid: d9717b3b8ebd41be9905a417f5f7f44a, type: 3}
+  _angry: {fileID: 21300000, guid: 48942ee640774073b0d4879943ec98c5, type: 3}
+  _sad: {fileID: 21300000, guid: 0df09a1a2e2c4989b08ba3e1e060b8d9, type: 3}
+  _joy: {fileID: 21300000, guid: b39b51c7430d48baad7c70e2eb31c295, type: 3}
 --- !u!1 &7775109907337705192
 GameObject:
   m_ObjectHideFlags: 0

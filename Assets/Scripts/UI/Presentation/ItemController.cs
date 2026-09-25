@@ -3,6 +3,7 @@ using BlueComplex.Core.Stage;
 using BlueComplex.Core.Turn;
 using BlueComplex.UI.Layout;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace BlueComplex.UI.Presentation
 {
@@ -103,6 +104,8 @@ namespace BlueComplex.UI.Presentation
             var held = Session.Items.Held;
             var capacity = Session.Items.Capacity;
             var firstNew = animateNew && held.Count > _shownCount ? _shownCount : int.MaxValue;
+            // DLJ: 접혀 있어도 획득 연출과 빈칸이 보이도록 패널을 펼친다.
+            if (firstNew != int.MaxValue) _panel.SetFolded(false);
 
             for (var i = 0; i < _panel.SlotCount; i++)
             {
@@ -111,6 +114,21 @@ namespace BlueComplex.UI.Presentation
                 else if (i < held.Count) slot.Render(held[i], insert: i >= firstNew);
                 else slot.SetEmpty();
             }
+
+            // 슬롯을 한 프레임 안에 여럿 SetActive/내용 변경하면 VerticalLayoutGroup이 한 번의 자동 리빌드로 전부
+            // 수렴하지 못하고 마지막 슬롯(들)의 가로 위치가 이전 프레임 값으로 남는 경우가 있다(배치모드 진단으로 재현·확인함:
+            // 강제 리빌드를 두 번 연달아 불러야 안정적으로 고쳐졌다 — 한 번은 그대로 어긋난 값을 냈다).
+            // 그래서 매 Refresh마다 명시적으로 두 번 강제 리빌드한다.
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_panel.Root);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_panel.Root);
+
+            // 이 강제 리빌드는 모든 슬롯의 anchoredPosition을 오프셋 없는 기본 자리로 되돌린다 — 방금 넣은 카드가 아니라
+            // *다른* 슬롯에서 PlayInsert의 LayoutSafeOffset 트윈이 아직 도는 중이었다면(itemPop+itemInsert ≈ 0.56초 동안,
+            // 그 사이 다른 아이템을 쓰거나 얻으면 이 Refresh가 다시 불린다), 그 트윈은 여기서 되돌려진 걸 모른 채 자기가
+            // 기억하는 옛 오프셋 기준으로 다음 델타를 계속 쌓아 카드가 레이아웃 자리에서 엉뚱하게 어긋난 채 멈춘다.
+            // 리빌드 직후 모든 슬롯에 Forget을 걸어 "지금 적용된 오프셋은 0"이라고 다시 맞춰 준다.
+            for (var i = 0; i < _panel.SlotCount; i++)
+                _panel.GetSlot(i).ForgetLayoutOffset();
 
             _shownCount = held.Count;
         }

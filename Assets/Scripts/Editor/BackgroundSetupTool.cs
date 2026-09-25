@@ -31,7 +31,6 @@ namespace BlueComplex.EditorTools
         private const string WindowLightName = "Window Spot Light";
         private const string ClockControllerName = "Clock Controller";
         private const string SmokeName = "Lamp Smoke";
-
         private const float PixelsPerUnit = 100f;
         private const int MaxTextureSize = 4096;
         private const int BaseRenderQueue = 3000;
@@ -63,13 +62,20 @@ namespace BlueComplex.EditorTools
             // 벽은 거의 검정이라 "아트색 × 조명"으론 밝아지지 않는다 — 빛이 닿는 만큼만 조명 색을 직접 더한다.
             // 테이블 위 사물/인물이 앞에서 가리는 만큼 여기 그림자가 진다(오브젝트 그림자).
             new LayerSpec { Name = "BG",           Texture = "BG",          Distance = 15.00f, LightGain = 1f, AlphaPower = 1.8f, SurfaceGlow = 0.08f, ReceiveShadow = true },
-            new LayerSpec { Name = "Window",       Texture = "Window",      Distance = 14.00f, LightGain = 1f, AlphaPower = 1.8f },
+            // 창문 유리도 벽처럼 거의 검정이라(art rgb 최대 21,55,46 근방) "아트색 × 조명" 가산만으론 빛줄기가
+            // 거의 안 밝아진다 — BG 벽과 같은 이유로 SurfaceGlow를 넣어 스포트라이트가 닿는 만큼 직접 들어올린다.
+            new LayerSpec { Name = "Window",       Texture = "Window",      Distance = 14.00f, LightGain = 1f, AlphaPower = 1.8f, SurfaceGlow = 0.08f },
             new LayerSpec { Name = "Clock",        Texture = "Clock",       Distance = 13.00f, LightGain = 1f, AlphaPower = 1.8f },
             new LayerSpec { Name = "Min",          Texture = "Min",         Distance = 12.95f, LightGain = 1f, AlphaPower = 1.8f, ClockHandPivot = true },
             new LayerSpec { Name = "Hour",         Texture = "Hour",        Distance = 12.90f, LightGain = 1f, AlphaPower = 1.8f, ClockHandPivot = true },
             // 램프는 스스로 빛나는 아트(글로우 포함)라 조명으로 또 밝히면 이중 노출이 된다.
-            new LayerSpec { Name = "Lamp",         Texture = "Lamp",        Distance = 12.00f, LightGain = 0f, AlphaPower = 1.8f },
-            new LayerSpec { Name = "Things",       Texture = "Things",      Distance = 11.00f, LightGain = 1f, AlphaPower = 1.8f, CastShadow = true },
+            // AlphaPower는 ShadowOverlay와 같은 이유로 1f — 글로우 halo가 반투명 그라디언트라 1.8을 쓰면
+            // 거의 다 뭉개져 흰 코어만 남는다(alpha 0.1~0.2 구간이 1.8제곱을 거치면 1~5%로 사라짐).
+            new LayerSpec { Name = "Lamp",         Texture = "Lamp",        Distance = 12.00f, LightGain = 0f, AlphaPower = 1f },
+            // Things.png엔 컵에서 나는 김도 그려져 있다 — 램프 글로우와 같은 반투명 그라디언트라 AlphaPower=1.8이면
+            // 똑같이 뭉개져서 안 보인다. 테이블/의자 같은 불투명 도트 아트 가장자리는 1.0이어도 육안 차이가 거의 없다
+            // (레이어 합성 실측 오차 +4.6%, Shadow와 동일 근거로 감수한다).
+            new LayerSpec { Name = "Things",       Texture = "Things",      Distance = 11.00f, LightGain = 1f, AlphaPower = 1f, CastShadow = true },
             new LayerSpec { Name = "LeftPerson",   Texture = "LeftPerson",  Distance = 10.00f, LightGain = 1f, AlphaPower = 1.8f, CastShadow = true },
             new LayerSpec { Name = "RightPerson",  Texture = "RightPerson", Distance = 10.00f, LightGain = 1f, AlphaPower = 1.8f, CastShadow = true },
             // Shadow.png는 흰 마스크가 아니라 "검정 + 알파" 비네트다 — 모든 레이어 위에 알파 블렌드로 얹으면 곱하기와 같다.
@@ -104,6 +110,7 @@ namespace BlueComplex.EditorTools
             var materials = EnsureMaterials(shader);
             var rig = BuildRig(camera, materials, out var clockController, log);
             var lampDriver = EnsureLights(rig, log);
+            EnsureCupSteam(rig, log);
             ConfigureCamera(camera, log);
             DisableConflictingSceneObjects(log);
             WireBootstrapper(clockController, lampDriver, log);
@@ -250,6 +257,19 @@ namespace BlueComplex.EditorTools
             // 레이어는 매번 새로 만든다(자식 광원/컨트롤러는 건드리지 않는다).
             var oldLayers = rigObject.transform.Find(LayersName);
             if (oldLayers != null) Object.DestroyImmediate(oldLayers.gameObject);
+
+            // 정리(1회성): BackgroundLayerRig.Apply()가 예전엔 레이어를 "Layers" 밖으로 끌어내 리그의
+            // 직속 자식으로 만들었던 버그 때문에, 위 정리로는 안 지워지는 예전 레이어(Min/Hour/Clock 등)가
+            // 리그 바로 밑에 그대로 쌓여 있을 수 있다(손 피벗이 중복돼 시계가 안 움직이는 것처럼 보였다).
+            // 이번 실행에서 새로 만들 이름과 겹치는 리그 직속 자식을 정리한다(광원/스모크/컨트롤러는
+            // 이름이 다르므로 안 건드린다).
+            var staleNames = new HashSet<string>();
+            foreach (var spec in Layers) staleNames.Add(spec.Name);
+            var staleDirectChildren = new List<Transform>();
+            foreach (Transform child in rigObject.transform)
+                if (staleNames.Contains(child.name)) staleDirectChildren.Add(child);
+            foreach (var child in staleDirectChildren) Object.DestroyImmediate(child.gameObject);
+
             var layersRoot = new GameObject(LayersName).transform;
             layersRoot.SetParent(rigObject.transform, false);
 
@@ -338,6 +358,16 @@ namespace BlueComplex.EditorTools
         }
 
         // ── 씬: 광원 ──────────────────────────────────────────────────────────────
+
+        /// <summary>테이블 위 컵에서 피어오르는 김 파티클. Things.png의 김은 정적 그림뿐이라 그 위에 옅은 퍼프를 얹는다.
+        /// 위치는 처음 만들 때만 잡는다(손으로 옮긴 값은 존중). 파티클 모듈은 <see cref="CupSteamEmitter"/>가 Awake에서 구성한다.</summary>
+        private static void EnsureCupSteam(BackgroundLayerRig rig, StringBuilder log)
+        {
+            var (go, created) = FindOrCreateChild(rig.transform, CupSteamEmitter.ObjectName);
+            if (created) go.transform.position = rig.CanvasPixelToWorld(CupSteamEmitter.CupMouthPixel, CupSteamEmitter.DefaultDistance);
+            if (go.GetComponent<CupSteamEmitter>() == null) go.AddComponent<CupSteamEmitter>();
+            log.AppendLine($"  {CupSteamEmitter.ObjectName}: {(created ? "생성" : "재사용")} — pos {go.transform.position}");
+        }
 
         private static LampLightDriver EnsureLights(BackgroundLayerRig rig, StringBuilder log)
         {

@@ -14,7 +14,7 @@ namespace BlueComplex.Core.Tests
     /// <summary>
     /// 12턴 3쿼터 통합 실행 — 시드 고정, 매 턴 손패의 첫 카드를 내는 단순 전략으로
     /// 프로토타입 스테이지를 끝까지 자동 진행한다. 예외 없이 완주하는 것이 1차 목표이며,
-    /// 로그는 밸런스(특히 검열 지속 턴 수)를 눈으로 확인하기 위한 참고 자료다.
+    /// 로그는 밸런스(특히 컴플렉스 지속 턴 수)를 눈으로 확인하기 위한 참고 자료다.
     /// </summary>
     public class QuarterStageIntegrationTest
     {
@@ -72,14 +72,6 @@ namespace BlueComplex.Core.Tests
             _ => "-"
         };
 
-        private static string FormatCensorship(CensorshipLevel level) => level switch
-        {
-            CensorshipLevel.None => "없음",
-            CensorshipLevel.Partial => "일부",
-            CensorshipLevel.Full => "전체",
-            _ => "-"
-        };
-
         [TestCase(20260916)]
         [TestCase(1)]
         [TestCase(12345)]
@@ -115,6 +107,12 @@ namespace BlueComplex.Core.Tests
             {
                 guard++;
                 Assert.Greater(session.Hand.Cards.Count, 0, $"턴 {session.Runner.CurrentTurn} 시작 시 손패가 비어 있으면 안 된다.");
+
+                // 저작된 단서 수(12)가 스테이지 전체 턴 수(12)와 같으므로, 쿼터 시작마다 지난 쿼터에
+                // 낸 단서가 되돌아와 손패가 항상 가득 차야 한다(ClueHand.RefillForNewQuarter).
+                if (config.Quarters.IsQuarterStart(session.Runner.CurrentTurn))
+                    Assert.AreEqual(ClueHand.HandSize, session.Hand.Cards.Count,
+                        $"쿼터 시작 턴({session.Runner.CurrentTurn})에는 손패가 가득 차 있어야 한다.");
 
                 var card = session.Hand.Cards[0];
                 var originalTags = card.Definition.CreateOriginalTagSet();
@@ -155,7 +153,7 @@ namespace BlueComplex.Core.Tests
                 log.AppendLine($"  쿼터 {report.Quarter} · {report.TurnInQuarter}/{config.Quarters.TurnsPerQuarter}턴  키 판정: {judgeText}");
 
                 var state = session.Zone.StateOf(report.HeartbeatValue);
-                log.AppendLine($"  상태: {FormatState(state)}  검열: {FormatCensorship(session.Censorship.Level)}");
+                log.AppendLine($"  상태: {FormatState(state)}");
 
                 log.AppendLine($"  신규 컴플렉스: {(report.SpawnedComplex != null ? report.SpawnedComplex.Definition.DisplayName : "없음")}");
                 log.AppendLine($"  결과: {report.Outcome}");

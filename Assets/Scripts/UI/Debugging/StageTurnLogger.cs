@@ -82,7 +82,7 @@ namespace BlueComplex.UI.Debugging
             log.AppendLine($"  쿼터 {report.Quarter} · {report.TurnInQuarter}/{_session.Runner.Schedule.TurnsPerQuarter}턴  키 판정: {judgeText}");
 
             var state = _session.Zone.StateOf(report.HeartbeatValue);
-            log.AppendLine($"  상태: {FormatState(state)}  검열: {FormatCensorship(_session.Censorship.Level)}");
+            log.AppendLine($"  상태: {FormatState(state)}");
 
             log.AppendLine($"  신규 컴플렉스: {(report.SpawnedComplex != null ? report.SpawnedComplex.Definition.DisplayName : "없음")}");
             log.Append($"  결과: {report.Outcome}");
@@ -105,14 +105,6 @@ namespace BlueComplex.UI.Debugging
             _ => "-"
         };
 
-        private static string FormatCensorship(CensorshipLevel level) => level switch
-        {
-            CensorshipLevel.None => "없음",
-            CensorshipLevel.Partial => "일부",
-            CensorshipLevel.Full => "전체",
-            _ => "-"
-        };
-
         private static string FormatTime(TimeTag time) => time switch
         {
             TimeTag.Past => "과거",
@@ -120,6 +112,9 @@ namespace BlueComplex.UI.Debugging
             TimeTag.Future => "미래",
             _ => "-"
         };
+
+        private static string FormatTimes(IReadOnlyList<TimeTag> times) =>
+            times.Count == 0 ? "-" : string.Join("+", times.Select(FormatTime));
 
         private static string FormatPerson(PersonTag person) => person switch
         {
@@ -154,6 +149,6 @@ namespace BlueComplex.UI.Debugging
         }
 
         private static string FormatTags(TagSet tags) =>
-            $"{FormatTime(tags.Time)}/{FormatPersons(tags.Persons)}/{FormatEmotions(tags.Emotions)}";
+            $"{FormatTimes(tags.Times)}/{FormatPersons(tags.Persons)}/{FormatEmotions(tags.Emotions)}";
     }
 }

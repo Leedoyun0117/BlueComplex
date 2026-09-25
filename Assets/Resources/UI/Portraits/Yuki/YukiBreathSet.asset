@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d8b6f2a91c44e7fa5b0c7e1d2f49a63, type: 3}
+  m_Name: YukiBreathSet
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.YukiBreathSet
+  frame1Hold: 1.2
+  frame3Hold: 0.6
+  stepSeconds: 0.15
+  normal:
+  - {fileID: 1086634847, guid: 5a4ecf0980d66e54a94d9d44a01281be, type: 3}
+  - {fileID: 1577136139, guid: 5a4ecf0980d66e54a94d9d44a01281be, type: 3}
+  - {fileID: 378299111, guid: 5a4ecf0980d66e54a94d9d44a01281be, type: 3}
+  - {fileID: 277514365, guid: 5a4ecf0980d66e54a94d9d44a01281be, type: 3}
+  sadness:
+  - {fileID: 1570906774, guid: 390739871b82a514d8b3276d25e8a287, type: 3}
+  - {fileID: 1012579950, guid: 390739871b82a514d8b3276d25e8a287, type: 3}
+  - {fileID: 1171034223, guid: 390739871b82a514d8b3276d25e8a287, type: 3}
+  - {fileID: 955869163, guid: 390739871b82a514d8b3276d25e8a287, type: 3}
+  joy:
+  - {fileID: 1505288704, guid: bca63a9279de1774bb4ec13198a1df3a, type: 3}
+  - {fileID: 686268239, guid: bca63a9279de1774bb4ec13198a1df3a, type: 3}
+  - {fileID: 1054188418, guid: bca63a9279de1774bb4ec13198a1df3a, type: 3}
+  - {fileID: 1412900951, guid: bca63a9279de1774bb4ec13198a1df3a, type: 3}
+  anger:
+  - {fileID: 883397380, guid: e9d2cd4362285a5438c4d901b8c5d3b6, type: 3}
+  - {fileID: 633018045, guid: e9d2cd4362285a5438c4d901b8c5d3b6, type: 3}
+  - {fileID: 751389138, guid: e9d2cd4362285a5438c4d901b8c5d3b6, type: 3}
+  - {fileID: 236701792, guid: e9d2cd4362285a5438c4d901b8c5d3b6, type: 3}

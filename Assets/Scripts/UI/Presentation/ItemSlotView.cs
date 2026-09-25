@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using BlueComplex.Core.Items;
+using BlueComplex.UI.Effects.DLJ;
 using BlueComplex.UI.Layout;
 using BlueComplex.UI.Motion;
 using DG.Tweening;
@@ -16,8 +17,8 @@ namespace BlueComplex.UI.Presentation
     /// 슬롯 자체엔 담기엔 너무 길다. 카드가 없는 자리는 파인 빈 칸(<see cref="SetEmpty"/>)으로 남는다.
     ///
     /// 움직임: 사용한 카드는 구겨지며 사라지고(<see cref="PlayUse"/>), 새 카드는 빈 칸에 눌려 끼워진다(<see cref="Render"/>의 insert).
-    /// 슬롯은 세로 레이아웃 그룹의 자식이라 위치는 건드리지 않고 크기·기울기·투명도로만 표현한다.
-    /// 시간은 UiMotionSettings(인스펙터)에서 온다.</summary>
+    /// 등장 시 DLJ 시각 복제본만 움직여 세로 레이아웃 그룹의 슬롯 위치는 유지한다.
+    /// 등장 시간은 DLJItemArrivalSettings, 사용 시간은 UiMotionSettings(인스펙터)에서 온다.</summary>
     public sealed class ItemSlotView : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
     {
         private const float HoverDelay = 0.25f;
@@ -30,15 +31,16 @@ namespace BlueComplex.UI.Presentation
 
         private static readonly Color FilledColor = MockupStyle.Card;
 
-        /// <summary>카드가 빠진 자리: 종이(패널)보다 살짝 어두운 불투명한 파인 자리. 반투명으로 두면 안 된다 — 테두리(Outline)가 그래픽 모양 그대로 채운 사본을 뒤에 깔아서 속이 찬 어두운 블록으로 보인다.</summary>
-        private static readonly Color EmptyColor = new Color32(226, 222, 212, 255);
-        private static readonly Color CrumpledColor = new Color32(196, 192, 182, 255);
+        /// <summary>카드가 빠진 자리: 종이(패널)보다 살짝 어두운 불투명한 파인 자리(종이 셰이더는 밝은 무채색만 윤곽선을 그리므로 너무 어둡거나 색이 있으면 안 된다). 반투명으로 두면 안 된다 — 테두리(Outline)가 그래픽 모양 그대로 채운 사본을 뒤에 깔아서 속이 찬 어두운 블록으로 보인다.</summary>
+        private static readonly Color EmptyColor = new Color32(224, 228, 224, 255);
+        private static readonly Color CrumpledColor = new Color32(192, 196, 192, 255);
 
         private Coroutine _hoverRoutine;
         private Outline _edge;
         private Color _edgeColor;
         private CanvasGroup _group;
         private Tween _motion;
+        private bool _inserting;
         private Tween _selectTween;
         private bool _selected;
         private static readonly Color SelectedEdge = new Color32(255, 200, 60, 255);
@@ -74,6 +76,13 @@ namespace BlueComplex.UI.Presentation
             }
 
             if (insert) PlayInsert();
+        }
+
+        /// <summary>DLJ: ItemController의 레이아웃 리빌드 후 알림과 호환되는 진입점.
+        /// 등장 연출은 슬롯 위치를 바꾸지 않고 복제본이 현재 슬롯을 따라가므로 초기화할 오프셋이 없다.</summary>
+        public void ForgetLayoutOffset()
+        {
+            // DLJ_ItemArrivalMotion.FollowSlot이 매 프레임 리빌드된 슬롯 위치를 반영한다.
         }
 
         /// <summary>아이템 대상 선택 모드에서 이 카드가 "지금 쓰려는 카드"임을 보인다 — 살짝 들리고 테두리가 금빛이 된다. 끄면 원래대로.</summary>
@@ -133,7 +142,7 @@ namespace BlueComplex.UI.Presentation
             _motion?.Kill();
             _selectTween?.Kill();
             _background.raycastTarget = false;
-            UiSoundHooks.Play(UiSoundCue.Paper);
+            UiSoundHooks.Play(UiSoundCue.ItemUse);
 
             var total = UiMotion.Settings.itemUse;
             var rect = (RectTransform)transform;
@@ -155,22 +164,15 @@ namespace BlueComplex.UI.Presentation
                 });
         }
 
+        /// <summary>빈 칸 옆에서 매우 작게 튀어나와 빠르게 커지고(1) → 커진 채로 빈 칸 쪽으로 움직이고(2) →
+        /// 빠르게 끼워지며 찰칵 소리가 난다(3).</summary>
         private void PlayInsert()
         {
             _motion?.Kill();
-            var total = UiMotion.Settings.itemInsert;
-            var rect = (RectTransform)transform;
-            var group = EnsureGroup();
-
-            // 크게 들린 채 옅게 시작해서 칸 위에 눌려 앉는다.
-            rect.localScale = Vector3.one * 1.3f;
-            rect.localRotation = Quaternion.Euler(0f, 0f, 7f);
-            group.alpha = 0f;
-
-            _motion = DOTween.Sequence().SetUpdate(true).SetTarget(this)
-                .Append(group.DOFade(1f, total * 0.4f))
-                .Join(rect.DOScale(1f, total).SetEase(Ease.OutBack, 1.6f))
-                .Join(rect.DOLocalRotate(Vector3.zero, total).SetEase(Ease.OutBack))
+            HideTooltip();
+            _inserting = true;
+            _motion = DLJ_ItemArrivalMotion.Play((RectTransform)transform, _background, _nameText, _iconImage,
+                EmptyColor, () => _inserting = false)
                 .AppendCallback(() => UiSoundHooks.Play(UiSoundCue.Pin));
         }
 
@@ -208,12 +210,12 @@ namespace BlueComplex.UI.Presentation
         {
             // 오른쪽 클릭은 대상 선택 취소용이라 아이템 사용으로 치지 않는다.
             if (eventData.button != PointerEventData.InputButton.Left) return;
-            if (Item != null) Clicked?.Invoke(Item);
+            if (Item != null && !_inserting) Clicked?.Invoke(Item);
         }
 
         public void OnPointerEnter(PointerEventData eventData)
         {
-            if (Item == null) return;
+            if (Item == null || _inserting) return;
             _hoverRoutine = StartCoroutine(HoverThenShow());
         }
 

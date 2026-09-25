@@ -16,7 +16,8 @@ namespace BlueComplex.Core.Tests
     /// 현재 쿼터 목표 구역에 더 가까워지는 아이템만 쓴다 — 목표 방향에 도움 되는 아이템을 즉시 사용하는 단순 규칙이다.
     ///
     /// 판단은 근시안이다: 다음에 낼 카드 한 장의 결과만 본다(손패에서 가장 좋은 카드). 각 아이템은 자기 효과를 이렇게 흉내 낸다 —
-    /// 감정적 설득(스테이지가 지정한 컴플렉스 무시), 기억 공감(공포·슬픔 1씩 제거 + 환각), 논리적 설득(중복 제거), 사마리아인(침체면 +10, 무력),
+    /// 감정적 설득(스테이지가 지정한 컴플렉스 무시), 기억 공감(슬픔 1씩 제거 + 환각), 무관심(타인 결과의 침체 감정 무시 + 무력), 공존감(타인 결과에 행복 1), 논리적 설득(중복 제거 + 랜덤 특성 하나 제거 — 지워질 수 있는 경우의 평균), 사마리아인(침체면 +10, 무력),
+    /// 심호흡(흥분이면 -10, 무력), 자아비대(결과 감정 전체 x2), 명상(흥분 감정이 침체보다 많으면 슬픔 +1, 예민),
     /// 극복(고른 컴플렉스가 없다고 보고 계산 — 지속이 줄어드는 만큼의 이득은 다음 턴 이후라 근사), 회상·선택적 기억(손패가 목표에서 멀어질 때만 무작위 교체).
     /// 이득이 <see cref="MinGain"/> 미만이면 쓰지 않는다.
     /// </summary>
@@ -31,9 +32,14 @@ namespace BlueComplex.Core.Tests
         {
             public HashSet<string> IgnoredComplexIds = new();
             public ComplexInstance RemovedComplex;
-            public bool RemoveFearSadness;
+            public bool RemoveSadness;
+            public bool IgnoreDepressedTowardOther;
+            public bool AddHappinessTowardOther;
             public bool Collapse;
+            public bool DoubleEmotions;
+            public bool MeditateSadness;
             public string ExtraTrait;
+            public string RemovedTrait;
             public int HeartbeatDelta;
         }
 
@@ -94,9 +100,32 @@ namespace BlueComplex.Core.Tests
                 }
                 case "item_empathy":
                     return baseline - BestDistance(session,
-                        new Hypothesis { RemoveFearSadness = true, ExtraTrait = PrototypeContent.TraitHallucination }, zone);
+                        new Hypothesis { RemoveSadness = true, ExtraTrait = PrototypeContent.TraitHallucination }, zone);
+                case "item_indifference":
+                    return baseline - BestDistance(session,
+                        new Hypothesis { IgnoreDepressedTowardOther = true, ExtraTrait = PrototypeContent.TraitLethargy }, zone);
+                case "item_coexistence":
+                    return baseline - BestDistance(session, new Hypothesis { AddHappinessTowardOther = true }, zone);
                 case "item_logic":
-                    return baseline - BestDistance(session, new Hypothesis { Collapse = true }, zone);
+                {
+                    // 중복 정리 + 붙어 있는 특성 하나를 랜덤으로 지운다 — 어느 것이 지워질지 모르니 지워질 수 있는 경우의 평균 거리로 본다(특성이 없으면 정리 효과만).
+                    var held = session.Traits.Traits.Select(t => t.Definition.Id).ToList();
+                    if (held.Count == 0) return baseline - BestDistance(session, new Hypothesis { Collapse = true }, zone);
+
+                    var expected = held.Average(id => BestDistance(session, new Hypothesis { Collapse = true, RemovedTrait = id }, zone));
+                    return baseline - (int)Math.Round(expected);
+                }
+                case "item_deep_breath":
+                {
+                    var lowered = session.Zone.PolarityOf(session.Heartbeat.Value) == Polarity.Excited ? -10 : 0;
+                    return baseline - BestDistance(session,
+                        new Hypothesis { HeartbeatDelta = lowered, ExtraTrait = PrototypeContent.TraitLethargy }, zone);
+                }
+                case "item_ego_inflation":
+                    return baseline - BestDistance(session, new Hypothesis { DoubleEmotions = true }, zone);
+                case "item_meditation":
+                    return baseline - BestDistance(session,
+                        new Hypothesis { MeditateSadness = true, ExtraTrait = PrototypeContent.TraitSensitive }, zone);
                 case "item_samaritan":
                 {
                     var raised = session.Zone.PolarityOf(session.Heartbeat.Value) == Polarity.Depressed ? 10 : 0;
@@ -109,7 +138,7 @@ namespace BlueComplex.Core.Tests
                     var bestGain = 0;
                     foreach (var candidate in session.Runner.GetItemTargets(item).OfType<ComplexTarget>())
                     {
-                        var gain = baseline - BestDistance(session, new Hypothesis { RemovedComplex = candidate.Complex }, zone);
+                        var gain = baseline - BestDistance(session, new Hypothesis { RemovedComplex = candidate.Complex, ExtraTrait = PrototypeContent.TraitSensitive }, zone);
                         if (gain <= bestGain) continue;
 
                         bestGain = gain;
@@ -167,7 +196,8 @@ namespace BlueComplex.Core.Tests
         private static int PredictDelta(StageSession session, ClueInstance card, Hypothesis hypothesis, int startHeartbeat)
         {
             var traits = new TraitBoard(session.Traits.Catalog);
-            foreach (var trait in session.Traits.Traits) traits.Grant(trait.Definition, trait.RemainingTurns);
+            foreach (var trait in session.Traits.Traits)
+                if (trait.Definition.Id != hypothesis.RemovedTrait) traits.Grant(trait.Definition, trait.RemainingTurns);
             if (hypothesis.ExtraTrait != null) traits.Grant(hypothesis.ExtraTrait);
 
             var board = new ComplexBoard(session.Complexes.MaxSlots);
@@ -182,13 +212,29 @@ namespace BlueComplex.Core.Tests
             var final = new ComplexResolver(board).Resolve(input, filter).Final;
 
             session.ActiveItems.Modify(final);
-            if (hypothesis.RemoveFearSadness)
+            if (hypothesis.RemoveSadness) final.RemoveEmotion(EmotionTag.Sadness);
+
+            if (hypothesis.IgnoreDepressedTowardOther && final.HasPerson(PersonTag.Other))
             {
-                final.RemoveEmotion(EmotionTag.Fear);
-                final.RemoveEmotion(EmotionTag.Sadness);
+                foreach (var emotion in new[] { EmotionTag.Sadness, EmotionTag.Disgust, EmotionTag.Fear })
+                    final.RemoveEmotion(emotion, final.CountOf(emotion));
             }
 
+            if (hypothesis.AddHappinessTowardOther && final.HasPerson(PersonTag.Other)) final.AddEmotion(EmotionTag.Happiness);
+
             if (hypothesis.Collapse) final.CollapseDuplicates();
+
+            if (hypothesis.DoubleEmotions)
+            {
+                foreach (var (emotion, count) in final.Emotions.ToList()) final.AddEmotion(emotion, count);
+            }
+
+            if (hypothesis.MeditateSadness)
+            {
+                var excited = final.Emotions.Where(e => PolarityTable.GetPolarity(e.Key) == Polarity.Excited).Sum(e => e.Value);
+                var depressed = final.Emotions.Where(e => PolarityTable.GetPolarity(e.Key) == Polarity.Depressed).Sum(e => e.Value);
+                if (excited > depressed) final.AddEmotion(EmotionTag.Sadness);
+            }
 
             return new TraitAwareEmotionEvaluator(PolarityTable, traits).Evaluate(final);
         }

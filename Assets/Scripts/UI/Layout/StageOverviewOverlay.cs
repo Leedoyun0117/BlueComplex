@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using BlueComplex.UI.Motion;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -147,7 +148,11 @@ namespace BlueComplex.UI.Layout
         }
 
         /// <summary>판넬 어디를 눌러도 닫힌다 — 내용물은 전부 레이캐스트를 받지 않으므로 클릭은 항상 여기로 온다.</summary>
-        public void OnPointerClick(PointerEventData eventData) => Hide();
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            UiSoundHooks.Play(UiSoundCue.ButtonClick);
+            Hide();
+        }
 
         private void Update()
         {

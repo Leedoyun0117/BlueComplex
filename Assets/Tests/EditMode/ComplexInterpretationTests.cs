@@ -54,7 +54,7 @@ namespace BlueComplex.Core.Tests
         [Test]
         public void AntiPast_PastWithoutAnyPerson_DoesNotTrigger()
         {
-            // 낡은 토끼 인형: 과거/(인물 없음)/행복 — '임의의 인물 태그'가 필요하므로 발동하지 않는다.
+            // 과거/(인물 없음)/행복 — '임의의 인물 태그'가 필요하므로 발동하지 않는다.
             var tags = new TagSet(TimeTag.Past, null, new[] { EmotionTag.Happiness });
 
             var result = Resolve(PrototypeContent.AntiPast(Polarity), tags);
@@ -252,7 +252,7 @@ namespace BlueComplex.Core.Tests
         [Test]
         public void Guilt_HappinessWithoutFamily_DoesNotTrigger()
         {
-            // 낡은 토끼 인형: 과거/(인물 없음)/행복 — 가족 태그가 없다.
+            // 과거/(인물 없음)/행복 — 가족 태그가 없다.
             var tags = new TagSet(TimeTag.Past, null, new[] { EmotionTag.Happiness });
 
             Assert.IsFalse(Resolve(PrototypeContent.Guilt(), tags).Steps[0].Triggered);
@@ -274,28 +274,54 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void Avoidance_PastFearOrDisgust_ShiftsToPresent()
+        public void Avoidance_PresentFear_ShiftsToPast()
         {
-            // 찢어진 책가방: 과거/타인,친구/공포,분노
+            // 공포 소설: 현재/(인물 없음)/공포
+            var tags = new TagSet(TimeTag.Present, new PersonTag[0], new[] { EmotionTag.Fear });
+
+            var result = Resolve(PrototypeContent.Avoidance(), tags);
+
+            Assert.IsTrue(result.Steps[0].Triggered);
+            Assert.AreEqual(TimeTag.Past, result.Final.Time);
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Fear), "감정은 바뀌지 않는다.");
+        }
+
+        [Test]
+        public void Avoidance_FutureDisgust_ShiftsToPast()
+        {
+            // 개학 날짜 달력: 미래/타인/슬픔,혐오
+            var tags = new TagSet(TimeTag.Future, new[] { PersonTag.Other },
+                new[] { EmotionTag.Sadness, EmotionTag.Disgust });
+
+            var result = Resolve(PrototypeContent.Avoidance(), tags);
+
+            Assert.IsTrue(result.Steps[0].Triggered);
+            Assert.AreEqual(TimeTag.Past, result.Final.Time);
+            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Disgust), "감정은 바뀌지 않는다.");
+        }
+
+        [Test]
+        public void Avoidance_PastFearOrDisgust_DoesNotTrigger_PastIsNoLongerTheSource()
+        {
+            // 찢어진 책가방: 과거/타인,친구/공포,분노 — 회피는 이제 현재/미래에서만 발동한다.
             var tags = new TagSet(TimeTag.Past, new[] { PersonTag.Other, PersonTag.Friend },
                 new[] { EmotionTag.Fear, EmotionTag.Anger });
 
             var result = Resolve(PrototypeContent.Avoidance(), tags);
 
-            Assert.IsTrue(result.Steps[0].Triggered);
-            Assert.AreEqual(TimeTag.Present, result.Final.Time);
-            Assert.AreEqual(1, result.Final.CountOf(EmotionTag.Fear), "감정은 바뀌지 않는다.");
+            Assert.IsFalse(result.Steps[0].Triggered);
+            Assert.AreEqual(TimeTag.Past, result.Final.Time);
         }
 
         [Test]
-        public void Avoidance_PastWithoutFearOrDisgust_DoesNotTrigger()
+        public void Avoidance_PresentWithoutFearOrDisgust_DoesNotTrigger()
         {
-            var tags = new TagSet(TimeTag.Past, new[] { PersonTag.Family }, new[] { EmotionTag.Sadness });
+            var tags = new TagSet(TimeTag.Present, new[] { PersonTag.Family }, new[] { EmotionTag.Sadness });
 
             var result = Resolve(PrototypeContent.Avoidance(), tags);
 
             Assert.IsFalse(result.Steps[0].Triggered);
-            Assert.AreEqual(TimeTag.Past, result.Final.Time);
+            Assert.AreEqual(TimeTag.Present, result.Final.Time);
         }
     }
 }

@@ -65,7 +65,18 @@ namespace BlueComplex.UI.Background
         [Tooltip("정전 시작 순간 짧게 puff를 뿜을 연기 이펙트(선택).")]
         [SerializeField] private LampSmokeEmitter _smoke;
 
+        [Header("전구 그림 연동")]
+        [Tooltip("램프 레이어(Lamp.png)의 Quad Renderer. 이 레이어는 스스로 빛나는 아트라 조명(LightGain=0)을 안 받아서, 이 연동이 없으면 " +
+                 "호흡·깜빡임·정전이 주변 벽에만 아주 약하게 비치고 전구 자체는 항상 그대로 보인다. 비우면 리그에서 Lamp/Quad를 찾는다.")]
+        [SerializeField] private Renderer _bulbRenderer;
+        [Tooltip("조명 밝기 변화를 전구 그림 밝기에 반영하는 정도. 호흡 최고점에서 아트 원래 밝기이고, 그보다 어두워지는 만큼에 이 배율을 곱한다. " +
+                 "0이면 연동 끔(전구는 항상 그대로).")]
+        [SerializeField, Range(0f, 4f)] private float _bulbSwing = 1.5f;
+
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+
         private Heartbeat _heartbeat;
+        private Material _bulbMaterial;
         private Tween _tween;
         private Tween _gateTween;
         private Tween _dipTween;
@@ -83,6 +94,23 @@ namespace BlueComplex.UI.Background
             if (_light != null) _baseIntensity = _light.intensity;
             _noiseSeed = Random.value * 100f;
             _breathPhase = Random.value * 100f;
+
+            if (_bulbRenderer == null) _bulbRenderer = FindBulbRenderer();
+            // 공유 머티리얼 에셋(BG_Lamp.mat)을 건드리지 않도록 런타임 인스턴스로 바꿔서 색만 조절한다.
+            if (_bulbRenderer != null) _bulbMaterial = _bulbRenderer.material;
+        }
+
+        private Renderer FindBulbRenderer()
+        {
+            var rig = GetComponentInParent<BackgroundLayerRig>();
+            if (rig == null) return null;
+            var quad = rig.transform.Find("Layers/Lamp/Quad") ?? rig.transform.Find("Lamp/Quad");
+            return quad != null ? quad.GetComponent<Renderer>() : null;
+        }
+
+        private void OnDestroy()
+        {
+            if (_bulbMaterial != null) Destroy(_bulbMaterial);
         }
 
         private void OnEnable()
@@ -116,6 +144,7 @@ namespace BlueComplex.UI.Background
             }
             _atmosphereGate = 1f;
             _flickerDip = 1f;
+            if (_bulbMaterial != null) _bulbMaterial.SetColor(BaseColorId, Color.white); // 꺼진 채로 남지 않게.
         }
 
         private void OnHeartbeatChanged(int from, int to)
@@ -149,6 +178,19 @@ namespace BlueComplex.UI.Background
                 : 1f;
 
             _light.intensity = _baseIntensity * _heartbeatMultiplier * microFlicker * breath * _atmosphereGate * _flickerDip;
+            ApplyBulbBrightness();
+        }
+
+        /// <summary>조명 배율을 전구 그림 색에도 곱한다. 배율이 호흡 최고점(1 + 진폭) 이상이면 아트 원래 밝기, 그보다 낮아질수록 어두워지고
+        /// 이중 플리커의 깜빡임 순간·정전에는 (거의) 꺼진다. 아트 밝기를 넘겨 밝히지는 않는다.</summary>
+        private void ApplyBulbBrightness()
+        {
+            if (_bulbMaterial == null || _baseIntensity <= 0f) return;
+
+            var ratio = _light.intensity / _baseIntensity;
+            var peak = 1f + (_atmosphereEnabled ? _breathAmplitude : 0f);
+            var brightness = Mathf.Clamp01(1f - (peak - ratio) * _bulbSwing);
+            _bulbMaterial.SetColor(BaseColorId, new Color(brightness, brightness, brightness, 1f));
         }
 
         // ── 방 분위기 시퀀스 ──────────────────────────────────────────────────────

@@ -1,10 +1,13 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using BlueComplex.Core.Clues;
 using BlueComplex.Core.Stage;
 using BlueComplex.Core.Tags;
 using BlueComplex.Core.Turn;
 using BlueComplex.UI.Background;
 using BlueComplex.UI.Debugging;
+using BlueComplex.UI.Motion;
 using BlueComplex.UI.Presentation;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -28,6 +31,10 @@ namespace BlueComplex.UI.Bootstrap
         [Tooltip("인스펙터에서 낼 카드의 손패 인덱스. 컨텍스트 메뉴 'Play Selected Card'로 실행.")]
         [SerializeField] private int _selectedCardIndex;
 
+        [Header("스테이지 (임시 디버그 선택)")]
+        [Tooltip("시작할 스테이지 번호(1 또는 2). Play 중에는 F1/F2 키로 해당 스테이지를 새로 시작한다.")]
+        [SerializeField, Range(1, 2)] private int _stageNumber = 1;
+
         [Header("시드")]
         [SerializeField] private int _seed = 20260916;
 
@@ -48,6 +55,15 @@ namespace BlueComplex.UI.Bootstrap
         private IEmotionPolarityTable _polarityTable;
         private StageTurnLogger _logger;
 
+        /// <summary>쿼터가 끝나 재생을 기다리는 결과들. 한 번의 PlayClue 호출 안에서 TurnResolved가 연달아 올 수 있어
+        /// (CinematicTurnResultPresenter 문서 참고) 큐에 쌓아 순서대로 재생한다.</summary>
+        private readonly Queue<TurnReport> _pendingQuarterDialogue = new();
+        private bool _quarterDialoguePlaying;
+
+        /// <summary>이 세션(앱 실행)에서 이미 들어온 적 있는 스테이지 id — "처음" 시작 대사는 스테이지별로 딱 한 번만 나온다.
+        /// 재시작(RestartWithSameSeed/NewSeed)은 여기서 지우지 않는다: 같은 스테이지를 다시 들어오는 것도 "재진입"이다.</summary>
+        private readonly HashSet<string> _stagesEnteredBefore = new();
+
         private void Start()
         {
             _polarityTable = new DefaultEmotionPolarityTable();
@@ -59,11 +75,18 @@ namespace BlueComplex.UI.Bootstrap
         private void OnDestroy()
         {
             _logger?.Dispose();
+            UiSoundHooks.StopAmbient();
         }
 
         private void Update()
         {
-            if (!_enableKeyboardInput || InputBlocked || Session == null || Keyboard.current == null) return;
+            if (!_enableKeyboardInput || Session == null || Keyboard.current == null) return;
+
+            // 스테이지 선택은 대화 재생 중(InputBlocked)에도 통한다 — BeginNewSession이 재생 중인 대화를 끊는다.
+            if (Keyboard.current.f1Key.wasPressedThisFrame) StartStage(1);
+            else if (Keyboard.current.f2Key.wasPressedThisFrame) StartStage(2);
+
+            if (InputBlocked) return;
 
             if (Keyboard.current.digit1Key.wasPressedThisFrame) PlayCardAtIndex(0);
             else if (Keyboard.current.digit2Key.wasPressedThisFrame) PlayCardAtIndex(1);
@@ -87,6 +110,29 @@ namespace BlueComplex.UI.Bootstrap
             Session.Runner.PlayClue(Session.Hand.Cards[index]);
         }
 
+        /// <summary>스테이지 번호(1 또는 2)를 골라 새 무작위 시드로 시작한다. 해금 지식(Ledger)은 유지된다. 임시 디버그 선택용.</summary>
+        public void StartStage(int stageNumber)
+        {
+            if (stageNumber < 1 || stageNumber > 2)
+            {
+                Debug.LogWarning($"스테이지 {stageNumber}는 없습니다. (1 또는 2)");
+                return;
+            }
+
+            _stageNumber = stageNumber;
+            BeginNewSession(Environment.TickCount);
+        }
+
+        [ContextMenu("Start Stage 1")]
+        private void StartStage1FromInspector() => StartStage(1);
+
+        [ContextMenu("Start Stage 2")]
+        private void StartStage2FromInspector() => StartStage(2);
+
+        private StageConfig CreateConfig() => _stageNumber == 2
+            ? Stage2Content.Stage2(_polarityTable)
+            : PrototypeContent.PrototypeStage(_polarityTable);
+
         /// <summary>같은 시드로 스테이지를 재시작한다. 해금 지식(Ledger)은 그대로 유지된다.</summary>
         public void RestartWithSameSeed() => BeginNewSession(CurrentSeed);
 
@@ -97,8 +143,14 @@ namespace BlueComplex.UI.Bootstrap
         {
             _logger?.Dispose();
 
+            // 재시작이 대화 재생 도중이면 그 코루틴을 끊고 막을 치운다 — InputBlocked도 켜진 채로 남지 않게.
+            StopAllCoroutines();
+            InputBlocked = false;
+            _pendingQuarterDialogue.Clear();
+            _quarterDialoguePlaying = false;
+
             CurrentSeed = seed;
-            var config = PrototypeContent.PrototypeStage(_polarityTable);
+            var config = CreateConfig();
             var random = new SystemRandomSource(seed);
 
             Config = config;
@@ -111,9 +163,89 @@ namespace BlueComplex.UI.Bootstrap
             if (_lampLightDriver != null)
                 _lampLightDriver.Bind(Session.Heartbeat);
 
+            var canvasRoot = FindCanvasRoot();
+            StageDialoguePlayer.GetOrCreate(canvasRoot)?.ResetNow();
+
+            // 상시 배경음은 스테이지(재시작 포함)가 시작될 때 처음부터 — 시작 대화 재생 중에도 이미 깔려 있다.
+            var ambient = StageSounds.For(config).Ambient;
+            if (ambient.HasValue) UiSoundHooks.StartAmbient(ambient.Value);
+            else UiSoundHooks.StopAmbient();
+
             // StartStage()가 첫 TurnBegan을 곧바로 쏘아 올리므로, 구독자는 그 전에 새 세션을 받아야 한다.
             RaiseSessionStarted();
+
+            // 뷰들(CinematicTurnResultPresenter 포함)이 방금 RaiseSessionStarted에서 TurnResolved를 구독했다 —
+            // 우리 구독은 그 뒤에 걸어야, 쿼터 마지막 턴이 끝날 때 턴 결과 연출(Present)이 먼저 시작되고 나서
+            // 우리 핸들러가 불린다(그래야 IsPresenting이 그새 true가 되어 아래에서 정확히 기다릴 수 있다).
+            Session.Runner.TurnResolved += OnTurnResolvedForQuarterDialogue;
+
+            // "처음" 시작 대사는 이 스테이지에 이 세션에서 정말 처음 들어올 때만 — 그 뒤로는(재시작 포함) "그 후" 풀에서 무작위로 고른다.
+            var isFirstEntry = !_stagesEnteredBefore.Contains(config.Id);
+            _stagesEnteredBefore.Add(config.Id);
+
+            // 스테이지 시작 대화가 끝나야 StartStage()를 부른다 — 그 전엔 손패가 비어 있어 카드가 없다.
+            StartCoroutine(BeginStageAfterIntro(canvasRoot, config.Id, isFirstEntry));
+        }
+
+        /// <summary>스테이지 시작 대화(있으면) 재생 → 입력 잠금 해제 → StartStage(). 대화가 없으면 그대로 바로 시작한다.</summary>
+        private IEnumerator BeginStageAfterIntro(Transform canvasRoot, string stageId, bool isFirstEntry)
+        {
+            var variant = StageDialogues.PickStageStart(stageId, isFirstEntry);
+            if (variant.HasValue && canvasRoot != null)
+            {
+                InputBlocked = true;
+                yield return StageDialoguePlayer.GetOrCreate(canvasRoot).Play(variant.Value);
+                InputBlocked = false;
+            }
+
             Session.Runner.StartStage();
+        }
+
+        /// <summary>쿼터의 마지막 턴이 끝났으면(스테이지가 그대로 계속되는 경우만) 대화 재생 큐에 넣는다.
+        /// 스테이지가 같은 턴에 끝났으면(Cleared/Failed) 여기서는 재생하지 않는다 — 클리어 대사는 StageEndController가 맡는다.</summary>
+        private void OnTurnResolvedForQuarterDialogue(TurnReport report)
+        {
+            if (report.Outcome != StageOutcome.InProgress) return;
+            if (Session == null || !Session.Runner.Schedule.IsQuarterEnd(report.Turn)) return;
+
+            _pendingQuarterDialogue.Enqueue(report);
+            if (_quarterDialoguePlaying) return;
+
+            _quarterDialoguePlaying = true;
+            StartCoroutine(DrainQuarterDialogue());
+        }
+
+        private IEnumerator DrainQuarterDialogue()
+        {
+            while (_pendingQuarterDialogue.Count > 0)
+                yield return PlayQuarterEndDialogue(_pendingQuarterDialogue.Dequeue());
+
+            _quarterDialoguePlaying = false;
+        }
+
+        /// <summary>이 턴의 결과 연출(CinematicTurnResultPresenter)이 다 끝날 때까지 기다린 뒤, 그 시점 심박수 구간에 맞는 대사를 재생한다.</summary>
+        private IEnumerator PlayQuarterEndDialogue(TurnReport report)
+        {
+            var canvasRoot = FindCanvasRoot();
+            if (canvasRoot == null) yield break;
+
+            var presenter = canvasRoot.GetComponentInChildren<ITurnResultPresenter>(true);
+            if (presenter != null) yield return new WaitUntil(() => !presenter.IsPresenting);
+
+            var mood = StageDialogueMoodClassifier.Classify(Session.Zone, report.HeartbeatValue);
+            var variant = StageDialogues.PickQuarterEnd(Config.Id, mood);
+            if (!variant.HasValue) yield break;
+
+            InputBlocked = true;
+            yield return StageDialoguePlayer.GetOrCreate(canvasRoot).Play(variant.Value);
+            InputBlocked = false;
+        }
+
+        /// <summary>StageBootstrapper가 MainHud 캔버스의 자식이라는 보장이 없어(씬 배치에 따라 다르다) 대화 오버레이를 지을 캔버스를 직접 찾는다.</summary>
+        private static Transform FindCanvasRoot()
+        {
+            var canvas = FindFirstObjectByType<Canvas>(FindObjectsInactive.Include);
+            return canvas != null ? canvas.transform : null;
         }
 
         /// <summary>구독자마다 따로 부른다 — 뷰 하나의 초기화가 예외로 죽어도(참조가 끊긴 프리팹 등) 뒤의 뷰들이 초기화를 못 받아 화면이 통째로 비는 일이 없게 한다.

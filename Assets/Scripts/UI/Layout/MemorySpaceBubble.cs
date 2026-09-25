@@ -153,6 +153,15 @@ namespace BlueComplex.UI.Layout
         private const float ChipFontSize = 40f;
         private const float RiseDistance = 110f;
 
+        // 특성 이름 태그(기획서 "특성 발현 이펙트"): 감정 칩 바로 위 줄에 놓이는 작은 태그. 감정 칩(색 채움 · 큼)과 헷갈리지 않게 회색 바탕 + 파란 테두리 + 작은 글자.
+        private const float TraitTagHeight = 48f;
+        private const float TraitTagPadding = 36f;
+        private const float TraitTagGap = 10f;
+        private const float TraitTagFontSize = 28f;
+        private const float TraitTagBorder = 3f;
+        private static readonly Color TraitTagFill = new(0.42f, 0.43f, 0.46f, 1f);
+        private static readonly Color TraitTagBorderColor = new(0.30f, 0.52f, 0.78f, 1f);
+
         private readonly List<RectTransform> _chips = new();
 
         /// <summary>지금 풍선 안에 결과 태그가 떠 있으면 true.</summary>
@@ -163,12 +172,14 @@ namespace BlueComplex.UI.Layout
         /// 다 나타난 뒤 <c>tagHold</c>초 가만히 있는 건 호출자(Presenter)가 정한다 — 이 메서드는 나타나는 움직임만 돌려준다.
         /// 남아 있는 칩은 <see cref="RiseResultTags"/>가 올려 보낸다.
         /// </summary>
-        public Sequence ShowResultTags(IReadOnlyList<ResultTag> tags)
+        public Sequence ShowResultTags(IReadOnlyList<ResultTag> tags, IReadOnlyList<string> traitNames = null)
         {
             ClearResultTags();
 
             var sequence = DOTween.Sequence().SetUpdate(true);
-            if (tags == null || tags.Count == 0) return sequence;
+            var hasTraits = traitNames != null && traitNames.Count > 0;
+            if ((tags == null || tags.Count == 0) && !hasTraits) return sequence;
+            tags ??= System.Array.Empty<ResultTag>();
 
             var motion = UiMotion.Settings;
             var area = ChipArea();
@@ -199,10 +210,44 @@ namespace BlueComplex.UI.Layout
                 rowWidth += needed;
             }
 
-            var totalHeight = rows.Count * ChipHeight + (rows.Count - 1) * ChipGap;
-            var y = area.center.y + totalHeight * 0.5f - ChipHeight * 0.5f;
+            // 특성 이름 태그는 감정 칩 줄들 맨 위(바로 위)에 한 줄로 가운데 정렬한다 — 칩 블록과 함께 영역 세로 중앙에 놓는다.
+            var chipRowsHeight = tags.Count == 0 ? 0f : rows.Count * ChipHeight + (rows.Count - 1) * ChipGap;
+            var traitRowHeight = hasTraits ? TraitTagHeight + (tags.Count > 0 ? TraitTagGap : 0f) : 0f;
+            var totalHeight = chipRowsHeight + traitRowHeight;
+            var top = area.center.y + totalHeight * 0.5f;
             var order = 0;
-            foreach (var row in rows)
+
+            if (hasTraits)
+            {
+                var traitWidths = new float[traitNames.Count];
+                var traitTags = new RectTransform[traitNames.Count];
+                for (var i = 0; i < traitNames.Count; i++)
+                {
+                    var label = CreateTraitTag(traitNames[i], i, out traitTags[i]);
+                    traitWidths[i] = label.GetPreferredValues(traitNames[i]).x + TraitTagPadding;
+                    traitTags[i].sizeDelta = new Vector2(traitWidths[i], TraitTagHeight);
+                    _chips.Add(traitTags[i]);
+                }
+
+                var traitTotal = traitWidths.Sum() + (traitNames.Count - 1) * ChipGap;
+                var tx = area.center.x - traitTotal * 0.5f;
+                for (var i = 0; i < traitTags.Length; i++)
+                {
+                    traitTags[i].anchoredPosition = new Vector2(tx + traitWidths[i] * 0.5f, top - TraitTagHeight * 0.5f);
+                    tx += traitWidths[i] + ChipGap;
+
+                    var group = traitTags[i].GetComponent<CanvasGroup>();
+                    group.alpha = 0f;
+                    traitTags[i].localScale = Vector3.one * 0.4f;
+
+                    var delay = order++ * 0.07f;
+                    sequence.Insert(delay, group.DOFade(1f, motion.tagPop * 0.6f));
+                    sequence.Insert(delay, traitTags[i].DOScale(1f, motion.tagPop).SetEase(Ease.OutBack, 2f));
+                }
+            }
+
+            var y = top - traitRowHeight - ChipHeight * 0.5f;
+            foreach (var row in tags.Count == 0 ? new List<List<int>>() : rows)
             {
                 var rowTotal = row.Sum(i => widths[i]) + (row.Count - 1) * ChipGap;
                 var x = area.center.x - rowTotal * 0.5f;
@@ -271,6 +316,40 @@ namespace BlueComplex.UI.Layout
             var width = rect.width * 0.74f;
             var height = rect.height * 0.46f;
             return new Rect(-width * 0.5f, rect.height * 0.08f - height * 0.5f, width, height);
+        }
+
+        /// <summary>특성 이름 태그 하나: 파란 테두리(바깥 이미지) 안에 회색 바탕(안쪽 이미지) + 흰 글자. 태그 전체가 하나의 RectTransform이라 감정 칩과 같이 뜨고 올라간다.</summary>
+        private TMP_Text CreateTraitTag(string name, int index, out RectTransform tag)
+        {
+            var go = new GameObject($"Trait Tag {index}", typeof(RectTransform), typeof(CanvasGroup), typeof(Image))
+            {
+                layer = gameObject.layer
+            };
+            go.transform.SetParent(transform, false);
+
+            tag = (RectTransform)go.transform;
+            tag.anchorMin = tag.anchorMax = tag.pivot = new Vector2(0.5f, 0.5f);
+
+            var border = go.GetComponent<Image>();
+            border.sprite = RuntimeUi.RoundedRect;
+            border.type = Image.Type.Sliced;
+            border.color = TraitTagBorderColor;
+            border.raycastTarget = false;
+            MockupStyle.AddShadow(go);
+
+            var fillRect = RuntimeUi.CreateStretched(tag, "Fill");
+            fillRect.offsetMin = new Vector2(TraitTagBorder, TraitTagBorder);
+            fillRect.offsetMax = new Vector2(-TraitTagBorder, -TraitTagBorder);
+            var fill = fillRect.gameObject.AddComponent<Image>();
+            fill.sprite = RuntimeUi.RoundedRect;
+            fill.type = Image.Type.Sliced;
+            fill.color = TraitTagFill;
+            fill.raycastTarget = false;
+
+            var text = RuntimeUi.CreateText(tag, "Text", name, _font, TraitTagFontSize, Color.white, TextAlignmentOptions.Center,
+                Vector2.zero, Vector2.one);
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            return text;
         }
 
         private TMP_Text CreateChip(ResultTag tag, int index, out RectTransform chip)

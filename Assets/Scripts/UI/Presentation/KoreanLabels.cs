@@ -19,6 +19,10 @@ namespace BlueComplex.UI.Presentation
             _ => "-"
         };
 
+        /// <summary>시간 태그가 여럿인 단서(스테이지 2 "과거 + 현재")는 "과거, 현재"로 잇는다. 하나도 없으면 "-".</summary>
+        public static string Times(System.Collections.Generic.IReadOnlyList<TimeTag> times) =>
+            times.Count == 0 ? "-" : string.Join(", ", System.Linq.Enumerable.Select(times, Time));
+
         public static string Person(PersonTag person) => person switch
         {
             PersonTag.Family => "가족",
@@ -55,14 +59,6 @@ namespace BlueComplex.UI.Presentation
         public static string Trait(TraitInstance trait) => trait.Definition.Kind == TraitKind.Special
             ? $"{trait.Definition.DisplayName} (안정까지)"
             : $"{trait.Definition.DisplayName} {trait.RemainingTurns}턴";
-
-        public static string Censorship(CensorshipLevel level) => level switch
-        {
-            CensorshipLevel.None => "없음",
-            CensorshipLevel.Partial => "일부",
-            CensorshipLevel.Full => "전체",
-            _ => "-"
-        };
 
         public static string Outcome(StageOutcome outcome) => outcome switch
         {

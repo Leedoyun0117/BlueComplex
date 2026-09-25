@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using BlueComplex.Core.Clues;
@@ -8,7 +9,8 @@ using BlueComplex.Core.Tags;
 namespace BlueComplex.Core.Tests
 {
     /// <summary>
-    /// 키 시스템 보정 — 도달 가능 범위 안에서만 키 구역을 고르는 ReachabilityKeyZonePlacer 검증.
+    /// 키 구역 배치 정책 — 좌/우를 도달 가능 여부와 무관하게 균등 확률로 먼저 정하고, 그 쪽 구간 안에서
+    /// (도달 가능한 후보가 있으면 그 중에서) 위치를 고르는 ReachabilityKeyZonePlacer 검증.
     /// 기본 레이아웃(HeartbeatZone 기본 경계 기준 Min=10, Max=190, EdgeWidth=60, KeyWidth=36) 기준
     /// 좌측 후보는 offset 0~24 → [10,69] 구간을, 우측 후보는 [131,190] 구간을 덮는다.
     /// 양 끝(0~9, 191~200)은 Fatal 구간이므로 키 구역이 그 안에 놓이면 도달 자체가 불가능해진다.
@@ -16,36 +18,49 @@ namespace BlueComplex.Core.Tests
     public class ReachabilityKeyZonePlacerTests
     {
         [Test]
-        public void Place_OnlyChoosesReachableCandidates_WhenSomeCandidatesAreOutOfRange()
+        public void Place_ChoosesReachablePositionWithinTheChosenSide()
         {
-            // startPosition=20, turnsUntilKey=0 → 도달 범위 [20,20]. 좌측 후보([10,69] 범위)만 겹치고
-            // 우측 후보([131,190])는 모두 벗어난다.
-            for (var seed = 0; seed < 50; seed++)
+            // startPosition=20, turnsUntilKey=0 → 도달 범위 [20,20]. 좌측에선 20을 덮는 후보만,
+            // 우측([131,190])엔 도달 가능한 후보가 없으므로 구간 전체에서 뽑는다.
+            var sawLeft = false;
+            var sawRight = false;
+            for (var seed = 0; seed < 200; seed++)
             {
                 var placer = new ReachabilityKeyZonePlacer(new SystemRandomSource(seed));
 
                 var zone = placer.Place(startPosition: 20, turnsUntilKey: 0);
-                var lastSlot = zone.StartSlot + zone.Width - 1;
 
-                Assert.LessOrEqual(lastSlot, 69,
-                    $"seed={seed}: 도달 범위 밖(우측)의 후보 [{zone.StartSlot},{lastSlot}] 가 선택되었다.");
+                if (IsLeft(zone))
+                {
+                    sawLeft = true;
+                    Assert.IsTrue(zone.Contains(20),
+                        $"seed={seed}: 좌측 구역 [{zone.StartSlot},{zone.StartSlot + zone.Width - 1}] 이 도달 범위(20)를 덮지 않는다.");
+                }
+                else
+                {
+                    sawRight = true;
+                    Assert.GreaterOrEqual(zone.StartSlot, 131, $"seed={seed}: 우측 구간 밖.");
+                    Assert.LessOrEqual(zone.StartSlot + zone.Width - 1, 190, $"seed={seed}: 우측 구간 밖.");
+                }
             }
+
+            Assert.IsTrue(sawLeft && sawRight, "도달 가능 여부와 무관하게 양쪽이 다 나와야 한다.");
         }
 
         [Test]
-        public void Place_WhenNoCandidateOverlapsRange_PicksNearestCandidate()
+        public void Place_WhenSideHasNoReachableCandidate_SpreadsOverTheWholeSideInsteadOfPinningOne()
         {
-            // startPosition=80, turnsUntilKey=0 → 도달 범위 [80,80]. 좌측 최댓값([34,69], 거리 11)이
-            // 우측 최솟값([131,166], 거리 51)보다 가까우므로 좌측 offset24([34,36])가 결정적으로 선택되어야 한다.
-            for (var seed = 0; seed < 20; seed++)
+            // startPosition=80, turnsUntilKey=0 → 도달 범위 [80,80]. 양쪽 다 도달 후보가 없다 — 예전엔 가장 가까운 후보 하나로 고정됐다.
+            var leftStarts = new HashSet<int>();
+            var rightStarts = new HashSet<int>();
+            for (var seed = 0; seed < 400; seed++)
             {
-                var placer = new ReachabilityKeyZonePlacer(new SystemRandomSource(seed));
-
-                var zone = placer.Place(startPosition: 80, turnsUntilKey: 0);
-
-                Assert.AreEqual(new KeyZone(34, 36), zone,
-                    $"seed={seed}: 겹치는 후보가 없으면 가장 가까운 후보를 결정적으로 골라야 한다.");
+                var zone = new ReachabilityKeyZonePlacer(new SystemRandomSource(seed)).Place(startPosition: 80, turnsUntilKey: 0);
+                (IsLeft(zone) ? leftStarts : rightStarts).Add(zone.StartSlot);
             }
+
+            Assert.AreEqual(25, leftStarts.Count, "좌측 후보 25개(offset 0~24)가 모두 나와야 한다.");
+            Assert.AreEqual(25, rightStarts.Count, "우측 후보 25개가 모두 나와야 한다.");
         }
 
         [Test]
@@ -98,42 +113,57 @@ namespace BlueComplex.Core.Tests
 
         private static bool IsLeft(KeyZone zone) => zone.StartSlot < 100;
 
-        [TestCase(3, 1)]
-        [TestCase(4, 2)]
-        [TestCase(5, 2)]
-        public void PlaceAll_SpreadsZonesAcrossBothSides_WhenAllCandidatesAreReachable(int zoneCount, int minPerSide)
+        [TestCase(3)]
+        [TestCase(5)]
+        public void PlaceAll_PicksEachSideWithEqualProbability_IndependentOfReach(int zoneCount)
         {
             // 시작 100, 키 턴 4번 이후 → 도달 범위 100±90 이상이라 모든 후보가 도달 가능하다.
             var turns = Enumerable.Range(0, zoneCount).Select(i => 4 + i * 2).ToArray();
+            const int seeds = 2000;
+            var rightByTurn = new int[zoneCount];
 
-            for (var seed = 0; seed < 500; seed++)
+            for (var seed = 0; seed < seeds; seed++)
             {
-                var placer = new ReachabilityKeyZonePlacer(new SystemRandomSource(seed));
-
-                var zones = placer.PlaceAll(100, turns);
+                var zones = new ReachabilityKeyZonePlacer(new SystemRandomSource(seed)).PlaceAll(100, turns);
 
                 Assert.AreEqual(zoneCount, zones.Count, $"seed={seed}: 모든 키 턴에 구역이 있어야 한다.");
-                var left = zones.Values.Count(IsLeft);
-                var right = zoneCount - left;
-                Assert.GreaterOrEqual(left, minPerSide, $"seed={seed}: 좌측 구역 {left}/{zoneCount}개 — 한쪽으로 쏠렸다.");
-                Assert.GreaterOrEqual(right, minPerSide, $"seed={seed}: 우측 구역 {right}/{zoneCount}개 — 한쪽으로 쏠렸다.");
+                for (var i = 0; i < zoneCount; i++)
+                    if (!IsLeft(zones[turns[i]])) rightByTurn[i]++;
             }
+
+            for (var i = 0; i < zoneCount; i++)
+                Assert.That(rightByTurn[i] / (double)seeds, Is.InRange(0.45, 0.55), $"턴 {turns[i]}의 우측 비율이 균등하지 않다.");
         }
 
         [Test]
-        public void PlaceAll_StillRespectsReach_WhenOneSideIsUnreachableForEarlyTurn()
+        public void PlaceAll_DoesNotForceBothSides_SoAllZonesMayLandOnOneSide()
         {
-            // 시작 20, 키 턴 1 → 도달 범위 [20,20]: 우측은 도달 불가. 분산보다 도달 가능성이 우선이어야 하고,
-            // 다른 턴(도달 범위 100±...)이 반대쪽을 맡아 분산은 유지되어야 한다.
-            for (var seed = 0; seed < 200; seed++)
+            // 좌우 분산 보장은 없다 — 구역마다 독립인 동전이므로 3개가 전부 한쪽에 몰리는 시드(이론상 25%)가 있어야 한다.
+            var turns = new[] { 4, 8, 12 };
+            var oneSided = Enumerable.Range(0, 400).Count(seed =>
             {
-                var placer = new ReachabilityKeyZonePlacer(new SystemRandomSource(seed));
+                var zones = new ReachabilityKeyZonePlacer(new SystemRandomSource(seed)).PlaceAll(100, turns);
+                return zones.Values.All(IsLeft) || zones.Values.All(z => !IsLeft(z));
+            });
 
-                var zones = placer.PlaceAll(20, new[] { 1, 6, 8 });
+            Assert.That(oneSided / 400.0, Is.InRange(0.18, 0.32), "3구역이 한쪽에 몰릴 확률은 25%여야 한다.");
+        }
 
-                Assert.IsTrue(IsLeft(zones[1]), $"seed={seed}: 턴 1의 구역은 도달 가능한 좌측이어야 한다.");
-                Assert.IsTrue(zones.Values.Any(z => !IsLeft(z)), $"seed={seed}: 다른 턴이 우측을 맡아 분산되어야 한다.");
+        [Test]
+        public void PlaceAll_SideChoiceIgnoresReach_EvenWhenOneSideIsUnreachable()
+        {
+            // 도달 범위 [10,100] → 우측 구역(131~)은 전부 도달 불가지만 우측 배정 비율은 여전히 절반이다.
+            var right = 0;
+            var total = 0;
+            for (var seed = 0; seed < 1000; seed++)
+            {
+                var zones = new ReachabilityKeyZonePlacer(new SystemRandomSource(seed), reach: new FixedReach(10, 100))
+                    .PlaceAll(80, new[] { 4, 8, 12 });
+                total += zones.Count;
+                right += zones.Values.Count(z => !IsLeft(z));
             }
+
+            Assert.That(right / (double)total, Is.InRange(0.47, 0.53));
         }
 
         [Test]
@@ -172,72 +202,54 @@ namespace BlueComplex.Core.Tests
             public (int Low, int High) Range(int startPosition, int moves) => (_low, _high);
         }
 
-        /// <summary>이동 횟수가 적은 판정 턴은 좁은 범위(좌측만), 많으면 전체를 돌려주는 테스트용 모델.</summary>
-        private sealed class WidensWithMoves : IReachModel
-        {
-            public (int Low, int High) Range(int startPosition, int moves) => moves <= 4 ? (10, 100) : (0, 200);
-        }
-
         [Test]
-        public void PlaceAll_WhenRightSideIsUnreachable_PutsEveryZoneOnTheReachableSide()
+        public void PlaceAll_WhenZonesShareOneSide_SpreadsTheirPositions()
         {
-            // 도달 범위 [10,100] → 우측 구역(131~)은 전부 도달 불가. 분산을 강제하지 않고 전부 좌측에 둔다.
-            for (var seed = 0; seed < 200; seed++)
+            // 한쪽 구간(오프셋 0~24)에 세 개가 몰린 경우 — 어느 쪽이든 서로 다른 위치로 벌려 놓아야 한다.
+            var checkedGroups = 0;
+            for (var seed = 0; seed < 600; seed++)
             {
                 var placer = new ReachabilityKeyZonePlacer(new SystemRandomSource(seed), reach: new FixedReach(10, 100));
+                var zones = placer.PlaceAll(80, new[] { 4, 8, 12 }).Values.ToList();
 
-                var zones = placer.PlaceAll(80, new[] { 4, 8, 12 });
+                foreach (var side in new[] { true, false })
+                {
+                    var group = zones.Where(z => IsLeft(z) == side).ToList();
+                    if (group.Count != 3) continue;
 
-                Assert.AreEqual(3, zones.Count);
-                Assert.IsTrue(zones.Values.All(IsLeft), $"seed={seed}: 우측이 도달 불가인데 우측 구역이 배정되었다.");
+                    checkedGroups++;
+                    var starts = group.Select(z => z.StartSlot).OrderBy(x => x).ToList();
+                    Assert.GreaterOrEqual(starts[1] - starts[0], 6, $"seed={seed}: 시작 위치 {string.Join(",", starts)} 가 너무 붙어 있다.");
+                    Assert.GreaterOrEqual(starts[2] - starts[1], 6, $"seed={seed}: 시작 위치 {string.Join(",", starts)} 가 너무 붙어 있다.");
+                    Assert.GreaterOrEqual(starts[2] - starts[0], 18, $"seed={seed}: 구간 전체에 퍼지지 않았다.");
+                }
             }
+
+            Assert.Greater(checkedGroups, 50, "한쪽에 3개가 몰리는 경우가 충분히 검사되어야 한다.");
         }
 
         [Test]
-        public void PlaceAll_WhenAllZonesShareOneSide_SpreadsTheirPositions()
+        public void MinOverlapFraction_NarrowsPositionsWithinTheSideToReachableOnes()
         {
-            // 같은 좌측 구간(오프셋 0~24)에 세 개가 놓이므로 서로 다른 위치로 벌려 놓아야 한다.
-            for (var seed = 0; seed < 300; seed++)
+            // 도달 범위 [10,160]. 우측 구역(시작 131+offset, 폭 36)이 절반(18칸) 이상 걸치려면 시작 ≤ 143(offset ≤ 12).
+            // 엄격 모드에선 우측이 뽑혀도 그 범위 안에서만, 기본(한 칸만 겹쳐도 가능)에선 더 바깥 위치까지 나온다.
+            var strictMaxStart = 0;
+            var looseMaxStart = 0;
+            for (var seed = 0; seed < 400; seed++)
             {
-                var placer = new ReachabilityKeyZonePlacer(new SystemRandomSource(seed), reach: new FixedReach(10, 100));
+                var strict = new ReachabilityKeyZonePlacer(new SystemRandomSource(seed), reach: new FixedReach(10, 160), minOverlapFraction: 0.5)
+                    .PlaceAll(80, new[] { 4, 8, 12 });
+                foreach (var zone in strict.Values.Where(z => !IsLeft(z)))
+                    strictMaxStart = System.Math.Max(strictMaxStart, zone.StartSlot);
 
-                var starts = placer.PlaceAll(80, new[] { 4, 8, 12 }).Values.Select(z => z.StartSlot).OrderBy(x => x).ToList();
-
-                Assert.GreaterOrEqual(starts[1] - starts[0], 6, $"seed={seed}: 시작 위치 {string.Join(",", starts)} 가 너무 붙어 있다.");
-                Assert.GreaterOrEqual(starts[2] - starts[1], 6, $"seed={seed}: 시작 위치 {string.Join(",", starts)} 가 너무 붙어 있다.");
-                Assert.GreaterOrEqual(starts[2] - starts[0], 18, $"seed={seed}: 구간 전체에 퍼지지 않았다.");
-            }
-        }
-
-        [Test]
-        public void PlaceAll_PutsTurnsWithOnlyOneReachableSideOnThatSide_AndSpreadsTheRest()
-        {
-            // 판정 턴 4는 좌측만 도달 가능, 8·12는 양쪽 다 가능 → 4는 좌측 고정, 8·12 중 하나는 반대쪽(우측)이어야 한다.
-            for (var seed = 0; seed < 200; seed++)
-            {
-                var placer = new ReachabilityKeyZonePlacer(new SystemRandomSource(seed), reach: new WidensWithMoves());
-
-                var zones = placer.PlaceAll(80, new[] { 4, 8, 12 });
-
-                Assert.IsTrue(IsLeft(zones[4]), $"seed={seed}: 좌측만 도달 가능한 턴 4가 우측에 배정되었다.");
-                Assert.IsTrue(!IsLeft(zones[8]) || !IsLeft(zones[12]), $"seed={seed}: 양쪽 다 도달 가능한 턴에서 분산되지 않았다.");
-            }
-        }
-
-        [Test]
-        public void MinOverlapFraction_TreatsZonesThatOnlyGrazeTheReachRangeAsUnreachable()
-        {
-            // 도달 범위 상한이 140이면 우측 구역([131~]) 중 가장 안쪽도 10칸밖에 안 걸친다(폭 36의 절반=18 미만).
-            for (var seed = 0; seed < 100; seed++)
-            {
-                var strict = new ReachabilityKeyZonePlacer(new SystemRandomSource(seed), reach: new FixedReach(10, 140), minOverlapFraction: 0.5);
-                Assert.IsTrue(strict.PlaceAll(80, new[] { 4, 8, 12 }).Values.All(IsLeft), $"seed={seed}: 끝자락만 스치는 우측 구역이 도달 가능으로 취급되었다.");
+                var loose = new ReachabilityKeyZonePlacer(new SystemRandomSource(seed), reach: new FixedReach(10, 160))
+                    .PlaceAll(80, new[] { 4, 8, 12 });
+                foreach (var zone in loose.Values.Where(z => !IsLeft(z)))
+                    looseMaxStart = System.Math.Max(looseMaxStart, zone.StartSlot);
             }
 
-            var anyOverlap = Enumerable.Range(0, 100).Any(seed =>
-                new ReachabilityKeyZonePlacer(new SystemRandomSource(seed), reach: new FixedReach(10, 140))
-                    .PlaceAll(80, new[] { 4, 8, 12 }).Values.Any(z => !IsLeft(z)));
-            Assert.IsTrue(anyOverlap, "minOverlapFraction=0(기본)이면 한 칸만 겹쳐도 도달 가능이라 우측이 배정될 수 있어야 한다.");
+            Assert.LessOrEqual(strictMaxStart, 143, "절반 미만만 걸치는 우측 위치가 도달 가능으로 취급되었다.");
+            Assert.Greater(looseMaxStart, 143, "minOverlapFraction=0(기본)이면 한 칸만 겹쳐도 도달 가능이라 더 바깥 위치도 나올 수 있어야 한다.");
         }
 
         [Test]
@@ -262,21 +274,44 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void PrototypeReach_MakesRightSideUnreachable_ForEveryQuarter()
+        public void StageFactoryPlacer_PlacesBothSidesEvenly_ForPrototypeStage()
         {
-            // 스테이지 1 카드 풀(상승 카드 5장, 각 +10)로는 시작 80에서 4번 움직여 120, 8번 이상 움직여도 130까지가 상한이라
-            // 우측 구역(131~)은 절반(18칸=148 이상) 이상 걸치지 못한다. 태그 영향력이 ±20이면 이 전제가 깨진다.
+            // 지금 카드 풀(상승 카드가 모자람)로는 우측 구역이 실질적으로 도달 불가지만, 배치는 그와 무관하게 절반씩이다.
+            // 그 밸런스 영향은 KeyReachabilityBotComparisonTest 로그의 좌/우별 성공률에서 본다.
             var table = new DefaultEmotionPolarityTable();
             var config = PrototypeContent.PrototypeStage(table);
             var zone = new HeartbeatZone();
 
-            for (var seed = 0; seed < 200; seed++)
+            var right = 0;
+            var total = 0;
+            for (var seed = 0; seed < 1000; seed++)
             {
                 var placer = StageFactory.CreateKeyPlacer(config, new SystemRandomSource(seed), zone, table);
 
                 var zones = placer.PlaceAll(Heartbeat.DefaultStartValue, config.Quarters.QuarterEndTurns());
 
-                Assert.IsTrue(zones.Values.All(IsLeft), $"seed={seed}: 도달 불가인 우측 구역이 배정되었다.");
+                total += zones.Count;
+                right += zones.Values.Count(z => !IsLeft(z));
+            }
+
+            Assert.That(right / (double)total, Is.InRange(0.47, 0.53), "우측 배치 비율");
+        }
+
+        [Test]
+        public void StageFactoryPlacer_IsReproducibleForSameSeed()
+        {
+            var table = new DefaultEmotionPolarityTable();
+            var config = PrototypeContent.PrototypeStage(table);
+
+            for (var seed = 0; seed < 50; seed++)
+            {
+                var a = StageFactory.CreateKeyPlacer(config, new SystemRandomSource(seed), new HeartbeatZone(), table)
+                    .PlaceAll(Heartbeat.DefaultStartValue, config.Quarters.QuarterEndTurns());
+                var b = StageFactory.CreateKeyPlacer(config, new SystemRandomSource(seed), new HeartbeatZone(), table)
+                    .PlaceAll(Heartbeat.DefaultStartValue, config.Quarters.QuarterEndTurns());
+
+                foreach (var turn in a.Keys)
+                    Assert.AreEqual(a[turn], b[turn], $"seed={seed} 턴 {turn}");
             }
         }
     }
