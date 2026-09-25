@@ -42,6 +42,17 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
         _WaterDistanceFade ("Water Distance Fade", Range(0, 4)) = 1.6
         _WaterScatterAngle ("Water Scatter Angle", Range(0, 160)) = 22
         _WaterLightDirection ("Water Light Direction", Range(-180, 180)) = 0
+        _WindowLightStyle ("Window Light Style", Int) = 0
+        _WindowBandWidth ("Soft Window Band Width", Range(0.003, 0.05)) = 0.016
+        _WindowBandSoftness ("Soft Window Band Softness", Range(0, 1)) = 0.8
+        _WindowBandOpacity ("Soft Window Band Opacity", Range(0, 1)) = 1
+        _WindowBandCoreBrightness ("Soft Window Band Core Brightness", Range(1, 5)) = 2
+        _WindowBandTint ("Soft Window Band Tint", Color) = (1, 0.97, 0.88, 1)
+        _WindowShaftGrouping ("Window Shaft Grouping", Range(0, 1)) = 0.75
+        _WindowShaftVerticalBias ("Window Shaft Vertical Bias", Range(0, 0.6)) = 0.52
+        _WindowShaftTopLength ("Window Shaft Top Length", Range(0.05, 1.5)) = 0.18
+        _WindowShaftBottomLength ("Window Shaft Bottom Length", Range(0.05, 1.5)) = 0.85
+        _WindowShaftAmbientStrength ("Window Shaft Ambient Strength", Range(0, 0.5)) = 0.2
         _ExcitedAmount ("Excited Amount", Range(0, 1)) = 0
         _ExcitedBlend ("Excited Tint Blend", Range(0, 1)) = 0
         _ChromaticBurst ("Transient Chromatic Burst", Range(0, 1)) = 0
@@ -129,6 +140,21 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
                 float _WaterLightDirection;
                 int _WaterSourceCount;
                 float4 _WaterSources[8];
+                int _WindowEdgeCount;
+                float4 _WindowEdges[8];
+                float4 _WindowDirections[8];
+                float4 _WindowStyles[8];
+                int _WindowLightStyle;
+                float _WindowBandWidth;
+                float _WindowBandSoftness;
+                float _WindowBandOpacity;
+                float _WindowBandCoreBrightness;
+                float4 _WindowBandTint;
+                float _WindowShaftGrouping;
+                float _WindowShaftVerticalBias;
+                float _WindowShaftTopLength;
+                float _WindowShaftBottomLength;
+                float _WindowShaftAmbientStrength;
                 float _ExcitedAmount;
                 float _ExcitedBlend;
                 float _ChromaticBurst;
@@ -335,7 +361,312 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
                 return beams;
             }
 
-            // 수중 번짐은 배경 하이라이트만 샘플링한다. 글자가 광원처럼 번지지 않게 UI는 제외.
+            // 방별 선택형: 참고 이미지의 부드러운 흰 빛 띠와 넓은 확산광.
+            // 기존 가는 광선과 별도 경로이며 창틀 바깥 반평면 제한은 동일해.
+            float3 SoftWindowBands(float2 uv)
+            {
+                float3 beams = 0.0;
+                float aspect = abs(_BlitTexture_TexelSize.y / _BlitTexture_TexelSize.x);
+                float2 pixel = uv * float2(aspect, 1.0);
+                float time = _MoodTime * max(_WaterWaveSpeed, 0.0);
+                float softness = saturate(_WindowBandSoftness);
+                int count = clamp(_WaterBeamCount, 8, 48);
+                [loop]
+                for (int edgeIndex = 0; edgeIndex < min(_WindowEdgeCount, 8); edgeIndex++)
+                {
+                    float4 edge = _WindowEdges[edgeIndex];
+                    float4 settings = _WindowDirections[edgeIndex];
+                    float2 a = edge.xy * float2(aspect, 1.0);
+                    float2 b = edge.zw * float2(aspect, 1.0);
+                    float2 outward = settings.xy;
+                    float outwardDepth = dot(pixel - a, outward);
+                    if (outwardDepth <= 0.0) continue;
+                    float reach = settings.z * 1.3 + _WindowBandWidth * _WaterBeamWidth * 6.0;
+                    if (any(pixel < min(a, b) - reach) || any(pixel > max(a, b) + reach)) continue;
+                    float2 tangent = normalize(b - a);
+                    float startFade = smoothstep(0.0, max(_WindowStyles[edgeIndex].x * 0.5, 0.002), outwardDepth);
+                    float density = pow(14.0 / (float)count, 0.65);
+                    [loop]
+                    for (int i = 0; i < count; i++)
+                    {
+                        float seed = Rand(float2(i + 13.0, edgeIndex + 41.0));
+                        float detail = Rand(float2(i + 31.0, edgeIndex + 9.0));
+                        float slot = ((float)i + lerp(0.12, 0.88, seed)) / (float)count;
+                        float along = 0.5 - 0.5 * cos(slot * 3.14159265);
+                        float lane = along * 2.0 - 1.0;
+                        float angle = lane * abs(lane) * 0.959931 + (detail - 0.5) * 0.065;
+                        float2 axis = outward * cos(angle) + tangent * sin(angle);
+                        float2 across = float2(-axis.y, axis.x);
+                        float2 relative = pixel - lerp(a, b, along);
+                        float depth = dot(relative, axis);
+                        float beamLength = settings.z * lerp(0.72, 1.0, seed);
+                        // 기울어진 광선의 시작 평면으로 자르면 창틀 바깥에 검은 쐐기 모양 빈틈이 생겨.
+                        // 폭 전체를 창틀까지 연장하고, 시작 경계는 위의 outwardDepth로만 제한해.
+                        if (depth > beamLength * 1.3) continue;
+                        float progress = max(depth, 0.0) / beamLength;
+                        // 넓은 빛 띠를 약하게 휘게 하고, 밝기만 천천히 일렁이게 해.
+                        float bend = sin(detail * 6.28318 + progress * 1.8) * beamLength * 0.008 * progress * progress;
+                        float lateral = abs(dot(relative, across) - bend);
+                        float widthVariation = lerp(1.0, lerp(0.55, 1.4, detail), saturate(_WaterWidthVariation));
+                        float bandWidth = _WindowBandWidth * widthVariation * clamp(_WaterBeamWidth, 0.1, 5.0)
+                            * sqrt(12.0 / max(_WaterLightSharpness, 2.0)) * lerp(0.8, 1.35, saturate(progress));
+                        float profile = lateral / max(bandWidth, 0.001);
+                        // 평평한 흰 심 대신 부드러운 종 모양 밝기. 머리카락 같은 선은 만들지 않아.
+                        float core = exp2(-profile * profile * lerp(5.0, 2.0, softness));
+                        float mist = exp2(-profile * profile * lerp(0.9, 0.35, softness));
+                        float shimmer = 1.0 + 0.06 * clamp(_WaterWaveStrength, 0.0, 2.0)
+                            * sin(time * lerp(0.25, 0.55, detail) + seed * 6.28318);
+                        float energy = settings.w * lerp(0.45, 0.9, seed) * density * startFade * shimmer;
+                        float fade = WaterDistanceOpacity(progress);
+                        beams.x += core * energy * fade * 0.55;
+                        beams.y += mist * energy * fade * 0.65;
+                        beams.z += mist * energy * WaterDistanceOpacity(progress / 1.3) * 0.18;
+                    }
+                }
+                return beams;
+            }
+
+            // 창문을 정면에서 볼 때의 빛. 기존 테두리 출발과 중앙 출발을 방별로 선택해.
+            float3 RoomWindowShafts(float2 uv, bool fromCenter)
+            {
+                float3 beams = 0.0;
+                float cornerLight = 0.0;
+                float aspect = abs(_BlitTexture_TexelSize.y / _BlitTexture_TexelSize.x);
+                float2 scale = float2(aspect, 1.0);
+                float2 pixel = uv * scale;
+                float time = _MoodTime * max(_WaterWaveSpeed, 0.0);
+                int count = clamp((int)round((float)_WaterBeamCount * 0.36), 4, 7);
+                float2 windowCenter = 0.0;
+                if (fromCenter)
+                {
+                    [loop]
+                    for (int centerEdge = 0; centerEdge < min(_WindowEdgeCount, 8); centerEdge++)
+                        windowCenter += (_WindowEdges[centerEdge].xy + _WindowEdges[centerEdge].zw) * scale;
+                    windowCenter /= max(2.0 * _WindowEdgeCount, 1.0);
+                    windowCenter += float2(0.0, _WindowShaftVerticalBias * 0.03);
+                }
+                [loop]
+                for (int edgeIndex = 0; edgeIndex < min(_WindowEdgeCount, 8); edgeIndex++)
+                {
+                    float4 edge = _WindowEdges[edgeIndex];
+                    float4 settings = _WindowDirections[edgeIndex];
+                    float2 a = edge.xy * scale;
+                    float2 b = edge.zw * scale;
+                    float2 outward = settings.xy;
+                    float outwardDepth = dot(pixel - a, outward);
+                    float reach = max(max(settings.z, _WindowShaftTopLength), _WindowShaftBottomLength)
+                        * 1.5 + _WindowBandWidth * 4.0;
+                    if (fromCenter) reach += distance(windowCenter, (a + b) * 0.5);
+                    if (any(pixel < min(a, b) - reach) || any(pixel > max(a, b) + reach)) continue;
+                    // 대각선 줄기와 변의 첫 줄기 사이에 생기는 검은 쐐기를 부드럽게 연결해.
+                    // 모서리 경계 안쪽 몇 픽셀까지 부드럽게 덮어, 맞닿지 않는 윤곽에도 검은 홈이 남지 않게 해.
+                    float cornerDistance = min(distance(pixel, a), distance(pixel, b));
+                    float cornerRadius = max(_WindowBandWidth * 5.5, settings.z * 0.4);
+                    float cornerProfile = exp2(-pow(cornerDistance / cornerRadius, 2.0) * 1.5);
+                    float cornerFade = smoothstep(-0.012, 0.012, outwardDepth);
+                    if (!fromCenter) cornerLight = max(cornerLight, cornerProfile * settings.w * cornerFade);
+                    if (!fromCenter && outwardDepth <= 0.0) continue;
+                    float2 tangent = normalize(b - a);
+                    float edgeFade = fromCenter ? 1.0
+                        : smoothstep(0.0, max(_WindowStyles[edgeIndex].x * 0.5, 0.006), outwardDepth);
+                    int edgeCount = clamp(count + (int)floor(Rand(float2(edgeIndex + 51.0, 19.0)) * 3.0) - 1, 3, 8);
+                    float groupShift = (Rand(float2(edgeIndex + 7.0, 73.0)) - 0.5) * 0.1;
+                    [loop]
+                    for (int i = 0; i < edgeCount + 2; i++)
+                    {
+                        float seed = Rand(float2(i + 17.0, edgeIndex + 23.0));
+                        float detail = Rand(float2(i + 43.0, edgeIndex + 7.0));
+                        bool corner = i == 0 || i == edgeCount + 1;
+                        float along = corner ? (i == 0 ? 0.0 : 1.0) : 0.5;
+                        if (!corner)
+                        {
+                            int index = i - 1;
+                            int firstSize = edgeCount / 2;
+                            bool firstGroup = index < firstSize;
+                            int localIndex = firstGroup ? index : index - firstSize;
+                            int groupSize = firstGroup ? firstSize : edgeCount - firstSize;
+                            float regular = ((float)index + 0.5 + (seed - 0.5) * 0.12) / (float)edgeCount;
+                            float clustered = (firstGroup ? 0.28 : 0.72) + groupShift
+                                + (((float)localIndex + 0.5) / (float)groupSize - 0.5) * (firstGroup ? 0.14 : 0.18)
+                                + (seed - 0.5) * 0.025;
+                            along = lerp(regular, clustered, saturate(_WindowShaftGrouping));
+                        }
+                        // 중앙 출발일 때는 각 줄기가 실제 창틀의 다른 지점을 통과해.
+                        // 기존 테두리 출발은 이전 각도 계산을 유지해.
+                        float angle = corner ? (i == 0 ? -0.70 : 0.70)
+                            : (along * 2.0 - 1.0) * 0.28 + (detail - 0.5) * 0.08;
+                        float2 target = lerp(a, b, along);
+                        float2 axis = fromCenter
+                            ? normalize(target - windowCenter)
+                            : outward * cos(angle) + tangent * sin(angle);
+                        float2 across = float2(-axis.y, axis.x);
+                        float2 origin = fromCenter ? windowCenter : lerp(a, b, along)
+                            + float2(0.0, _WindowShaftVerticalBias * 0.03);
+                        float2 relative = pixel - origin;
+                        float depth = dot(relative, axis);
+                        float edgeLength = lerp(settings.z, _WindowShaftTopLength, saturate(outward.y));
+                        edgeLength = lerp(edgeLength, _WindowShaftBottomLength, saturate(-outward.y));
+                        float launchDepth = fromCenter ? max(dot((a + b) * 0.5 - windowCenter, outward), 0.0) : 0.0;
+                        float beamLength = launchDepth + edgeLength * lerp(0.68, 1.24, detail);
+                        // 광선의 시작 평면으로 폭을 자르지 않아 창틀에 검은 쐐기가 생기지 않아.
+                        if ((fromCenter && depth <= 0.0) || depth > beamLength * 1.15) continue;
+                        float progress = fromCenter
+                            ? max(depth - launchDepth, 0.0) / max(beamLength - launchDepth, 0.005)
+                            : depth / max(beamLength, 0.005);
+                        float widthVariation = lerp(1.0, lerp(0.38, 1.8, seed), saturate(_WaterWidthVariation));
+                        float width = _WindowBandWidth * clamp(_WaterBeamWidth, 0.1, 5.0)
+                            * widthVariation * lerp(0.85, 1.32, saturate(progress))
+                            * (1.0 + 0.08 * sin(progress * 5.0 + detail * 6.28318));
+                        float bend = sin(detail * 6.28318 + progress * 1.8)
+                            * beamLength * 0.01 * progress * progress;
+                        float profile = abs(dot(relative, across) - bend) / max(width, 0.001);
+                        float core = exp2(-profile * profile * lerp(2.8, 1.65, saturate(_WindowBandSoftness)));
+                        float haze = exp2(-profile * profile * (fromCenter ? 0.9 : 0.42));
+                        float shimmer = 1.0 + sin(time * 0.35 + seed * 6.28318)
+                            * clamp(_WaterWaveStrength, 0.0, 2.0) * 0.035;
+                        float energy = settings.w * edgeFade * shimmer
+                            * (1.0 - outward.y * _WindowShaftVerticalBias * 0.75)
+                            * lerp(0.35, 1.5, seed) * (corner ? (fromCenter ? 0.4 : 0.76) : 1.0)
+                            * (fromCenter ? 0.28 : 1.0);
+                        float fade = WaterDistanceOpacity(progress);
+                        beams.x += core * energy * fade * 0.67;
+                        beams.y += haze * energy * fade * 0.17;
+                        beams.z += haze * energy * WaterDistanceOpacity(progress / 1.2) * 0.045;
+                    }
+                }
+                beams.x += cornerLight * 0.45;
+                beams.y += cornerLight;
+                return beams;
+            }
+
+            // 광선 사이에도 남는 옅은 산란광. 창문 윤곽까지의 거리로만 감쇠해 줄기 간격을 메우되,
+            // 줄기 자체의 밝기와 모양은 바꾸지 않아.
+            float RoomWindowAmbient(float2 uv)
+            {
+                if (_WindowEdgeCount <= 0 || _WaterLightStrength <= 0.001
+                    || _WindowShaftAmbientStrength <= 0.001) return 0.0;
+                float aspect = abs(_BlitTexture_TexelSize.y / _BlitTexture_TexelSize.x);
+                float2 pixel = uv * float2(aspect, 1.0);
+                float nearest = 1000.0;
+                float outside = -1000.0;
+                float radius = 0.12;
+                float strength = 0.0;
+                [loop]
+                for (int edgeIndex = 0; edgeIndex < min(_WindowEdgeCount, 8); edgeIndex++)
+                {
+                    float4 edge = _WindowEdges[edgeIndex];
+                    float4 settings = _WindowDirections[edgeIndex];
+                    float2 a = edge.xy * float2(aspect, 1.0);
+                    float2 b = edge.zw * float2(aspect, 1.0);
+                    float2 segment = b - a;
+                    float along = saturate(dot(pixel - a, segment) / max(dot(segment, segment), 0.000001));
+                    float edgeDistance = distance(pixel, a + segment * along);
+                    if (edgeDistance < nearest)
+                    {
+                        nearest = edgeDistance;
+                        float edgeLength = lerp(settings.z, _WindowShaftTopLength, saturate(settings.y));
+                        edgeLength = lerp(edgeLength, _WindowShaftBottomLength, saturate(-settings.y));
+                        // Window Glow는 위쪽 광선 길이와 무관하게 네 변 모두 같은 폭으로 번져.
+                        // 위쪽 길이가 짧더라도 위·왼쪽 위 모서리가 어두워지지 않게 해.
+                        radius = _WindowLightStyle == 4 ? 0.12
+                            : _WindowLightStyle == 3 ? clamp(edgeLength * 0.18, 0.04, 0.12)
+                            : max(edgeLength * 1.25, 0.12);
+                    }
+                    outside = max(outside, dot(pixel - a, settings.xy));
+                    strength = max(strength, settings.w);
+                }
+                float borderFade = smoothstep(0.0, 0.025, outside);
+                float falloff = exp2(-pow(nearest / radius, 2.0) * 1.5);
+                return borderFade * falloff * strength * saturate(_WindowShaftAmbientStrength);
+            }
+
+            // 창문은 지정된 테두리에서만 출발해. 어두운 창틀도 발광 경계로 쓸 수 있도록 밝기 추출과 분리해.
+            // 변마다 고정된 수의 광선을 분배하며 전구 묶음을 지점마다 복제하지 않아.
+            float3 WindowBeams(float2 uv)
+            {
+                float3 beams = 0.0;
+                if (_WindowEdgeCount <= 0 || _WaterLightStrength <= 0.001) return beams;
+                [branch]
+                if (_WindowLightStyle == 4) return beams;
+                [branch]
+                if (_WindowLightStyle == 1) return SoftWindowBands(uv);
+                [branch]
+                if (_WindowLightStyle == 2) return RoomWindowShafts(uv, false);
+                [branch]
+                if (_WindowLightStyle == 3) return RoomWindowShafts(uv, true);
+                float aspect = abs(_BlitTexture_TexelSize.y / _BlitTexture_TexelSize.x);
+                float2 scale = float2(aspect, 1.0);
+                float waveTime = _MoodTime * max(_WaterWaveSpeed, 0.0);
+                int count = clamp(_WaterBeamCount, 8, 48);
+                [loop]
+                for (int edgeIndex = 0; edgeIndex < min(_WindowEdgeCount, 8); edgeIndex++)
+                {
+                    float4 edge = _WindowEdges[edgeIndex];
+                    float4 settings = _WindowDirections[edgeIndex];
+                    float width = max(_WindowStyles[edgeIndex].x, 0.001);
+                    float2 a = edge.xy * scale;
+                    float2 b = edge.zw * scale;
+                    float2 pixel = uv * scale;
+                    float reach = settings.z * 1.25 + width * 4.0;
+                    if (any(pixel < min(a, b) - reach) || any(pixel > max(a, b) + reach)) continue;
+                    float2 outward = settings.xy;
+                    // 심·주변 산란·잔광을 모두 창틀의 바깥 반평면에 제한해. 안쪽을 가로지르는 빛은 없어.
+                    float outwardDepth = dot(pixel - a, outward);
+                    if (outwardDepth <= 0.0) continue;
+                    float edgeFade = smoothstep(0.0, max(width * 0.15, abs(_BlitTexture_TexelSize.y)), outwardDepth);
+                    float2 tangent = normalize(b - a);
+                    float density = pow(24.0 / (float)count, 0.65);
+                    [loop]
+                    for (int i = 0; i < count; i++)
+                    {
+                        float seed = Rand(float2(i + 13.0, edgeIndex + 41.0));
+                        float detail = Rand(float2(i + 31.0, edgeIndex + 9.0));
+                        // 출발점은 고정하되 모서리 가까이에 더 배치해서 대각선 구역을 메워.
+                        float slot = ((float)i + lerp(0.08, 0.92, seed)) / (float)count;
+                        float along = 0.5 - 0.5 * cos(slot * 3.14159265);
+                        float2 origin = lerp(a, b, along);
+                        // 중앙은 바깥 법선, 모서리는 약 55도까지 펼쳐 이웃 변의 빛과 대각선에서 이어져.
+                        // 기본 방향 주위에만 작은 편차와 느린 흔들림을 줘. 안쪽으로 뒤집히지는 않아.
+                        float lane = along * 2.0 - 1.0;
+                        float angle = lane * abs(lane) * 0.959931
+                            + (detail - 0.5) * 0.12
+                            + sin(waveTime * 0.18 + seed * 6.28318)
+                                * 0.025 * clamp(_WaterWaveStrength, 0.0, 2.0);
+                        float2 beamAxis = outward * cos(angle) + tangent * sin(angle);
+                        float2 beamAcross = float2(-beamAxis.y, beamAxis.x);
+                        float2 relative = pixel - origin;
+                        float depth = dot(relative, beamAxis);
+                        float beamLength = settings.z * lerp(0.52, 1.0, seed);
+                        if (depth <= 0.0 || depth > beamLength * 1.25) continue;
+                        float progress = depth / beamLength;
+                        // 곧은 빗살 느낌만 누그러뜨리는 얕은 휨. 시작점과 바깥 반평면은 유지해.
+                        float bend = sin(progress * 2.2 + detail * 6.28318 + waveTime * 0.12)
+                            * settings.z * 0.012 * progress * progress;
+                        float signedLateral = dot(relative, beamAcross) - bend;
+                        float lateral = abs(signedLateral);
+                        float widthClass = i % 5 == 0 ? lerp(1.6, 2.5, detail) : lerp(0.25, 0.85, detail);
+                        float baseWidth = max(width * 0.18 * lerp(1.0, widthClass, _WaterWidthVariation)
+                            * sqrt(12.0 / max(_WaterLightSharpness, 2.0)), 0.0005);
+                        baseWidth *= 1.0 + saturate(progress) * 0.55;
+                        float coreWidth = baseWidth * 0.35 * clamp(_WaterBeamWidth, 0.1, 5.0);
+                        float feather = max(baseWidth * 0.25, abs(_BlitTexture_TexelSize.y) * 0.75);
+                        float core = 1.0 - smoothstep(coreWidth, coreWidth + feather, lateral);
+                        float shimmer = 1.0 + 0.08 * clamp(_WaterWaveStrength, 0.0, 2.0)
+                            * sin(waveTime * lerp(0.65, 1.5, detail) * 0.6 + seed * 6.28318);
+                        float energy = settings.w * lerp(0.55, 1.0, detail) * density * shimmer * edgeFade * 0.5;
+                        float fade = WaterDistanceOpacity(progress);
+                        beams.x += core * energy * fade;
+                        float halo = lateral / max(baseWidth * 3.2, 0.001);
+                        beams.y += exp2(-halo * halo * 3.0) * energy * fade;
+                        float tail = lateral / max(width * 0.7 + max(depth, 0.0) * 0.04, 0.001);
+                        beams.z += exp2(-tail * tail * 2.0) * energy * 0.35
+                            * WaterDistanceOpacity(progress / 1.25);
+                    }
+                }
+                return beams;
+            }
+
+            // UI는 산란광 합성에서 제외해.
             float3 Underwater(float2 uv, float3 col)
             {
                 float uiAlpha = SAMPLE_TEXTURE2D(_UITex, sampler_UITex, uv).a;
@@ -354,14 +685,24 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
                 float3 blue = luminance * _DepressedTint.rgb * 1.55;
                 float3 tinted = lerp(crisp, blue, _BlueTintStrength * (1.0 - whiteLight));
                 tinted = lerp(tinted, luminance.xxx, whiteLight * 0.55);
-                float3 beams = WaterBeams(uv);
+                float3 beams = WaterBeams(uv) + WindowBeams(uv);
                 // 흰 중심은 선명하게, 청록 외곽은 넓고 옅게. 균일한 삼각형 면은 만들지 않는다.
                 float core = 1.0 - exp2(-beams.x * _WaterLightStrength * 3.5);
                 float haze = 0.4 * (1.0 - exp2(-beams.y * _WaterLightStrength * _WaterScatterStrength * 2.0));
                 float afterglow = 0.35 * (1.0 - exp2(-beams.z * _WaterLightStrength * _WaterAfterglowStrength * 2.0));
-                tinted += (float3(0.84, 0.96, 1.0) * core
+                float3 scattering = float3(0.84, 0.96, 1.0) * core
                     + float3(0.24, 0.64, 0.78) * haze
-                    + float3(0.3, 0.7, 0.82) * afterglow) * (1.0 - uiAlpha);
+                    + float3(0.3, 0.7, 0.82) * afterglow;
+                [branch]
+                if (_WindowLightStyle == 1 || _WindowLightStyle == 2 || _WindowLightStyle == 3 || _WindowLightStyle == 4)
+                    scattering = _WindowBandTint.rgb * (core * clamp(_WindowBandCoreBrightness, 1.0, 5.0)
+                        + haze * 0.85 + afterglow * 0.7)
+                        * saturate(_WindowBandOpacity);
+                [branch]
+                if (_WindowLightStyle == 2 || _WindowLightStyle == 3 || _WindowLightStyle == 4)
+                    scattering += _WindowBandTint.rgb * RoomWindowAmbient(uv)
+                        * saturate(_WindowBandOpacity);
+                tinted += scattering * (1.0 - uiAlpha);
                 return lerp(col, tinted, _DepressedAmount);
             }
 
