@@ -17,7 +17,7 @@ namespace BlueComplex.Core.Tests
     ///
     /// 판단은 근시안이다: 다음에 낼 카드 한 장의 결과만 본다(손패에서 가장 좋은 카드). 각 아이템은 자기 효과를 이렇게 흉내 낸다 —
     /// 감정적 설득(스테이지가 지정한 컴플렉스 무시), 기억 공감(슬픔 1씩 제거 + 환각), 무관심(타인 결과의 침체 감정 무시 + 무력), 공존감(타인 결과에 행복 1), 논리적 설득(중복 제거 + 랜덤 특성 하나 제거 — 지워질 수 있는 경우의 평균), 사마리아인(침체면 +10, 무력),
-    /// 심호흡(흥분이면 -10, 무력), 자아비대(결과 감정 전체 x2), 명상(흥분 감정이 침체보다 많으면 슬픔 +1, 예민),
+    /// 심호흡(흥분이면 -10, 무력), 자아비대(결과 감정 전체 x2), 광기(x3), 명상(흥분 감정이 침체보다 많으면 슬픔 +1, 예민),
     /// 극복(고른 컴플렉스가 없다고 보고 계산 — 지속이 줄어드는 만큼의 이득은 다음 턴 이후라 근사), 회상·선택적 기억(손패가 목표에서 멀어질 때만 무작위 교체).
     /// 이득이 <see cref="MinGain"/> 미만이면 쓰지 않는다.
     /// </summary>
@@ -36,7 +36,7 @@ namespace BlueComplex.Core.Tests
             public bool IgnoreDepressedTowardOther;
             public bool AddHappinessTowardOther;
             public bool Collapse;
-            public bool DoubleEmotions;
+            public int EmotionFactor = 1;
             public bool MeditateSadness;
             public string ExtraTrait;
             public string RemovedTrait;
@@ -122,7 +122,9 @@ namespace BlueComplex.Core.Tests
                         new Hypothesis { HeartbeatDelta = lowered, ExtraTrait = PrototypeContent.TraitLethargy }, zone);
                 }
                 case "item_ego_inflation":
-                    return baseline - BestDistance(session, new Hypothesis { DoubleEmotions = true }, zone);
+                    return baseline - BestDistance(session, new Hypothesis { EmotionFactor = 2 }, zone);
+                case "item_madness":
+                    return baseline - BestDistance(session, new Hypothesis { EmotionFactor = 3 }, zone);
                 case "item_meditation":
                     return baseline - BestDistance(session,
                         new Hypothesis { MeditateSadness = true, ExtraTrait = PrototypeContent.TraitSensitive }, zone);
@@ -224,9 +226,9 @@ namespace BlueComplex.Core.Tests
 
             if (hypothesis.Collapse) final.CollapseDuplicates();
 
-            if (hypothesis.DoubleEmotions)
+            if (hypothesis.EmotionFactor > 1)
             {
-                foreach (var (emotion, count) in final.Emotions.ToList()) final.AddEmotion(emotion, count);
+                foreach (var (emotion, count) in final.Emotions.ToList()) final.AddEmotion(emotion, count * (hypothesis.EmotionFactor - 1));
             }
 
             if (hypothesis.MeditateSadness)

@@ -36,7 +36,7 @@ namespace BlueComplex.UI.Presentation
 
         /// <summary>
         /// 이 컴플렉스의 행을 한 번 빛나게 한다. 행을 못 찾으면(같은 턴에 만료돼 이미 행이 없다) false — 호출자는 조용히 건너뛴다.
-        /// 어느 컴플렉스를 어떤 순서(우선순위, InterpretationResult.Steps가 이미 그 순서다)로 빛낼지, 그 사이에 무엇을 보여줄지(이벤트 대사)는
+        /// 어느 컴플렉스를 어떤 순서(평가 순서, InterpretationResult.Steps가 이미 그 순서다)로 빛낼지, 그 사이에 무엇을 보여줄지(이벤트 대사)는
         /// Presenter가 쥔다. TickDurations/스폰이 Resolve 이후에 일어나므로 행 배치는 Steps가 계산됐을 때와 다를 수 있어 인덱스가 아니라
         /// ComplexInstance 참조로 찾는다 — 호출 전에 Refresh()로 최신 보드 상태를 먼저 반영해 둬야 한다.
         /// </summary>

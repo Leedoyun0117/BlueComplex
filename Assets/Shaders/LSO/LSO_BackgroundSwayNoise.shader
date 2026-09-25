@@ -39,7 +39,8 @@ Shader "BlueComplex/LSO/BackgroundSwayNoise"
         [Header(Per Blade)]
         _BladeStrength ("Per-Blade Sway X (UV units)", Range(0, 0.08)) = 0.015
         _BladeLift ("Per-Blade Sway Y (UV units)", Range(0, 0.06)) = 0.008
-        _BladeVariation ("Per-Blade Variation", Range(0, 60)) = 18
+        _BladeVariation ("Per-Blade Bands (roughly blade count)", Range(1, 60)) = 18
+        _BladeRandom ("Per-Blade Randomness", Range(0, 1)) = 1
 
         [Header(Noise)]
         [NoScaleOffset] _NoiseTex ("Wind Noise (R channel)", 2D) = "gray" {}
@@ -107,6 +108,7 @@ Shader "BlueComplex/LSO/BackgroundSwayNoise"
                 half _BladeStrength;
                 half _BladeLift;
                 half _BladeVariation;
+                half _BladeRandom;
             CBUFFER_END
 
             // 두 패스가 같은 식을 써야 그림자가 본체를 따라온다. 고칠 땐 아래 그림자 패스의 같은 함수도 같이 고칠 것.
@@ -134,8 +136,9 @@ Shader "BlueComplex/LSO/BackgroundSwayNoise"
             //
             // 쿼드는 정점이 4개뿐이라 정점만 밀어서는 판 전체가 한 덩어리로 기울 수밖에 없다 — 그림 안에 잎이
             // 여러 개여도 뭉쳐서 움직인다. 그래서 정점이 아니라 "텍스처에서 읽어오는 자리"를 픽셀마다 다르게 민다.
-            // 가로 위치(u)를 위상에 섞으므로 u가 다른 잎은 서로 어긋난 박자로 흔들린다. _BladeVariation 이
-            // 클수록 이웃한 잎끼리 더 많이 어긋난다(대략 잎 개수에 맞추면 자연스럽다).
+            // 가로를 _BladeVariation 개의 칸으로 나누고 칸마다 난수로 위상·진폭·속도를 흩는다. 대략 잎 개수에
+            // 맞추면 잎 하나가 칸 하나를 차지해 제각기 논다. _BladeRandom 을 0으로 내리면 난수를 끄고
+            // 가로 위치에 비례하는 규칙적인 위상으로 돌아간다(잔물결처럼 한 방향으로 쓸린다).
             //
             // 가로(_BladeStrength)와 세로(_BladeLift)를 따로 준다. 세로는 위상과 속도를 어긋나게 둬서
             // 잎 끝이 직선이 아니라 타원을 그리며 돈다 — 가로만 있으면 좌우로 쓸리기만 해서 뻣뻣해 보인다.
@@ -146,11 +149,41 @@ Shader "BlueComplex/LSO/BackgroundSwayNoise"
             // 큰 움직임은 정점 쪽(_WindStrength)에 맡기고 여기선 결만 준다.
             //
             // 두 패스가 같은 식을 써야 그림자 실루엣이 본체와 맞는다 — 그림자 패스의 같은 함수도 같이 고칠 것.
+            float LSO_Hash11(float n)
+            {
+                return frac(sin(n * 127.1) * 43758.5453);
+            }
+
+            // 1D 밸류 노이즈 — 정수 칸마다 임의값을 하나씩 뽑고 그 사이를 부드럽게 잇는다.
+            // 칸 값을 그대로 쓰면(계단) 칸 경계에서 잎이 좌우로 찢어지므로 반드시 부드럽게 이어야 한다.
+            // 텍스처가 필요 없어 노이즈 맵을 안 물려도 잎별 랜덤이 동작한다.
+            float LSO_ValueNoise1D(float x)
+            {
+                float i = floor(x);
+                float f = frac(x);
+                f = f * f * (3.0 - 2.0 * f);
+                return lerp(LSO_Hash11(i), LSO_Hash11(i + 1.0), f);
+            }
+
             float2 WarpBladeUV(float2 uv)
             {
                 float weight = pow(saturate(uv.y), _SwayFalloff);
-                float t = _Time.y * _WindSpeed;
-                float seed = uv.x * _BladeVariation;
+
+                // 가로를 _BladeVariation 개의 칸으로 나누고 칸마다 다른 난수를 뽑는다.
+                // 오프셋(37.7, 91.3)은 세 값이 서로 상관되지 않게 띄워 둔 것이다 — 같은 자리를 읽으면 셋이 함께 움직인다.
+                float bands = uv.x * _BladeVariation;
+                float rPhase = LSO_ValueNoise1D(bands);
+                float rAmp   = LSO_ValueNoise1D(bands + 37.7);
+                float rSpeed = LSO_ValueNoise1D(bands + 91.3);
+
+                // _BladeRandom 0 이면 예전처럼 가로 위치에 비례하는 규칙적 위상, 1 이면 칸마다 임의 위상.
+                float seed = lerp(uv.x * _BladeVariation, rPhase * 6.2831853, _BladeRandom);
+
+                // 속도까지 흩어야 잎들이 영영 다시 맞아떨어지지 않는다 — 위상만 다르면 주기가 같아 언젠가 다시 겹친다.
+                float speedJitter = lerp(1.0, lerp(0.75, 1.30, rSpeed), _BladeRandom);
+                float ampJitter = lerp(1.0, lerp(0.55, 1.45, rAmp), _BladeRandom);
+
+                float t = _Time.y * _WindSpeed * speedJitter;
 
                 float waveX = sin(t + seed) * 0.65 + sin(t * 1.37 + seed * 1.9 + 2.1) * 0.35;
 
@@ -162,7 +195,7 @@ Shader "BlueComplex/LSO/BackgroundSwayNoise"
                 // 노이즈를 안 물리면 기본값 gray(0.5) → 배율이 정확히 1이라 아무 영향이 없다(잎별 흔들림은 그대로 동작한다).
                 float gust = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex,
                     float2(uv.x * _NoiseScale - _Time.y * _NoiseScroll, 0.5)).r;
-                float gustScale = lerp(1.0, gust * 2.0, _NoiseInfluence);
+                float gustScale = lerp(1.0, gust * 2.0, _NoiseInfluence) * ampJitter;
                 waveX *= gustScale;
                 waveY *= gustScale;
 
@@ -285,6 +318,7 @@ Shader "BlueComplex/LSO/BackgroundSwayNoise"
                 half _BladeStrength;
                 half _BladeLift;
                 half _BladeVariation;
+                half _BladeRandom;
             CBUFFER_END
 
             float3 _LightDirection;
@@ -311,11 +345,41 @@ Shader "BlueComplex/LSO/BackgroundSwayNoise"
             }
 
             // 본체 패스와 같은 식 — 그림자 실루엣이 잎별 흔들림을 따라온다. 한쪽만 고치면 그림자 모양이 어긋난다.
+            float LSO_Hash11(float n)
+            {
+                return frac(sin(n * 127.1) * 43758.5453);
+            }
+
+            // 1D 밸류 노이즈 — 정수 칸마다 임의값을 하나씩 뽑고 그 사이를 부드럽게 잇는다.
+            // 칸 값을 그대로 쓰면(계단) 칸 경계에서 잎이 좌우로 찢어지므로 반드시 부드럽게 이어야 한다.
+            // 텍스처가 필요 없어 노이즈 맵을 안 물려도 잎별 랜덤이 동작한다.
+            float LSO_ValueNoise1D(float x)
+            {
+                float i = floor(x);
+                float f = frac(x);
+                f = f * f * (3.0 - 2.0 * f);
+                return lerp(LSO_Hash11(i), LSO_Hash11(i + 1.0), f);
+            }
+
             float2 WarpBladeUV(float2 uv)
             {
                 float weight = pow(saturate(uv.y), _SwayFalloff);
-                float t = _Time.y * _WindSpeed;
-                float seed = uv.x * _BladeVariation;
+
+                // 가로를 _BladeVariation 개의 칸으로 나누고 칸마다 다른 난수를 뽑는다.
+                // 오프셋(37.7, 91.3)은 세 값이 서로 상관되지 않게 띄워 둔 것이다 — 같은 자리를 읽으면 셋이 함께 움직인다.
+                float bands = uv.x * _BladeVariation;
+                float rPhase = LSO_ValueNoise1D(bands);
+                float rAmp   = LSO_ValueNoise1D(bands + 37.7);
+                float rSpeed = LSO_ValueNoise1D(bands + 91.3);
+
+                // _BladeRandom 0 이면 예전처럼 가로 위치에 비례하는 규칙적 위상, 1 이면 칸마다 임의 위상.
+                float seed = lerp(uv.x * _BladeVariation, rPhase * 6.2831853, _BladeRandom);
+
+                // 속도까지 흩어야 잎들이 영영 다시 맞아떨어지지 않는다 — 위상만 다르면 주기가 같아 언젠가 다시 겹친다.
+                float speedJitter = lerp(1.0, lerp(0.75, 1.30, rSpeed), _BladeRandom);
+                float ampJitter = lerp(1.0, lerp(0.55, 1.45, rAmp), _BladeRandom);
+
+                float t = _Time.y * _WindSpeed * speedJitter;
 
                 float waveX = sin(t + seed) * 0.65 + sin(t * 1.37 + seed * 1.9 + 2.1) * 0.35;
 
@@ -325,7 +389,7 @@ Shader "BlueComplex/LSO/BackgroundSwayNoise"
 
                 float gust = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex,
                     float2(uv.x * _NoiseScale - _Time.y * _NoiseScroll, 0.5)).r;
-                float gustScale = lerp(1.0, gust * 2.0, _NoiseInfluence);
+                float gustScale = lerp(1.0, gust * 2.0, _NoiseInfluence) * ampJitter;
                 waveX *= gustScale;
                 waveY *= gustScale;
 

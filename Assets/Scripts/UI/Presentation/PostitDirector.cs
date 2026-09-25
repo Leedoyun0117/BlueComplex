@@ -14,6 +14,7 @@ namespace BlueComplex.UI.Presentation
     ///
     /// 일반 턴: 두 포스트잇이 0.1초 시차로 떼어짐 → 글자 쓰는 소리(그 사이 내용 갱신) → 갱신된 포스트잇이 붙음.
     /// 키 턴: 포스트잇이 떼어지며 화면이 어두워짐 → 나츠 독백 → 화면이 다시 밝아지며 포스트잇이 붙음.
+    /// 심박수 변화: 포스트잇이 떼어짐 → (<see cref="HeartbeatFocusDirector"/>: 표시기로 확대 → 심박수 소리 → 잦아들며 복귀) → 새 정보의 포스트잇이 붙음.
     ///
     /// 두 포스트잇의 위치는 이미 잡혀 있고(컴플렉스: 프리팹, 대화: QuarterHud) 이 클래스는 그 <see cref="Postit"/>만 찾아 움직인다.
     /// MainHud.prefab에 넣지 않고 처음 필요할 때 캔버스 아래에 짓는다(QuarterHud와 같은 방식).
@@ -41,24 +42,39 @@ namespace BlueComplex.UI.Presentation
         /// <summary>
         /// 포스트잇을 떼고, 그 사이에 <paramref name="refreshContent"/>로 내용을 갱신하고, 다시 붙인다. 이 코루틴이 끝나면 입력이 가능하다.
         /// <paramref name="monologue"/>가 비어 있지 않으면 키 턴 연출(암전 + 독백)이다.
+        /// <paramref name="whilePeeled"/>가 있으면 심박수 변화 연출이다 — 포스트잇이 떼어진 사이에 그 코루틴(카메라 확대 등)이 끼고, 글자 쓰는 소리는 없다
+        /// (내용은 떼어진 직후 고쳐 두므로, 확대된 화면에 이미 새 정보가 보인다). 키 턴과 겹치면 확대가 끝난 뒤에 암전이 시작된다 — 확대 화면이 어두워지지 않게.
         /// </summary>
-        public IEnumerator PlayRefresh(string speaker, string monologue, Action refreshContent)
+        public IEnumerator PlayRefresh(string speaker, string monologue, Action refreshContent, IEnumerator whilePeeled = null)
         {
             var settings = UiMotion.Settings;
             var postits = FindPostits();
             var keyTurn = !string.IsNullOrEmpty(monologue);
+            var focused = whilePeeled != null;
 
-            var dim = keyTurn ? Overlay.FadeIn() : null;
+            var dim = keyTurn && !focused ? Overlay.FadeIn() : null;
 
             yield return Staggered(postits, postit => postit.Peel(), settings.postitStagger);
             if (dim != null && dim.IsActive()) yield return dim.WaitForCompletion(true);
 
-            if (keyTurn)
+            if (focused)
             {
                 refreshContent();
+                yield return whilePeeled;
+
+                if (keyTurn)
+                {
+                    dim = Overlay.FadeIn();
+                    if (dim.IsActive()) yield return dim.WaitForCompletion(true);
+                }
+            }
+
+            if (keyTurn)
+            {
+                if (!focused) refreshContent();
                 yield return Overlay.PlayMonologue(speaker, monologue);
             }
-            else
+            else if (!focused)
             {
                 UiSoundHooks.Play(UiSoundCue.Write);
                 refreshContent();

@@ -151,11 +151,29 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.Audio.SoundManager
   _library: {fileID: 0}
   _voices: 6
+  _mixer: {fileID: 0}
   _sameQueueCooldown: 0.09
   _bedCrossfade: 0.6
   _ambientFadeIn: 2
   _ambientFadeOut: 2.5
   _ambientLoopSeam: 3
+  _heartbeatFocusGain: 2
+  _ambientDuckWhenFocused: 0.3
+--- !u!4 &15954282
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 15954280}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &15954283
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -173,21 +191,6 @@ MonoBehaviour:
   _sfxSlider: {fileID: 0}
   _bgmSlider: {fileID: 0}
   _ambientSlider: {fileID: 0}
---- !u!4 &15954282
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 15954280}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &95494120
 GameObject:
   m_ObjectHideFlags: 0

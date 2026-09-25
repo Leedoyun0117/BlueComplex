@@ -33,13 +33,27 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: 039018f5d1d77aa42ae73ab4ecfa73b4, type: 3}
   - Id: s1_amusement_ticket
     Sprite: {fileID: 21300000, guid: 09aee6ce12c0f2848b16aeb64acadabd, type: 3}
+  - Id: s1_broccoli
+    Sprite: {fileID: 21300000, guid: 48eb249214991854c8c92196f9f7fb02, type: 3}
+  - Id: s1_clock
+    Sprite: {fileID: 21300000, guid: 8567406c91a50954186e9daabbe20d46, type: 3}
   - Id: s1_cookie_box
     Sprite: {fileID: 21300000, guid: 690d2547ec9e70b4eb2862be55b0f33c, type: 3}
   - Id: s1_family_photo
     Sprite: {fileID: 21300000, guid: 9317387f21f419e4d893fc0893f75fa1, type: 3}
   - Id: s1_flower
     Sprite: {fileID: 21300000, guid: 3d091df80ad52994fa1b467be852e036, type: 3}
+  - Id: s1_horror_novel
+    Sprite: {fileID: 21300000, guid: 746149a3c4fb8ad44b5e08ebaf21620f, type: 3}
+  - Id: s1_landscape
+    Sprite: {fileID: 21300000, guid: ffbb791defb88744b902572f35a53c76, type: 3}
   - Id: s1_old_rabbit
-    Sprite: {fileID: 21300000, guid: 65e866f310802384cbeb9974af967068, type: 3}
+    Sprite: {fileID: 21300000, guid: 2eb09ed8f15c60446961936abf94d216, type: 3}
   - Id: s1_school_calendar
     Sprite: {fileID: 21300000, guid: e8ccb398177f01842a0632601db361bd, type: 3}
+  - Id: s1_torn_backpack
+    Sprite: {fileID: 21300000, guid: dd99c0356bfdfb342a8f2ed351178fdc, type: 3}
+  - Id: stage_key
+    Sprite: {fileID: 21300000, guid: 6cc17e69f09aed243b599bad25d02f39, type: 3}
+  - Id: stage_lock
+    Sprite: {fileID: 21300000, guid: 223267a2c6d95b24eb6fc9c5e8840aef, type: 3}

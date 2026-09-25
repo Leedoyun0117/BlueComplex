@@ -380,11 +380,19 @@ namespace BlueComplex.Core.Stage
         /// <summary>스테이지 1 아이템 풀 — 기획서 스테이지 1 표 그대로 12종(공용 10종 + 공존감 + 무관심).</summary>
         public static IReadOnlyList<ItemDefinition> Stage1Items() => CommonItems().Append(Coexistence()).Append(Indifference()).ToArray();
 
-        /// <summary>스테이지 2 아이템 풀 — 기획서 스테이지 2 표(09/25) 그대로 12종. 스테이지 1과 같은 목록이다(공용 10종 + 공존감 + 무관심).</summary>
-        public static IReadOnlyList<ItemDefinition> Stage2Items() => CommonItems().Append(Coexistence()).Append(Indifference()).ToArray();
+        /// <summary>
+        /// 광기 — 스테이지 2 표(09/25 09:19)에만 있다. "이번 턴의 결과 감정 전체에 3을 곱한다." 자아비대와 같은 방식이라 감정 종류(침체/흥분) 구분 없이 전부 곱하고,
+        /// 특성 부여·대상 선택도 없다. 지속 1턴은 자아비대와 같게 뒀다.
+        /// </summary>
+        public static ItemDefinition Madness() => new("item_madness", "광기",
+            "이번 턴의 결과 감정 전체에 3을 곱합니다.",
+            duration: 1, new MultiplyEmotions(3));
 
-        /// <summary>아이템 전체 목록 12종(id로 찾을 때 쓴다). 스테이지 풀은 <see cref="Stage1Items"/>·<see cref="Stage2Items"/>다.</summary>
-        public static IReadOnlyList<ItemDefinition> Items() => Stage1Items();
+        /// <summary>스테이지 2 아이템 풀 — 기획서 스테이지 2 표(09/25 09:19) 그대로 13종(스테이지 1의 12종 + 광기).</summary>
+        public static IReadOnlyList<ItemDefinition> Stage2Items() => Stage1Items().Append(Madness()).ToArray();
+
+        /// <summary>아이템 전체 목록 13종(id로 찾을 때 쓴다). 스테이지 풀은 <see cref="Stage1Items"/>·<see cref="Stage2Items"/>다.</summary>
+        public static IReadOnlyList<ItemDefinition> Items() => Stage2Items();
 
         /// <summary>구간 확률에 곱해지는 컴플렉스 발현 배율. 기획자 피드백으로 1.0에서 12.5% 올렸다 — 침체/흥분 30% → 33.75%, 매우 침체/흥분 50% → 56.25%, 안정 0% 유지.
         /// 스테이지 설정(<see cref="StageConfig.ComplexWeight"/>)의 값이라 스테이지마다 다르게 줄 수 있다.</summary>

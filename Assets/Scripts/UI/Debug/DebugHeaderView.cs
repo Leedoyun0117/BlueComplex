@@ -47,7 +47,7 @@ namespace BlueComplex.UI.DebugPlay
             _heartbeatText.text = $"{value} / {DebugKoreanLabels.State(state)}";
 
             var runner = Session.Runner;
-            _turnText.text = $"{runner.CurrentQuarter}쿼터 · {runner.CurrentTurnInQuarter}/{runner.Schedule.TurnsPerQuarter}턴 " +
+            _turnText.text = $"{runner.CurrentQuarter}분기점 · {runner.CurrentTurnInQuarter}/{runner.Schedule.TurnsPerQuarter}턴 " +
                              $"(전체 {runner.CurrentTurn}/{runner.TotalTurns})";
 
             _keyText.text = $"키: {Session.Keys.Collected} / {Session.Keys.Required}";

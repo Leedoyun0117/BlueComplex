@@ -24,6 +24,7 @@ namespace BlueComplex.UI.Layout
         private CanvasGroup _nextIndicator;
         private Tween _blink;
         private Color _lineInk = MockupStyle.Ink;
+        private string _idleLine = string.Empty;
 
         public RectTransform Root => (RectTransform)transform;
 
@@ -33,7 +34,11 @@ namespace BlueComplex.UI.Layout
 
         private void Awake()
         {
-            if (_label != null) _lineInk = _label.color;
+            if (_label != null)
+            {
+                _lineInk = _label.color;
+                _idleLine = _label.text; // 프리팹이 처음 보여 주는 대기 글(있으면) — 재시작 초기화가 이걸로 돌려놓는다.
+            }
             BuildNextIndicator();
         }
 
@@ -49,6 +54,22 @@ namespace BlueComplex.UI.Layout
             }
 
             ShowNextIndicator(true);
+        }
+
+        /// <summary>재시작용 초기화: 타이핑을 끊고 옛 글을 지워 처음 화면(프리팹의 대기 글)으로 돌린다. 끊긴 재생을 기다리던 구독(Presenter의 옛 코루틴이 남긴 것)도 함께 버린다 —
+        /// 재생이 끊기면 TypingComplete가 안 와 구독이 해제되지 않은 채 남는다.</summary>
+        public void ResetNow()
+        {
+            StopTyping();
+            TypingComplete = null;
+            _fullLine = _idleLine;
+            if (_label != null)
+            {
+                _label.color = _lineInk;
+                _label.text = _idleLine;
+            }
+
+            ShowNextIndicator(false);
         }
 
         /// <summary>한 글자씩 재생한다. 재생 중이면 새 줄로 갈아친다.</summary>
