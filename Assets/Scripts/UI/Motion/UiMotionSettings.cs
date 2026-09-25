@@ -15,7 +15,7 @@ namespace BlueComplex.UI.Motion
         [Header("심박수 모니터")]
         [Tooltip("심박수가 바뀔 때 파형 높이·속도·BPM 숫자가 새 값으로 넘어가는 시간. 턴 결과 연출의 태그 상승(0.9초)과 맞춘다.")]
         public float heartTransition = 0.9f;
-        [Tooltip("쿼터가 바뀌어 목표 띠가 새 자리로 옮겨 가는 시간.")]
+        [Tooltip("분기점이 바뀌어 목표 띠가 새 자리로 옮겨 가는 시간.")]
         public float bandMove = 0.6f;
         [Tooltip("키 턴에 목표 띠가 강조되며 맥동하는 한 주기.")]
         public float keyBandPulse = 0.7f;
@@ -126,6 +126,44 @@ namespace BlueComplex.UI.Motion
         public float keyTurnSecondsPerChar = 0.06f;
         [Tooltip("독백이 다 나온 뒤 화면이 밝아지기 전까지 머무는 시간(클릭하면 건너뛴다).")]
         public float keyTurnHold = 1.1f;
+
+        [Header("심박수 변화 연출 (카메라 확대)")]
+        [Tooltip("포스트잇이 떼어진 뒤 카메라가 심박수 표시기 쪽으로 확대되는 시간.")]
+        public float heartFocusZoomIn = 0.7f;
+        [Tooltip("확대된 채 심박수 소리가 앞으로 나와 머무는 시간. 기획: 심박수 사운드 2초 출력.")]
+        public float heartFocusHold = 2f;
+        [Tooltip("소리가 잦아들며 원래 화면으로 돌아오는 시간.")]
+        public float heartFocusZoomOut = 1.0f;
+        [Tooltip("표시기가 화면(가로·세로 중 큰 쪽)의 이만큼을 채우도록 확대한다.")]
+        [Range(0.2f, 0.9f)] public float heartFocusFill = 0.75f;
+        [Tooltip("확대 배율의 하한/상한 — 표시기가 아주 작거나 커도 이 범위 안에서만 확대한다.")]
+        public Vector2 heartFocusZoomRange = new Vector2(1.6f, 3f);
+
+        [Header("스테이지 클리어 연출 (자물쇠 → 대사 → 컷신 → 다음 스테이지)")]
+        [Tooltip("자물쇠 화면으로 넘어가며 화면이 어두워지는 시간.")]
+        public float clearDimFade = 0.9f;
+        [Tooltip("자물쇠가 어둠 속에 나타나는 시간.")]
+        public float lockAppear = 0.5f;
+        [Tooltip("열쇠가 자물쇠 쪽으로 날아 들어가는 시간.")]
+        public float lockKeyFly = 0.5f;
+        [Tooltip("열쇠가 꽂힌 채 돌아가는 시간.")]
+        public float lockKeyTwist = 0.3f;
+        [Tooltip("자물쇠 고리가 열리며 들리는 시간.")]
+        public float lockUnlatch = 0.35f;
+        [Tooltip("자물쇠 하나가 열린 뒤 다음 자물쇠로 넘어가기 전 쉼.")]
+        public float lockInterval = 0.3f;
+        [Tooltip("자물쇠가 다 열린 뒤(또는 못 열린 채로) 다음 단계로 넘어가기 전에 머무는 시간.")]
+        public float lockHold = 0.9f;
+        [Tooltip("클리어 대사가 나오는 동안 화면이 밝아지는 정도: 마지막 줄이 끝났을 때 남는 어둡기(0 = 완전히 밝음).")]
+        [Range(0f, 1f)] public float clearBrightenFloor = 0.25f;
+        [Tooltip("대사가 끝난 뒤 남은 어둠이 걷히며 컷신으로 넘어가는 시간.")]
+        public float clearBrightenFinish = 1.1f;
+        [Tooltip("컷신이 끝난 뒤 화면이 어두워지는 시간, 그리고 새 스테이지가 시작되며 밝아지는 시간.")]
+        public float stageChangeFade = 1.0f;
+        [Tooltip("스테이지 실패: 자물쇠도 함께 어두워지며 화면이 완전한 암흑이 되는 시간.")]
+        public float failBlackout = 1.4f;
+        [Tooltip("완전한 암흑에서 시작 화면으로 돌아가기 전에 머무는 시간.")]
+        public float failBlackHold = 0.7f;
     }
 
     /// <summary>모션 값 조회. 에셋이 없으면 기본값 인스턴스를 만들어 쓴다.</summary>

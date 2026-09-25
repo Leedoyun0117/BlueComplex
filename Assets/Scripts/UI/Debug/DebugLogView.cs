@@ -106,7 +106,7 @@ namespace BlueComplex.UI.DebugPlay
                 sb.Append($"\n  신규 컴플렉스: {report.SpawnedComplex.Definition.DisplayName}");
 
             if (report.KeyResult is { } key)
-                sb.Append($"\n  {key.Quarter}쿼터 키 판정: {(key.Success ? "성공" : "실패")} " +
+                sb.Append($"\n  {key.Quarter}분기점 키 판정: {(key.Success ? "성공" : "실패")} " +
                           $"(구역 {key.Zone.StartSlot}~{key.Zone.StartSlot + key.Zone.Width - 1}, 심박 {key.Position})");
 
             return sb.ToString();

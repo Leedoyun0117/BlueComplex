@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using TMPro;
 using UnityEngine;
@@ -30,6 +31,9 @@ namespace BlueComplex.UI.Presentation
         }
 
         public IEnumerator Play(DialogueVariant variant) => Overlay.PlaySequence(variant);
+
+        /// <summary>자기 암전 막 없이 줄만 재생한다(다른 막이 이미 화면을 덮고 있을 때). 한 줄이 끝날 때마다 진행도(0~1)를 알린다.</summary>
+        public IEnumerator PlayOver(DialogueVariant variant, Action<float> onLineDone) => Overlay.PlayLinesOver(variant, onLineDone);
 
         /// <summary>진행 중인 연출을 멈추고 막을 치운다(재시작). 아직 한 번도 재생한 적 없으면(오버레이가 없으면) 아무 일도 안 한다.</summary>
         public void ResetNow() => _overlay?.ResetNow();

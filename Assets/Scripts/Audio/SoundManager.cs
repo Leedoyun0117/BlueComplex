@@ -43,8 +43,18 @@ namespace BlueComplex.Audio
         [Tooltip("곡이 끝나기 이 시간(초) 전부터 처음과 겹쳐 크로스페이드해 루프 이음매를 가린다.")]
         [SerializeField] [Min(0.1f)] private float _ambientLoopSeam = 3f;
 
+        [Header("심박수 변화 연출")]
+        [Tooltip("심박수 소리를 가장 앞으로 끌어냈을 때 배경음(심박수 소리) 볼륨 배율. 라이브러리 볼륨 x 이 값(최대 1).")]
+        [SerializeField] [Min(1f)] private float _heartbeatFocusGain = 2f;
+
+        [Tooltip("심박수 소리를 가장 앞으로 끌어냈을 때 상시 배경음(Fragile Notes)이 남는 비율.")]
+        [SerializeField] [Range(0f, 1f)] private float _ambientDuckWhenFocused = 0.3f;
+
         private AudioSource[] _pool;
         private int _next;
+        private float _focus;
+        private float _focusGoal;
+        private float _focusSeconds;
 
         /// <summary>배경음 전용 소스 둘 — 하나가 사라지는 동안 다른 하나가 올라온다.</summary>
         private AudioSource[] _bedSources;
@@ -112,6 +122,7 @@ namespace BlueComplex.Audio
 
             UiSoundHooks.AmbientStarted += StartAmbient;
             UiSoundHooks.AmbientStopped += StopAmbient;
+            UiSoundHooks.HeartbeatFocusChanged += FocusHeartbeat;
             if (UiSoundHooks.CurrentAmbient.HasValue && !_ambient.IsActive) StartAmbient(UiSoundHooks.CurrentAmbient.Value);
         }
 
@@ -121,19 +132,30 @@ namespace BlueComplex.Audio
             UiSoundHooks.BedChanged -= SetBed;
             UiSoundHooks.AmbientStarted -= StartAmbient;
             UiSoundHooks.AmbientStopped -= StopAmbient;
+            UiSoundHooks.HeartbeatFocusChanged -= FocusHeartbeat;
+        }
+
+        private void FocusHeartbeat(float level, float seconds)
+        {
+            _focusGoal = level;
+            _focusSeconds = seconds;
+            if (seconds <= 0f) _focus = level;
         }
 
         private void Update()
         {
             if (_bedSources == null) return;
 
+            _focus = Mathf.MoveTowards(_focus, _focusGoal, _focusSeconds > 0f ? Time.unscaledDeltaTime / _focusSeconds : 1f);
+            _ambient.Duck = Mathf.Lerp(1f, _ambientDuckWhenFocused, _focus);
             _ambient.Tick(Time.unscaledDeltaTime);
 
+            var bedTarget = Mathf.Min(1f, _bedTargetVolume * Mathf.Lerp(1f, _heartbeatFocusGain, _focus));
             var step = _bedCrossfade > 0f ? Time.unscaledDeltaTime / _bedCrossfade : 1f;
             for (var i = 0; i < _bedSources.Length; i++)
             {
                 var source = _bedSources[i];
-                var goal = i == _bedActive ? _bedTargetVolume : 0f;
+                var goal = i == _bedActive ? bedTarget : 0f;
                 source.volume = Mathf.MoveTowards(source.volume, goal, step * Mathf.Max(_bedTargetVolume, 0.01f));
 
                 // 완전히 사라진 소스는 멈춘다(재생 위치를 붙들고 있지 않게).

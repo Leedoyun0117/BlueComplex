@@ -132,6 +132,80 @@ namespace BlueComplex.Core.Tests
             Assert.IsTrue(ledger.GetKnowledge("b").TimeRevealed);
         }
 
+        // ── 끝나지 않은 채 버려진 런(F1/F2 재시작) ────────────────────────────────
+
+        [Test]
+        public void DiscardPending_DropsUncommittedObservations_ButKeepsCommittedKnowledge()
+        {
+            var ledger = new ClueKnowledgeLedger();
+            var friendLove = Resolve(new TagSet(TimeTag.Past, new[] { PersonTag.Friend }, new[] { EmotionTag.Love }), PrototypeContent.ChildhoodFriend());
+
+            ledger.RecordInterpretation("committed", friendLove);
+            ledger.CommitRun();
+            ledger.RecordInterpretation("abandoned", friendLove);
+            Assert.AreEqual(1, ledger.PendingCount);
+
+            ledger.DiscardPending();
+            Assert.AreEqual(0, ledger.PendingCount);
+
+            ledger.CommitRun();
+            Assert.IsTrue(ledger.GetKnowledge("committed").TimeRevealed, "이미 확정된 지식은 버려지지 않는다");
+            Assert.IsFalse(ledger.GetKnowledge("abandoned").TimeRevealed, "버려진 런의 관찰은 다음 CommitRun에 딸려 들어가면 안 된다");
+            CollectionAssert.IsEmpty(ledger.GetKnowledge("abandoned").RevealedPersons);
+        }
+
+        [Test]
+        public void AnAbandonedRun_DoesNotLeakIntoTheNextRunsCommit()
+        {
+            // 재시작 전에 판이 도중에 버려진다(StageEnded/CommitRun 없음). 다음 판은 자기 관찰만 확정해야 한다.
+            var config = PrototypeContent.PrototypeStage(Polarity);
+
+            void PlayTurns(StageSession session, int turns)
+            {
+                session.Runner.StartStage();
+                for (var i = 0; i < turns && session.Runner.Outcome == StageOutcome.InProgress && session.Hand.Cards.Count > 0; i++)
+                    session.Runner.PlayClue(session.Hand.Cards[0]);
+            }
+
+            bool SameKnowledge(ClueKnowledgeLedger a, ClueKnowledgeLedger b) => config.Clues.All(clue =>
+            {
+                var x = a.GetKnowledge(clue.Id);
+                var y = b.GetKnowledge(clue.Id);
+                return x.TimeRevealed == y.TimeRevealed
+                       && x.RevealedPersons.OrderBy(p => p).SequenceEqual(y.RevealedPersons.OrderBy(p => p))
+                       && x.RevealedEmotions.OrderBy(e => e).SequenceEqual(y.RevealedEmotions.OrderBy(e => e));
+            });
+
+            // 버려지는 판(seed) 4턴 → 같은 장부로 다음 판(1000+seed)을 끝까지 → CommitRun. discard가 true면 재시작이 하는 DiscardPending을 끼운다.
+            ClueKnowledgeLedger RunAbandonedThenNext(int seed, bool discard)
+            {
+                var ledger = new ClueKnowledgeLedger();
+                PlayTurns(StageFactory.Create(config, new SystemRandomSource(seed), ledger, Polarity), 4);
+                if (discard) ledger.DiscardPending();
+                PlayTurns(StageFactory.Create(config, new SystemRandomSource(1000 + seed), ledger, Polarity), config.TotalTurns);
+                ledger.CommitRun();
+                return ledger;
+            }
+
+            var compared = 0;
+            var leakedWithDiscard = 0;
+            var leakedWithoutDiscard = 0;
+            for (var seed = 1; seed < 60; seed++)
+            {
+                var alone = new ClueKnowledgeLedger(); // 기준: 다음 판만 돌렸을 때의 해금.
+                PlayTurns(StageFactory.Create(config, new SystemRandomSource(1000 + seed), alone, Polarity), config.TotalTurns);
+                alone.CommitRun();
+
+                compared++;
+                if (!SameKnowledge(alone, RunAbandonedThenNext(seed, discard: true))) leakedWithDiscard++;
+                if (!SameKnowledge(alone, RunAbandonedThenNext(seed, discard: false))) leakedWithoutDiscard++;
+            }
+
+            Assert.Greater(compared, 0);
+            Assert.Greater(leakedWithoutDiscard, 0, "대조군: DiscardPending 없이는 누수가 재현돼야 이 시나리오가 의미가 있다");
+            Assert.AreEqual(0, leakedWithDiscard, "재시작 뒤 판의 해금이 그 판만 돌린 결과와 달라졌다 — 버려진 판의 관찰이 딸려 들어왔다");
+        }
+
         // ── 실제 스테이지 진행 ─────────────────────────────────────────────────
 
         [Test]

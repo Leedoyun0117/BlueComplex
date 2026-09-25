@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace BlueComplex.UI.Motion
 {
@@ -96,7 +97,13 @@ namespace BlueComplex.UI.Motion
         /// <summary>지금 켜져 있어야 하는 상시 배경음. SoundManager가 요청 뒤에 켜져도 이 값으로 따라잡는다. 꺼져 있으면 null.</summary>
         public static UiSoundCue? CurrentAmbient { get; private set; }
 
+        /// <summary>심박수 소리를 앞으로 끌어내는 정도가 바뀐다(목표 0~1, 그 값에 이를 때까지 걸리는 초). 심박수 변화 연출이 카메라를 확대하는 동안 배경음(심박수 소리)이 커지고 상시 배경음이 물러난다.</summary>
+        public static event Action<float, float> HeartbeatFocusChanged;
+
         public static void Play(UiSoundCue cue) => Cue?.Invoke(cue);
+
+        /// <summary>심박수 소리를 <paramref name="level"/>(0 = 평소, 1 = 가장 앞)까지 <paramref name="seconds"/> 동안 끌어올리거나 내린다.</summary>
+        public static void FocusHeartbeat(float level, float seconds) => HeartbeatFocusChanged?.Invoke(Mathf.Clamp01(level), Mathf.Max(0f, seconds));
 
         public static void StartAmbient(UiSoundCue cue)
         {

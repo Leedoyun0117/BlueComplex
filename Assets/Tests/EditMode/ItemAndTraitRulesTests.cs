@@ -80,10 +80,11 @@ namespace BlueComplex.Core.Tests
             CollectionAssert.AreEquivalent(common, PrototypeContent.CommonItems().Select(i => i.DisplayName).ToList());
             CollectionAssert.AreEquivalent(common.Append("공존감").Append("무관심").ToList(),
                 PrototypeContent.Stage1Items().Select(i => i.DisplayName).ToList(), "스테이지 1 표: 12종 전부(공용 10종 + 공존감 + 무관심).");
-            CollectionAssert.AreEquivalent(common.Append("공존감").Append("무관심").ToList(),
-                Stage2Content.Stage2(Polarity).ItemPool.Select(i => i.DisplayName).ToList(), "스테이지 2 표(09/25): 스테이지 1과 같은 12종.");
-            CollectionAssert.AreEquivalent(common.Append("무관심").Append("공존감").ToList(),
-                PrototypeContent.Items().Select(i => i.DisplayName).ToList(), "전체 목록 12종은 id 조회용이다.");
+            CollectionAssert.AreEquivalent(common.Append("공존감").Append("무관심").Append("광기").ToList(),
+                Stage2Content.Stage2(Polarity).ItemPool.Select(i => i.DisplayName).ToList(), "스테이지 2 표(09/25 09:19): 스테이지 1의 12종 + 광기.");
+            CollectionAssert.AreEquivalent(common.Append("무관심").Append("공존감").Append("광기").ToList(),
+                PrototypeContent.Items().Select(i => i.DisplayName).ToList(), "전체 목록 13종은 id 조회용이다.");
+            CollectionAssert.DoesNotContain(PrototypeContent.Stage1Items().Select(i => i.DisplayName).ToList(), "광기", "광기는 스테이지 2 전용이다.");
         }
 
         [Test]
@@ -425,6 +426,38 @@ namespace BlueComplex.Core.Tests
 
             var second = session.Runner.PlayClue(session.Hand.Cards[0]);
             Assert.AreEqual(10, second.HeartbeatDelta, "다음 턴에는 효과가 끝나 있다.");
+        }
+
+        [Test]
+        public void Madness_TriplesEveryEmotionOfTheResult_RegardlessOfPolarity_AndGrantsNoTrait()
+        {
+            var madness = Item("item_madness");
+            var session = Start(Config(new[] { madness }));
+
+            Assert.AreEqual(ItemTargetKind.None, madness.TargetKind);
+            session.Runner.UseItem(madness);
+
+            var tags = new TagSet(TimeTag.Past, new[] { PersonTag.Family },
+                new[] { EmotionTag.Sadness, EmotionTag.Sadness, EmotionTag.Anger, EmotionTag.Happiness });
+            session.ActiveItems.Modify(tags);
+
+            Assert.AreEqual(6, tags.CountOf(EmotionTag.Sadness), "겹친 개수까지 통째로 세 배(침체)");
+            Assert.AreEqual(3, tags.CountOf(EmotionTag.Anger), "흥분도 세 배");
+            Assert.AreEqual(3, tags.CountOf(EmotionTag.Happiness));
+            Assert.IsTrue(tags.HasPerson(PersonTag.Family), "인물 태그는 그대로");
+            Assert.AreEqual(0, session.Traits.Traits.Count, "광기는 특성을 부여하지 않는다.");
+        }
+
+        [Test]
+        public void Madness_LastsOneTurn()
+        {
+            var madness = Item("item_madness");
+            var session = Start(Config(new[] { madness }, clues: Enumerable.Range(0, 12).Select(i => Clue($"h{i}", EmotionTag.Happiness)).ToList()),
+                heartbeat: 100);
+
+            session.Runner.UseItem(madness);
+            Assert.AreEqual(30, session.Runner.PlayClue(session.Hand.Cards[0]).HeartbeatDelta, "행복 1개(+10)가 세 배 = +30");
+            Assert.AreEqual(10, session.Runner.PlayClue(session.Hand.Cards[0]).HeartbeatDelta, "다음 턴에는 효과가 끝나 있다.");
         }
 
         [Test]
