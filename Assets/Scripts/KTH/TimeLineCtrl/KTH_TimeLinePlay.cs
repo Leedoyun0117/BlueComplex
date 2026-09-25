@@ -11,7 +11,7 @@ namespace KTH
         private static event Action<PlayableAsset> PlayRequested;
 
         [SerializeField] private bool playOnce = true;
-        [Tooltip("시작 시 꺼두고 타임라인 재생이 시작되면 켜는 오브젝트")]
+        [Tooltip("시작 시 꺼두고 타임라인 재생이 시작되면 켜는 오브젝트 (타임라인이 끝나면 다시 끔)")]
         [SerializeField] private GameObject[] activateOnPlay;
 
         private PlayableDirector pd;
@@ -32,12 +32,14 @@ namespace KTH
         {
             PlayRequested += OnPlayRequested;
             pd.played += OnPlayed;
+            pd.stopped += OnStopped;
         }
 
         private void OnDisable()
         {
             PlayRequested -= OnPlayRequested;
             pd.played -= OnPlayed;
+            pd.stopped -= OnStopped;
         }
 
         private void OnPlayRequested(PlayableAsset timeLine)
@@ -48,6 +50,12 @@ namespace KTH
         private void OnPlayed(PlayableDirector director)
         {
             SetActivateTargets(true);
+        }
+
+        // 타임라인이 끝나면 켰던 오브젝트(캔버스 등)를 다시 끈다
+        private void OnStopped(PlayableDirector director)
+        {
+            SetActivateTargets(false);
         }
 
         private void SetActivateTargets(bool active)
