@@ -48,6 +48,9 @@ namespace BlueComplex.EditorTools
 
             // 상시 배경음 레이어 — 심박수 배경음과 별개 채널(SoundManager의 AmbientLayer). 구간이 바뀌어도 이어진다.
             ("Fragile Notes.mp3", UiSoundCue.AmbientNotes, BedPitchRange, AmbientVolume),
+
+            // 스테이지 2의 기본 배경음(심박수 기본 자리를 대신한다 — StageSounds 참고).
+            ("ClockTower.mp3", UiSoundCue.HeartbeatBaseStage2, BedPitchRange, BedVolume),
         };
 
         [MenuItem("BlueComplex/Audio/Ensure Sound Library")]

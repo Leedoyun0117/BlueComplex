@@ -44,6 +44,10 @@ namespace BlueComplex.Core.Turn
 
         /// <summary>이 턴에 컴플렉스 초과로 새로 붙은 특수 특성(없으면 null). 초과했어도 그 구간 쪽 특수 특성이 카탈로그에 없으면 null.</summary>
         public TraitDefinition SpecialTraitGranted { get; }
+
+        /// <summary>이 턴의 결과에 "처음" 나타나는 특성들(발현 순서) — 지난 턴 결과 이후 이번 턴 결과까지 새로 붙은 것: 아이템 사용으로 발현한 일반 특성과 이 턴에 컴플렉스 초과로
+        /// 붙은 특수 특성. 이미 걸려 있던 특성(지속 턴이 남은 채 이어지는 것)은 들어 있지 않다. 결과 화면이 특성 이름 태그를 띄우는 기준이다.</summary>
+        public IReadOnlyList<TraitDefinition> TraitsManifested { get; }
         public StageOutcome Outcome { get; }
 
         /// <summary>이 턴이 쿼터의 마지막 턴이라 키를 판정했다면 그 결과. 아니면 null.</summary>
@@ -64,7 +68,8 @@ namespace BlueComplex.Core.Turn
                           StageOutcome outcome,
                           KeyJudgement? keyResult,
                           bool complexOverflowed = false,
-                          TraitDefinition specialTraitGranted = null)
+                          TraitDefinition specialTraitGranted = null,
+                          IReadOnlyList<TraitDefinition> traitsManifested = null)
         {
             Turn = turn;
             Quarter = quarter;
@@ -77,6 +82,7 @@ namespace BlueComplex.Core.Turn
             SpawnedComplex = spawnedComplex;
             ComplexOverflowed = complexOverflowed;
             SpecialTraitGranted = specialTraitGranted;
+            TraitsManifested = traitsManifested ?? Array.Empty<TraitDefinition>();
             Outcome = outcome;
             KeyResult = keyResult;
         }
@@ -155,7 +161,19 @@ namespace BlueComplex.Core.Turn
             _ledger = ledger;
             _itemParameters = itemParameters;
             _handBias = handBias;
+
+            _traits.Granted += trait =>
+            {
+                // 이미 걸려 있던 특성을 다시 붙여 갈아끼운 것(예: 초과가 계속돼 특수 특성이 매 턴 다시 붙는 경우)은 새로 발현한 게 아니다.
+                if (!trait.RenewedExisting) _manifested.Add(trait.Definition);
+            };
+
+            // 발현한 뒤 결과가 나오기 전에 아이템(논리적 설득)이 지운 특성은 결과에 한 번도 걸리지 않았으니 새로 발현된 것으로 안 친다.
+            _traits.Removed += trait => _manifested.Remove(trait.Definition);
         }
+
+        /// <summary>지난 턴 결과 이후 새로 붙은 특성 — 다음 TurnReport가 가져가며 비운다(<see cref="TurnReport.TraitsManifested"/>).</summary>
+        private readonly List<TraitDefinition> _manifested = new();
 
         public void StartStage()
         {
@@ -332,8 +350,12 @@ namespace BlueComplex.Core.Turn
 
             Outcome = JudgeOutcome();
 
+            // 같은 특성이 (만료 후 다시 붙는 등으로) 두 번 기록됐어도 결과엔 한 번만.
+            var manifested = _manifested.Distinct().ToList();
+            _manifested.Clear();
+
             var report = new TurnReport(CurrentTurn, Schedule.QuarterOf(CurrentTurn), Schedule.TurnInQuarter(CurrentTurn),
-                clue, interpretation, finalTags, delta, _heartbeat.Value, spawned, Outcome, keyResult, overflowed, specialTrait?.Definition);
+                clue, interpretation, finalTags, delta, _heartbeat.Value, spawned, Outcome, keyResult, overflowed, specialTrait?.Definition, manifested);
             TurnResolved?.Invoke(report);
 
             if (Outcome == StageOutcome.InProgress) BeginTurn();

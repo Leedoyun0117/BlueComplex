@@ -304,12 +304,13 @@ namespace BlueComplex.Core.Stage
         /// <summary>StageConfig.ItemParameters에서 감정적 설득이 무시할 컴플렉스 id 목록을 찾는 키.</summary>
         public const string PersuasionTargetsKey = "persuasion.ignored_complexes";
 
-        /// <summary>모든 스테이지가 공유하는 7종(기획서 '스테이지 기획'의 스테이지 공용 아이템 목록).</summary>
+        /// <summary>모든 스테이지가 공유하는 10종 — 기존 7종 + 심호흡·자아비대·명상(기획서에 스테이지 구분 표시가 없어 공용으로 뒀다).</summary>
         public static IReadOnlyList<ItemDefinition> CommonItems() => new[]
         {
             new ItemDefinition("item_overcome", "극복",
-                "지정한 컴플렉스의 지속 시간을 절반으로 줄인다.",
-                duration: 0, new HalveComplexDuration(), ItemTargetKind.Complex),
+                "지정한 컴플렉스의 지속 시간을 절반으로 줄인다. 예민 특성을 부여합니다.",
+                duration: 0, new HalveComplexDuration(), ItemTargetKind.Complex,
+                grantedTraitId: TraitSensitive),
 
             // 지속 시간 2턴은 기획서에 없어 프로토타입 값을 그대로 유지했다.
             new ItemDefinition("item_persuasion", "감정적 설득",
@@ -327,22 +328,39 @@ namespace BlueComplex.Core.Stage
                 grantedTraitId: TraitGrandiosity),
 
             new ItemDefinition("item_logic", "논리적 설득",
-                "결과에서 중복되는 감정을 하나씩 남기고 지웁니다.",
-                duration: 1, new CollapseDuplicateEmotions()),
+                "결과에서 중복되는 감정을 하나씩 남기고 지웁니다. 붙어 있는 특성 중 하나를 랜덤으로 지웁니다.",
+                duration: 1, new CombinedBehaviour(new CollapseDuplicateEmotions(), new RemoveRandomTrait())),
 
             new ItemDefinition("item_samaritan", "착한 사마리아인",
                 "현재 심박수가 침체에 머물고 있다면, 심박수를 10 올립니다. 무력 특성을 부여합니다.",
-                duration: 0, new RaiseHeartbeatInZone(Polarity.Depressed, 10),
+                duration: 0, new ChangeHeartbeatInZone(Polarity.Depressed, 10),
                 grantedTraitId: TraitLethargy),
 
             new ItemDefinition("item_selective_memory", "선택적 기억",
-                "보유한 단서 중 선택한 하나를 랜덤으로 교체합니다.",
-                duration: 0, new ReplaceClue(), ItemTargetKind.Clue),
+                "보유한 단서 중 선택한 하나를 랜덤으로 교체합니다. 환각 특성을 부여합니다.",
+                duration: 0, new ReplaceClue(), ItemTargetKind.Clue,
+                grantedTraitId: TraitHallucination),
+
+            new ItemDefinition("item_deep_breath", "심호흡",
+                "현재 심박수가 흥분에 머물고 있다면 심박수를 10 낮춥니다. 무력 특성을 부여합니다.",
+                duration: 0, new ChangeHeartbeatInZone(Polarity.Excited, -10),
+                grantedTraitId: TraitLethargy),
+
+            // 특성 부여 없음. 대상 선택도 없다(이번 턴 결과에 바로 걸린다). 지속 1턴은 다른 결과 보정 아이템과 같다.
+            new ItemDefinition("item_ego_inflation", "자아비대",
+                "이번 턴의 결과 감정 전체에 2를 곱합니다.",
+                duration: 1, new MultiplyEmotions(2)),
+
+            // 흥분·침체 개수는 기본 극성표로 센다(스테이지가 극성표를 바꾸는 일은 아직 없다).
+            new ItemDefinition("item_meditation", "명상",
+                "이번 턴의 결과 감정이 흥분이 침체보다 더 많다면, 슬픔을 1 추가합니다. 예민 특성을 부여합니다.",
+                duration: 1, new AddEmotionWhenPolarityLeads(Polarity.Excited, EmotionTag.Sadness, 1, new DefaultEmotionPolarityTable()),
+                grantedTraitId: TraitSensitive),
         };
 
         /// <summary>
-        /// 무관심 — '아이템과 특성' 페이지에만 있고 '스테이지 기획'의 어느 스테이지 표에도 없다(스테이지 1 표에는 공존감이 대신 실려 있다).
-        /// 지속 시간은 기획서에 없어 결과 보정 아이템(기억 공감·논리적 설득)과 같은 1턴으로 뒀다. 침체 감정 = 슬픔·혐오·공포.
+        /// 무관심 — 기획서 '아이템과 특성'과 스테이지 1 표에 있다(스테이지 2에는 아이템 표가 없다). 지속 시간은 기획서에 없어 결과 보정 아이템(기억 공감·논리적 설득)과 같은 1턴으로 뒀다.
+        /// 침체 감정 = 슬픔·혐오·공포.
         /// </summary>
         public static ItemDefinition Indifference() => new("item_indifference", "무관심",
             "최종 결과가 타인에 대한 침체 감정이라면 해당 감정을 무시합니다. 무력 특성을 부여합니다.",
@@ -351,7 +369,7 @@ namespace BlueComplex.Core.Stage
             grantedTraitId: TraitLethargy);
 
         /// <summary>
-        /// 공존감 — 스테이지 1 표에만 있는 아이템. 지속 시간은 기획서에 없어 다른 결과 보정 아이템과 같은 1턴으로 뒀다.
+        /// 공존감 — 지속 시간은 기획서에 없어 다른 결과 보정 아이템과 같은 1턴으로 뒀다.
         /// "선택한 단서"는 이번 턴에 내는 단서로, "타인에 관한 것"은 최종 결과에 타인 태그가 있는 것으로 옮겼다(무관심과 같은 방식).
         /// </summary>
         public static ItemDefinition Coexistence() => new("item_coexistence", "공존감",
@@ -359,16 +377,16 @@ namespace BlueComplex.Core.Stage
             duration: 1,
             new AddEmotionTowardPerson(PersonTag.Other, EmotionTag.Happiness, 1));
 
-        /// <summary>스테이지 1 아이템 풀 — 기획서 스테이지 1 표의 8종(공용 7종 + 공존감).</summary>
-        public static IReadOnlyList<ItemDefinition> Stage1Items() => CommonItems().Append(Coexistence()).ToArray();
+        /// <summary>스테이지 1 아이템 풀 — 기획서 스테이지 1 표 그대로 12종(공용 10종 + 공존감 + 무관심).</summary>
+        public static IReadOnlyList<ItemDefinition> Stage1Items() => CommonItems().Append(Coexistence()).Append(Indifference()).ToArray();
 
         /// <summary>
-        /// 스테이지 2 아이템 풀 — 기획서 스테이지 2에는 아이템 표가 없어 공존감 도입 전 구성(공용 7종 + 무관심)을 그대로 유지했다.
+        /// 스테이지 2 아이템 풀 — 기획서 스테이지 2에는 아이템 표가 없어 기존 구성(공존감은 없고 무관심은 있다)을 유지한다: 공용 10종 + 무관심 = 11종.
         /// </summary>
         public static IReadOnlyList<ItemDefinition> Stage2Items() => CommonItems().Append(Indifference()).ToArray();
 
-        /// <summary>아이템 전체 목록(id로 찾을 때 쓴다) — 공용 7종 + 무관심 + 공존감. 스테이지 풀은 <see cref="Stage1Items"/>·<see cref="Stage2Items"/>다.</summary>
-        public static IReadOnlyList<ItemDefinition> Items() => CommonItems().Append(Indifference()).Append(Coexistence()).ToArray();
+        /// <summary>아이템 전체 목록 12종(id로 찾을 때 쓴다). 스테이지 풀은 <see cref="Stage1Items"/>·<see cref="Stage2Items"/>다.</summary>
+        public static IReadOnlyList<ItemDefinition> Items() => Stage1Items();
 
         /// <summary>구간 확률에 곱해지는 컴플렉스 발현 배율. 기획자 피드백으로 1.0에서 12.5% 올렸다 — 침체/흥분 30% → 33.75%, 매우 침체/흥분 50% → 56.25%, 안정 0% 유지.
         /// 스테이지 설정(<see cref="StageConfig.ComplexWeight"/>)의 값이라 스테이지마다 다르게 줄 수 있다.</summary>
