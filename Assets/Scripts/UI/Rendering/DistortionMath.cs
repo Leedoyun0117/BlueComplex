@@ -9,7 +9,7 @@ namespace BlueComplex.UI.Rendering
     /// 필요) 한 곳으로 뺐다 — 수식 자체는 그대로, 위치만 옮긴 것이라 레이캐스터의 동작은 변하지
     /// 않는다.
     ///
-    /// 알려진 한계: _Shake(화면 흔들림)는 보정하지 않는다 — CrtEffect.shader 주석 참고.
+    /// _Shake(화면 흔들림)는 보정할 필요가 없다 — CrtEffect.shader가 씬 샘플링에만 적용하고 UI는 흔들지 않는다.
     /// </summary>
     public static class DistortionMath
     {

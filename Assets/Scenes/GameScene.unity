@@ -941,6 +941,7 @@ MonoBehaviour:
   _lampLightDriver: {fileID: 466152629}
   _enableKeyboardInput: 1
   _selectedCardIndex: 0
+  _stageNumber: 1
   _seed: 20260916
 --- !u!4 &650770982
 Transform:
@@ -11903,14 +11904,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1790762286}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 10}
+  m_LocalRotation: {x: 0, y: -1, z: 0, w: 0}
+  m_LocalPosition: {x: 0.88, y: 0, z: 10}
   m_LocalScale: {x: 0.6415003, y: 0.6415003, z: 0.6415003}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1936491377}
   m_Father: {fileID: 576639274}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: -180, z: 0}
 --- !u!1 &1812172362
 GameObject:
   m_ObjectHideFlags: 0
@@ -13225,14 +13226,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2145131107}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 10}
+  m_LocalRotation: {x: 0, y: -1, z: 0, w: 0}
+  m_LocalPosition: {x: -1.03, y: 0, z: 10}
   m_LocalScale: {x: 0.6415003, y: 0.6415003, z: 0.6415003}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 736055721}
   m_Father: {fileID: 576639274}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: -180, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

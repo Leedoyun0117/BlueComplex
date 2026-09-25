@@ -11,8 +11,7 @@ namespace BlueComplex.UI.Rendering
     /// 왜곡된 화면에서 클릭한 지점을 그대로 히트테스트하면 어긋난다 — 클릭 좌표에 같은 Barrel()을
     /// 한 번 더 적용해 보정한 뒤 히트테스트해야 한다.
     ///
-    /// 알려진 한계: _Shake(화면 흔들림)는 보정하지 않는다. 값 범위가 작고(0~0.03 UV) 시간 위상까지
-    /// 맞추려면 복잡도가 늘어나는데 1단계 골격 목적엔 과함 — 필요해지면 나중에 추가.
+    /// _Shake(화면 흔들림)는 보정할 필요가 없다 — CRT 셰이더가 흔들림을 씬 샘플링에만 적용하고 UI는 흔들지 않는다.
     /// </summary>
     public sealed class DistortionCorrectedGraphicRaycaster : GraphicRaycaster
     {

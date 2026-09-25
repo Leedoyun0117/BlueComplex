@@ -85,19 +85,21 @@ Shader "BlueComplex/CRT/PostProcess"
             // 색수차 오프셋 샘플링과 블룸 누적이 이 함수를 통해서만 _BlitTexture를 읽도록 해서,
             // 이하의 모든 CRT 로직(스캔라인/새도우마스크/파스텔/틴트/노이즈/비네트/밝기)은
             // 손대지 않은 원래 그대로 유지한다 — 입력만 "씬"에서 "씬+UI 합성 결과"로 바뀐다.
-            float3 SampleComposited(float2 uv)
+            // shakeDelta: 화면 흔들림으로 씬 샘플링 좌표에만 더하는 오프셋. UI는 흔들리지 않는 좌표(uv)로 읽어
+            // 카드/대사창 텍스트가 심박수 구간과 상관없이 고정되고, 배경만 흔들린다.
+            float3 SampleComposited(float2 uv, float2 shakeDelta)
             {
-                float3 scene = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv).rgb;
+                float3 scene = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv + shakeDelta).rgb;
                 float4 ui = SAMPLE_TEXTURE2D(_UITex, sampler_UITex, uv);
                 return lerp(scene, ui.rgb, ui.a);
             }
 
-            float3 Sample3(float2 c)
+            float3 Sample3(float2 c, float2 shakeDelta)
             {
                 float2 off = (c - 0.5) * _Aberration;
-                float r = SampleComposited(c + off).r;
-                float g = SampleComposited(c).g;
-                float b = SampleComposited(c - off).b;
+                float r = SampleComposited(c + off, shakeDelta).r;
+                float g = SampleComposited(c, shakeDelta).g;
+                float b = SampleComposited(c - off, shakeDelta).b;
                 return float3(r, g, b);
             }
 
@@ -107,21 +109,23 @@ Shader "BlueComplex/CRT/PostProcess"
 
                 float2 res = _BlitTexture_TexelSize.zw;
                 float time = _Time.y;
-                float2 c = input.texcoord;
+                float2 c0 = input.texcoord;
 
-                // 화면 흔들림
-                c.x += sin(time * 37.0) * _Shake * 0.5;
-                c.y += cos(time * 23.0) * _Shake * 0.35;
+                // 화면 흔들림 — 씬 샘플링에만 적용한다(UI는 c0 그대로). 배럴은 비선형이라 흔들린 좌표와 원래 좌표를
+                // 각각 통과시킨 차이를 shakeDelta로 두고, 이 값을 씬 좌표에만 더한다(화면 픽셀마다 상수).
+                float2 shake = float2(sin(time * 37.0) * _Shake * 0.5,
+                                      cos(time * 23.0) * _Shake * 0.35);
 
                 // 배럴 왜곡
-                c = Barrel(c);
+                float2 c = Barrel(c0);
+                float2 shakeDelta = Barrel(c0 + shake) - c;
 
                 // 화면 밖 클리핑
                 if (c.x < 0.0 || c.x > 1.0 || c.y < 0.0 || c.y > 1.0)
                     return float4(0, 0, 0, 1);
 
                 // 색수차
-                float3 col = Sample3(c);
+                float3 col = Sample3(c, shakeDelta);
 
                 // 블룸
                 float3 acc = float3(0, 0, 0);
@@ -133,7 +137,7 @@ Shader "BlueComplex/CRT/PostProcess"
                     [unroll]
                     for (int j = -2; j <= 2; j++)
                     {
-                        float3 s = SampleComposited(c + float2(i * px, j * py));
+                        float3 s = SampleComposited(c + float2(i * px, j * py), shakeDelta);
                         acc += max(s - _BloomThreshold, 0.0);
                     }
                 }
