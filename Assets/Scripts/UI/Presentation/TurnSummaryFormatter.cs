@@ -42,7 +42,7 @@ namespace BlueComplex.UI.Presentation
                 sb.Append($" 컴플렉스가 넘쳐 \"{report.SpecialTraitGranted.DisplayName}\" 특성이 발현했다.");
 
             if (report.KeyResult is { } key)
-                sb.Append(key.Success ? $" {key.Quarter}쿼터 키를 얻었다!" : $" {key.Quarter}쿼터 키를 놓쳤다.");
+                sb.Append(key.Success ? $" {key.Quarter}분기점 키를 얻었다!" : $" {key.Quarter}분기점 키를 놓쳤다.");
 
             if (report.Outcome != StageOutcome.InProgress)
                 sb.Append(report.Outcome == StageOutcome.Cleared ? " 스테이지 클리어!" : " 스테이지 실패...");

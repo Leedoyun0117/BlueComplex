@@ -193,7 +193,7 @@ namespace BlueComplex.UI.Layout
             var frame = RuntimeUi.CreateImage(visual, "Frame", IdleFrameColor, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             RuntimeUi.CreateImage(visual, "Body", BlockColor, Vector2.zero, Vector2.one, new Vector2(3f, 3f), new Vector2(-3f, -3f));
 
-            RuntimeUi.CreateText(visual, "Title", $"{quarter}쿼터", font, 30f, Color.white, TextAlignmentOptions.Center,
+            RuntimeUi.CreateText(visual, "Title", $"{quarter}분기점", font, 30f, Color.white, TextAlignmentOptions.Center,
                 new Vector2(0f, 0.80f), new Vector2(1f, 0.98f)).fontStyle = FontStyles.Bold;
 
             var track = new TurnTrack(visual, "Turn Track", new Vector2(0.10f, 0.62f), new Vector2(0.90f, 0.78f), turnsPerQuarter, 16f);

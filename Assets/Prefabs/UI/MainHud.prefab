@@ -439,8 +439,8 @@ MonoBehaviour:
   _memoryBubble: {fileID: 0}
   _complexStatus: {fileID: 0}
   _traitStatus: {fileID: 0}
-  _clock: {fileID: 0}
   _items: {fileID: 0}
+  _natsu: {fileID: 0}
   _eventLinePause: 0.25
   _keyTurnMonologue: "\uC774\uBC88 \uB300\uD654\uC5D0\uC11C \uD0A4\uB97C \uC5BB\uC5B4\uC57C
     \uD574."

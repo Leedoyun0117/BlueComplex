@@ -86,6 +86,18 @@ namespace BlueComplex.UI.Layout
             }
         }
 
+        /// <summary>재시작용 초기화: 칩·풍선 선·요약 글자를 즉시 처음 상태로 돌린다(애니메이션 없이). 도는 칩 시퀀스도 함께 끊는다 —
+        /// 안 끊으면 옛 <see cref="RiseResultTags"/>의 OnComplete(<see cref="ClearResultTags"/>)가 재시작 뒤 새 판의 칩을 지울 수 있다.</summary>
+        public void ResetNow()
+        {
+            DOTween.Kill(this);
+            ClearResultTags();
+
+            IsEngaged = false;
+            _stroke?.Clear();
+            if (_summaryText != null) _summaryText.text = string.Empty;
+        }
+
         private void SubscribeToClueDrag() => ForEachCardDragHandler(h =>
         {
             h.DragStarted += OnClueDragStarted;
@@ -176,7 +188,7 @@ namespace BlueComplex.UI.Layout
         {
             ClearResultTags();
 
-            var sequence = DOTween.Sequence().SetUpdate(true);
+            var sequence = DOTween.Sequence().SetUpdate(true).SetTarget(this);
             var hasTraits = traitNames != null && traitNames.Count > 0;
             if ((tags == null || tags.Count == 0) && !hasTraits) return sequence;
             tags ??= System.Array.Empty<ResultTag>();
@@ -277,7 +289,7 @@ namespace BlueComplex.UI.Layout
         /// 심박수 모니터 전환과 같은 프레임에 시작하는 건 Presenter가 정한다.</summary>
         public Sequence RiseResultTags()
         {
-            var sequence = DOTween.Sequence().SetUpdate(true);
+            var sequence = DOTween.Sequence().SetUpdate(true).SetTarget(this);
             var rise = UiMotion.Settings.tagRise;
 
             for (var i = 0; i < _chips.Count; i++)

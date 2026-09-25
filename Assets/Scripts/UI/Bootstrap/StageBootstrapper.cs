@@ -38,7 +38,16 @@ namespace BlueComplex.UI.Bootstrap
         [Header("시드")]
         [SerializeField] private int _seed = 20260916;
 
+        /// <summary>플레이할 수 있는 마지막 스테이지 번호. 이보다 큰 스테이지는 없다 — 클리어 뒤 이어질 다음 스테이지가 있는지 가리는 기준이다.</summary>
+        public const int LastStageNumber = 2;
+
         public StageSession Session { get; private set; }
+
+        /// <summary>지금 돌고 있는(또는 마지막으로 시작한) 스테이지 번호.</summary>
+        public int StageNumber => _stageNumber;
+
+        /// <summary>클리어하면 이어서 시작할 다음 스테이지가 있는가.</summary>
+        public bool HasNextStage => _stageNumber < LastStageNumber;
 
         /// <summary>지금 돌고 있는 스테이지의 저작 설정 — 스테이지 이름 표시 같은 UI가 읽는다. 세션이 바뀌면 함께 바뀐다.</summary>
         public StageConfig Config { get; private set; }
@@ -113,14 +122,20 @@ namespace BlueComplex.UI.Bootstrap
         /// <summary>스테이지 번호(1 또는 2)를 골라 새 무작위 시드로 시작한다. 해금 지식(Ledger)은 유지된다. 임시 디버그 선택용.</summary>
         public void StartStage(int stageNumber)
         {
-            if (stageNumber < 1 || stageNumber > 2)
+            if (stageNumber < 1 || stageNumber > LastStageNumber)
             {
-                Debug.LogWarning($"스테이지 {stageNumber}는 없습니다. (1 또는 2)");
+                Debug.LogWarning($"스테이지 {stageNumber}는 없습니다. (1~{LastStageNumber})");
                 return;
             }
 
             _stageNumber = stageNumber;
             BeginNewSession(Environment.TickCount);
+        }
+
+        /// <summary>다음 스테이지를 새 무작위 시드로 시작한다(스테이지 클리어 연출이 컷신 뒤에 부른다). 다음 스테이지가 없으면 아무 일도 안 한다.</summary>
+        public void StartNextStage()
+        {
+            if (HasNextStage) StartStage(_stageNumber + 1);
         }
 
         [ContextMenu("Start Stage 1")]
@@ -142,6 +157,10 @@ namespace BlueComplex.UI.Bootstrap
         private void BeginNewSession(int seed)
         {
             _logger?.Dispose();
+
+            // 끝나지 않은 채 버려지는 판(F1/F2 등 StageEnded를 안 거친 재시작)의 미확정 관찰은 다음 판에 딸려 가지 않게 버린다.
+            // 결과 패널 경로는 StageEnded에서 이미 CommitRun했으므로 여기서 비는 게 정상이다.
+            _ledger.DiscardPending();
 
             // 재시작이 대화 재생 도중이면 그 코루틴을 끊고 막을 치운다 — InputBlocked도 켜진 채로 남지 않게.
             StopAllCoroutines();
