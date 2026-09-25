@@ -155,9 +155,29 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TypingTextSignal
   text: {fileID: 6206272494546572077}
   lines:
-  - "\uC138\uAD6C\uB294"
-  - "\uC138\uACC4 \uCD5C\uACE0\uC758 \uC544\uC774\uB3CC\uC774\uB2E4"
-  - "\uC57C\uB974"
+  - "B씨는 시계탑의 분침 따위 신경 쓰지 않겠다는 듯,\n차가 식어버릴 때 까지 나의 맞은편에 앉아있었다."
+  - "”유키, 힘들어하고 있는 거 알고 있어.”"
+  - "”나도 아버지를 잃었으니까.”"
+  - "”…”"
+  - "”기운 차릴 때 까지 앉아있어도 좋아.”"
+  - "”하지만 저녁 식사는 거르지 말고.”"
+  - "”뭐 좀 먹어야 힘이 나지..”"
+  - "“..B씨.”"
+  - "“정말 제 잘못이 아닌거죠?”"
+  - "저 너머의 시계탑에서\n초침이 박동하는 소리가 들려왔다."
+  - "1초가 분보다 길게 느껴졌다."
+  - "어쩌면, 실제로 그랬는지도 모르겠다."
+  - "“이건, 누구의 잘못도 아니야.”"
+  - "B씨가 말했다."
+  - "“우연을 막을 수 있는 사람은 없어.”"
+  - "“이제 그만 자책하렴.”"
+  - "“아니요.”"
+  - "“제 잘못이 아니라고, 말해줘요.”"
+  - "B씨는 숨을 깊게 들이마신 뒤,\n한 글자 한 글자 또렷한 목소리로 말했다."
+  - "“유키, 부모님이 돌아가신 건 네 잘못이 아니야.”"
+  - "그의 목소리가 흐릿하게 나를 감쌌다."
+  - "안게 속에서 길을 잃었지만,\n길은 더 이상 중요하지 않았다."
+  - "나는 난간 뒤로 뛰어 내리려 던 생각을 그만두고\nB씨를 따라 집 안으로 들어갔다."
   charInterval: 0.06
   clearOnEnable: 1
 --- !u!82 &5625376930688403077
@@ -269,7 +289,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de28affe0897fe94486e8cb209367bb1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineAudioSignal
-  clip: {fileID: 8300000, guid: be16724eb8d782048abff35debde1923, type: 3}
+  clip: {fileID: 8300000, guid: d9adf3b75bf58d9439996c1b5fd87000, type: 3}
   fadeInDuration: 3
   fadeOutDuration: 3
 --- !u!1 &1678700031947422978
@@ -569,6 +589,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimeLinePlay
   playOnce: 1
+  activateOnPlay:
+  - {fileID: 6214589011762609067}
 --- !u!1 &4912920091234975653
 GameObject:
   m_ObjectHideFlags: 0
