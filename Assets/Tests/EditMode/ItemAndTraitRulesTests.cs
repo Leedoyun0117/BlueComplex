@@ -80,8 +80,8 @@ namespace BlueComplex.Core.Tests
             CollectionAssert.AreEquivalent(common, PrototypeContent.CommonItems().Select(i => i.DisplayName).ToList());
             CollectionAssert.AreEquivalent(common.Append("공존감").Append("무관심").ToList(),
                 PrototypeContent.Stage1Items().Select(i => i.DisplayName).ToList(), "스테이지 1 표: 12종 전부(공용 10종 + 공존감 + 무관심).");
-            CollectionAssert.AreEquivalent(common.Append("무관심").ToList(),
-                Stage2Content.Stage2(Polarity).ItemPool.Select(i => i.DisplayName).ToList(), "스테이지 2는 아이템 표가 없어 기존 구성(공존감 없음, 무관심 있음) + 신규 공용 3종.");
+            CollectionAssert.AreEquivalent(common.Append("공존감").Append("무관심").ToList(),
+                Stage2Content.Stage2(Polarity).ItemPool.Select(i => i.DisplayName).ToList(), "스테이지 2 표(09/25): 스테이지 1과 같은 12종.");
             CollectionAssert.AreEquivalent(common.Append("무관심").Append("공존감").ToList(),
                 PrototypeContent.Items().Select(i => i.DisplayName).ToList(), "전체 목록 12종은 id 조회용이다.");
         }

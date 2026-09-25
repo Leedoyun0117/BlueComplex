@@ -175,10 +175,46 @@ MonoBehaviour:
       - speaker: 1
         text: '아, 차라리 앉아서 말해요. 이상한 낌새가 보이면 발목을 잘라드릴 테니까.'
     quarterEnd:
-      excited: []
-      stable: []
-      depressed: []
+      excited:
+      - lines:
+        - speaker: 1
+          text: 'B씨는 항상 저녁이 되면 제가 먹고 싶어 하는 음식을 만들어 주시죠. 상상도 못할 만큼 맛있다고요!'
+      - lines:
+        - speaker: 1
+          text: '당신은 누군대 계속 말을 시키는 거죠? B씨와 아는 사이 맞아요?'
+      - lines:
+        - speaker: 1
+          text: '액자의 사람들을 실제로 마주치면 어떨까요? 손에 무언가 들려 있다면, 그대로 내리 찍을 것만 같아요.'
+      stable:
+      - lines:
+        - speaker: 1
+          text: '생각보다 나쁘지 않네요. 다른 사람과 대화하는 게 정말 오랜만인데..'
+      - lines:
+        - speaker: 1
+          text: 'B씨가 돌아오기 전에는 이렇게 지하실에서 가만히 앉아 있어요. 그럼 터질 것 같던 마음이 좀 진정되거든요.'
+      - lines:
+        - speaker: 1
+          text: '누가 초록 빛은 편안하도록 도움을 준다는데, 지금은 확실히 효과가 있는 듯 하네요.'
+      depressed:
+      - lines:
+        - speaker: 1
+          text: '더 이상 말하고 싶은 기분이 아니에요. 언제까지 있을 생각이죠?'
+      - lines:
+        - speaker: 1
+          text: '제 삶은 늘 호수 밑바닥에 잠겨서 위롤 비라 보는 듯 해요. 차라리 이끼로 태어났다면 물에 익숙했을까요?'
+      - lines:
+        - speaker: 1
+          text: '이렇게 말만 한다고 뭐가 달라 질까요? 그냥 누워서 시간을 떼우는 게 더 나을 것 같아요.'
     stageClear:
-      excited: []
-      stable: []
-      depressed: []
+      excited:
+      - lines:
+        - speaker: 1
+          text: '정말요? 끝이라고요? 아니, 이야기를 시작 했으면 끝을 내야죠. 이건, 이건 완전히 끊겼잖아요.'
+      stable:
+      - lines:
+        - speaker: 1
+          text: '이제 끝났나요? 네, 생각보다 좋은 시간이었다는 건 부정할 수 없네요. 조심히 돌아가요.'
+      depressed:
+      - lines:
+        - speaker: 1
+          text: '…끝난 것 같네요. 맞죠. 이제 돌아가시겠어요?'
