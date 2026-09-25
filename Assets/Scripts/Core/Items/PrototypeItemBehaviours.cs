@@ -130,13 +130,16 @@ namespace BlueComplex.Core.Items
         public void Modify(TagSet finalTags) => finalTags.CollapseDuplicates();
     }
 
-    /// <summary>착한 사마리아인 — 심박수가 <see cref="Side"/> 구간에 있을 때만 <see cref="Amount"/>만큼 올린다(기획: 침체면 +10). 아니면 심박수는 그대로다.</summary>
-    public sealed class RaiseHeartbeatInZone : IItemBehaviour
+    /// <summary>
+    /// 착한 사마리아인·심호흡 — 심박수가 <see cref="Side"/> 구간에 있을 때만 <see cref="Amount"/>만큼 바꾼다(사마리아인: 침체면 +10, 심호흡: 흥분이면 -10).
+    /// 아니면 심박수는 그대로다. 구간 판정은 사용하는 시점의 심박수 기준이다.
+    /// </summary>
+    public sealed class ChangeHeartbeatInZone : IItemBehaviour
     {
         public Polarity Side { get; }
         public int Amount { get; }
 
-        public RaiseHeartbeatInZone(Polarity side, int amount)
+        public ChangeHeartbeatInZone(Polarity side, int amount)
         {
             Side = side;
             Amount = amount;
@@ -145,6 +148,60 @@ namespace BlueComplex.Core.Items
         public void OnActivate(ItemActivationContext context)
         {
             if (context.Zone.PolarityOf(context.Heartbeat.Value) == Side) context.Heartbeat.Change(Amount);
+        }
+    }
+
+    /// <summary>
+    /// 자아비대 — 이번 턴 결과 감정 전체(태그마다 겹친 개수 포함)에 <see cref="Factor"/>를 곱한다. 시간·인물 태그는 그대로다.
+    /// 결과 보정 단계(계산 순서 3)에서 걸리므로 그 앞의 컴플렉스 해석 결과가 곱해지고, 같은 단계의 다른 보정과는 켜진 순서대로 섞인다.
+    /// </summary>
+    public sealed class MultiplyEmotions : IItemBehaviour, IResultModifier
+    {
+        public int Factor { get; }
+
+        public MultiplyEmotions(int factor) => Factor = factor;
+
+        public void OnActivate(ItemActivationContext context) => context.AddModifier(this);
+
+        public void Modify(TagSet finalTags)
+        {
+            foreach (var (emotion, count) in finalTags.Emotions.ToList())
+                finalTags.AddEmotion(emotion, count * (Factor - 1));
+        }
+    }
+
+    /// <summary>
+    /// 명상 — 결과 감정 중 <see cref="Leading"/> 극성(기획: 흥분)의 개수가 반대 극성보다 <b>많을 때만</b> 지정한 감정(기획: 슬픔)을 amount개 더한다. 같거나 적으면 그대로다.
+    /// 개수는 겹친 태그까지 센다(심박수 계산이 감정 태그 하나하나를 더하는 것과 같은 단위). 극성은 환각이 뒤집기 전의 원래 극성이다(보정 단계가 환각 앞이다).
+    /// </summary>
+    public sealed class AddEmotionWhenPolarityLeads : IItemBehaviour, IResultModifier
+    {
+        public Polarity Leading { get; }
+        private readonly EmotionTag _emotion;
+        private readonly int _amount;
+        private readonly IEmotionPolarityTable _polarityTable;
+
+        public AddEmotionWhenPolarityLeads(Polarity leading, EmotionTag emotion, int amount, IEmotionPolarityTable polarityTable)
+        {
+            Leading = leading;
+            _emotion = emotion;
+            _amount = amount;
+            _polarityTable = polarityTable;
+        }
+
+        public void OnActivate(ItemActivationContext context) => context.AddModifier(this);
+
+        public void Modify(TagSet finalTags)
+        {
+            var leading = 0;
+            var other = 0;
+            foreach (var (emotion, count) in finalTags.Emotions)
+            {
+                if (_polarityTable.GetPolarity(emotion) == Leading) leading += count;
+                else other += count;
+            }
+
+            if (leading > other) finalTags.AddEmotion(_emotion, _amount);
         }
     }
 

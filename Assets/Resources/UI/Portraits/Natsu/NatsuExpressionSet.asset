@@ -12,6 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c1f5a0e3b4d4e6f9a2b8d10c5e7f3a9, type: 3}
   m_Name: NatsuExpressionSet
   m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.NatsuExpressionSet
+  blinkIntervalSeconds: 3
+  blinkFrameSeconds: 0.05
   closeEyes:
   - {fileID: 1832618158, guid: 4317902610eff844db77e09151d87b14, type: 3}
   - {fileID: 938814250, guid: 4317902610eff844db77e09151d87b14, type: 3}
@@ -37,3 +39,11 @@ MonoBehaviour:
   - {fileID: 1658279589, guid: e015b08a412e4ae48b13d6694cbf82f9, type: 3}
   - {fileID: 40836475, guid: e015b08a412e4ae48b13d6694cbf82f9, type: 3}
   - {fileID: 114573881, guid: e015b08a412e4ae48b13d6694cbf82f9, type: 3}
+  focusBlink:
+  - {fileID: 1286814277, guid: 540603280e0b14a47a4f5432dec8ee20, type: 3}
+  - {fileID: 796330953, guid: 540603280e0b14a47a4f5432dec8ee20, type: 3}
+  - {fileID: 708240207, guid: 540603280e0b14a47a4f5432dec8ee20, type: 3}
+  confusedBlink:
+  - {fileID: 1137177144, guid: d34a73f3a08805b40b67ad4a04b8c3fc, type: 3}
+  - {fileID: 562336332, guid: d34a73f3a08805b40b67ad4a04b8c3fc, type: 3}
+  - {fileID: 1751927949, guid: d34a73f3a08805b40b67ad4a04b8c3fc, type: 3}

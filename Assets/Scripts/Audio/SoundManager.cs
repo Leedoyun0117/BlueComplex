@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using BlueComplex.UI.Motion;
 using UnityEngine;
+using UnityEngine.Audio;
 using Random = UnityEngine.Random;
 
 namespace BlueComplex.Audio
@@ -22,7 +23,8 @@ namespace BlueComplex.Audio
         [Tooltip("동시에 겹칠 수 있는 소리 수.")]
         [SerializeField] [Min(1)] private int _voices = 6;
 
-        [Range(0f, 1f)] [SerializeField] private float _masterVolume = 1f;
+        [Tooltip("채널 볼륨(Master/SFX/BGM/Ambient 그룹)을 가진 믹서. 비워 두면 Resources/GameAudioMixer를 쓴다. 볼륨 슬라이더는 AudioSettingsController가 맡는다.")]
+        [SerializeField] private AudioMixer _mixer;
 
         [Tooltip("같은 큐가 이 시간(초) 안에 다시 오면 무시한다. 서로 다른 큐끼리는 영향받지 않는다.")]
         [SerializeField] [Min(0f)] private float _sameQueueCooldown = 0.09f;
@@ -56,10 +58,17 @@ namespace BlueComplex.Audio
 
         private void Awake()
         {
+            // 믹서가 없으면(에셋 누락) 그룹이 null이라 소스가 기본 출력으로 나간다 — 소리는 나되 채널 볼륨만 안 먹는다.
+            var mixer = _mixer != null ? _mixer : Resources.Load<AudioMixer>(AudioSettingsController.DefaultMixerResource);
+            var sfxGroup = FindGroup(mixer, AudioSettingsController.SfxGroupPath);
+            var bgmGroup = FindGroup(mixer, AudioSettingsController.BgmGroupPath);
+            var ambientGroup = FindGroup(mixer, AudioSettingsController.AmbientGroupPath);
+
             _pool = new AudioSource[Mathf.Max(1, _voices)];
             for (var i = 0; i < _pool.Length; i++)
             {
                 var source = gameObject.AddComponent<AudioSource>();
+                source.outputAudioMixerGroup = sfxGroup;
                 source.playOnAwake = false;
                 source.spatialBlend = 0f;
                 _pool[i] = source;
@@ -69,6 +78,7 @@ namespace BlueComplex.Audio
             for (var i = 0; i < _bedSources.Length; i++)
             {
                 var source = gameObject.AddComponent<AudioSource>();
+                source.outputAudioMixerGroup = bgmGroup;
                 source.playOnAwake = false;
                 source.spatialBlend = 0f;
                 source.loop = true;
@@ -77,7 +87,21 @@ namespace BlueComplex.Audio
             }
 
             // 상시 배경음 레이어는 심박수 배경음 소스와 완전히 별개의 소스 둘을 쓴다.
-            _ambient = new AmbientLayer(gameObject.AddComponent<AudioSource>(), gameObject.AddComponent<AudioSource>());
+            _ambient = new AmbientLayer(gameObject.AddComponent<AudioSource>(), gameObject.AddComponent<AudioSource>(), ambientGroup);
+        }
+
+        private static AudioMixerGroup FindGroup(AudioMixer mixer, string path)
+        {
+            if (mixer == null) return null;
+
+            var groups = mixer.FindMatchingGroups(path);
+            if (groups == null || groups.Length == 0)
+            {
+                Debug.LogWarning($"[SoundManager] 믹서 '{mixer.name}'에 그룹 '{path}'가 없다 — 이 채널은 믹서를 거치지 않는다.");
+                return null;
+            }
+
+            return groups[0];
         }
 
         private void OnEnable()
@@ -103,13 +127,13 @@ namespace BlueComplex.Audio
         {
             if (_bedSources == null) return;
 
-            _ambient.Tick(Time.unscaledDeltaTime, _masterVolume);
+            _ambient.Tick(Time.unscaledDeltaTime);
 
             var step = _bedCrossfade > 0f ? Time.unscaledDeltaTime / _bedCrossfade : 1f;
             for (var i = 0; i < _bedSources.Length; i++)
             {
                 var source = _bedSources[i];
-                var goal = i == _bedActive ? _bedTargetVolume * _masterVolume : 0f;
+                var goal = i == _bedActive ? _bedTargetVolume : 0f;
                 source.volume = Mathf.MoveTowards(source.volume, goal, step * Mathf.Max(_bedTargetVolume, 0.01f));
 
                 // 완전히 사라진 소스는 멈춘다(재생 위치를 붙들고 있지 않게).
@@ -171,7 +195,7 @@ namespace BlueComplex.Audio
 
             var source = NextVoice();
             source.pitch = Random.Range(entry.pitchRange.x, entry.pitchRange.y);
-            source.volume = entry.volume * _masterVolume;
+            source.volume = entry.volume;
             source.clip = clip;
             source.Play();
         }
