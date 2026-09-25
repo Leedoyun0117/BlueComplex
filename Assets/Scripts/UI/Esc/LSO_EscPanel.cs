@@ -45,17 +45,17 @@ namespace UI.Esc
 
         private void Start()
         {
-            if (!content.gameObject.activeInHierarchy)
-            {
-                content.gameObject.SetActive(true);
-            }
-            
             if (content == null)
             {
                 Debug.LogWarning("LSO_EscPanel content is null!", this);
                 enabled = false;
                 return;
             }
+
+            // 창은 CanvasGroup으로 숨기므로 오브젝트 자체는 켜져 있어야 한다(꺼져 있으면 아예 안 그려진다).
+            // activeInHierarchy가 아니라 activeSelf를 본다 — 조상이 꺼져 있는 건 여기서 켤 수 없고,
+            // 그 경우엔 이 컴포넌트의 Start조차 돌지 않는다.
+            if (!content.gameObject.activeSelf) content.gameObject.SetActive(true);
 
             if (key == Key.None)
             {
@@ -104,10 +104,26 @@ namespace UI.Esc
             _opened = true;
             Opened?.Invoke();
 
+            BringToFront();
             SetInteractable(true);
             _lock.Acquire();
             slide.Show();
         }
+
+        /// <summary>
+        /// 열릴 때마다 형제 중 맨 뒤(= 맨 앞에 그려짐)로 보낸다.
+        ///
+        /// uGUI는 형제 순서가 곧 그리는 순서인데, 이 프로젝트의 여러 패널이 런타임에 캔버스 아래에 생기면서
+        /// 스스로를 SetAsLastSibling()으로 앞에 세운다(ClueBookPanel·QuarterHud·StageDialoguePlayer 등).
+        /// 그래서 씬에 미리 놓아둔 ESC 창은 플레이가 진행될수록 뒤로 밀려 가려진다.
+        /// 이 창은 캔버스 루트의 직속 자식이라(그 패널들과 같은 형제 레벨) 여기서 한 번 밀어 주면 앞에 선다.
+        ///
+        /// 부모가 캔버스 루트가 아니게 되면 이 한 줄로는 부족해진다 — 형제 순서는 같은 부모 안에서만
+        /// 의미가 있어서, 더 깊이 들어가면 루트 수준의 앞뒤는 조상 가지가 정한다. 그때는 창 전용 Canvas에
+        /// overrideSorting을 켜는 쪽으로 바꿔야 하는데, 그 경우 이 프로젝트에서는 GraphicRaycaster를
+        /// 일반 것이 아니라 DistortionCorrectedGraphicRaycaster로 붙여야 클릭 좌표가 어긋나지 않는다.
+        /// </summary>
+        private void BringToFront() => transform.SetAsLastSibling();
 
         private void ClosePanel()
         {
