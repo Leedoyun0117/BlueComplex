@@ -141,15 +141,17 @@ namespace BlueComplex.UI.Presentation
             director.FadeFromBlack();
         }
 
-        /// <summary>임시 완료 메시지. 원문의 청장 대사("…완벽해. 당장 수사에 투입될 수 있도록 절차를 밟겠네.")는 청장 화자가 붙는 다음 단계에서 옮긴다.</summary>
+        /// <summary>튜토리얼 클리어 뒤 청장의 마지막 대사(노션 원문).</summary>
         private static readonly DialogueVariant TutorialClearMessage = new()
         {
-            lines = new[] { new DialogueLine { speaker = DialogueSpeaker.Player, text = "튜토리얼을 마쳤습니다." } }
+            lines = new[] { new DialogueLine { speaker = DialogueSpeaker.Chief, text = TutorialGuideContent.ClearLine } }
         };
 
         /// <summary>튜토리얼 종료: 클리어면 완료 메시지 → 완료 알림 → 결과 패널, 실패면 바로 결과 패널(다시 시작).</summary>
         private IEnumerator PlayTutorialEnding(StageOutcome outcome)
         {
+            TutorialGuide.Find(transform.root)?.ResetNow(); // 남은 말풍선·강조·클릭 막을 치운다.
+
             if (outcome == StageOutcome.Cleared)
             {
                 Bootstrapper.InputBlocked = true;

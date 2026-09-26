@@ -38,7 +38,7 @@ namespace BlueComplex.UI.Presentation
             var verdict = _bootstrapper.Session.CheckPlay(view.Card);
             if (!verdict.Allowed)
             {
-                PlayGateFeedback.Show(transform, verdict);
+                PlayGateFeedback.Show(transform, verdict, _bootstrapper.Session.Runner.CurrentTurn);
                 return;
             }
 
