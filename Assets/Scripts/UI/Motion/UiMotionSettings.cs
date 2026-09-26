@@ -131,41 +131,71 @@ namespace BlueComplex.UI.Motion
         [Tooltip("게임 UI가 사라지는 시간, 그리고 대사가 끝난 뒤 다시 나타나는 시간.")]
         public float branchSceneFade = 0.5f;
 
-        [Header("시작 컷신 (암전+엔진 소리 → 차 주행 → 암전 → 시계 → 암전 → TV 뉴스 → 경찰서). 전체 = 엔진 + 주행 + 암전 + 시계 + 암전 + 뉴스 줄 수×줄 시간 + 밝아짐 + 머묾 + 걷힘")]
-        [Tooltip("컷신이 시작되며 화면이 검게 덮이는 시간(엔진 소리와 겹쳐 흐른다 — 전체 길이에 더해지지 않는다).")]
-        public float introFadeIn = 0.4f;
-        [Tooltip("암전 + 소리만: 엔진 소리가 먼저 들리는 시간. 끝나면 차가 나타난다.")]
-        public float introCarLead = 0.8f;
-        [Tooltip("차가 달리는 시간(차는 화면에 멈춰 있고 배경이 일정한 속도로 흘러간다).")]
-        public float introCarDrive = 2f;
-        [Tooltip("차가 달리는 동안 배경(건물)이 오른쪽에서 왼쪽으로 흘러가는 거리(화면 너비의 몇 배). 차는 제자리에 있고 배경만 흐른다.")]
-        [Range(0.2f, 6f)] public float introCarScroll = 1.5f;
-        [Tooltip("차 구간과 시계 사이의 암전(하드 컷).")]
-        public float introCarCut = 0.4f;
-        [Tooltip("시계가 화면 중앙에 작게 떠 있는 시간(시계 구간의 전반부).")]
-        public float introClockAppear = 2f;
-        [Tooltip("시계가 크기만 변하며 클로즈업되는 시간(시계 구간의 후반부).")]
-        public float introClockZoom = 2f;
-        [Tooltip("작은 시계의 높이(캔버스 높이에 대한 비율). PPT 4번 장표 기준.")]
-        [Range(0.1f, 1f)] public float introClockSmall = 0.537f;
-        [Tooltip("클로즈업된 시계의 높이(캔버스 높이에 대한 비율). PPT 5번 장표 기준.")]
-        [Range(0.1f, 1.5f)] public float introClockLarge = 0.815f;
-        [Tooltip("시계가 떠 있는 동안(작게 + 확대) 분침이 시계 방향으로 도는 바퀴 수. 시침은 실제 시계처럼 그 1/12만큼 함께 돈다.")]
-        [Range(0.5f, 12f)] public float introClockMinuteTurns = 4f;
-        [Tooltip("시계 구간과 뉴스 사이의 암전(호흡).")]
-        public float introBlackout = 0.8f;
+        [Header("튜토리얼 시작 컷신 (암흑 → TV 뉴스 → 경찰서). 전체 = 암전 + 암전 + 뉴스 줄 수×줄 시간 + 잡음 + 밝아짐 + 머묾. 게임 첫 실행의 오프닝은 아래 '오프닝 시퀀스'")]
+        [Tooltip("컷신이 시작되며 화면이 검게 덮이는 시간.")]
+        public float introFadeIn = 0.6f;
+        [Tooltip("완전한 암흑만 있는 시간(뉴스가 흘러들어오기 전).")]
+        public float introDark = 0.8f;
+        [Tooltip("뉴스가 흘러들어오기 전의 잠잠해진 암흑.")]
+        public float introBlackout = 1f;
+        [Tooltip("뉴스가 암흑 속에서 흘러들어오며 나타나는 시간.")]
+        public float introNewsFadeIn = 0.7f;
         [Tooltip("뉴스 자막 한 줄이 떠 있는 시간.")]
         public float introNewsLine = 2f;
+        [Tooltip("자막이 다 끝난 뒤 지직거리는 잡음만 남아 있는 시간.")]
+        public float introNewsStatic = 1.2f;
         [Tooltip("뉴스가 끝난 뒤 검은 화면에서 경찰서(취조실 그림)가 밝아지며 드러나는 시간.")]
         public float introReveal = 1.4f;
-        [Tooltip("경찰서 그림이 완전히 밝아진 뒤 오프닝 대화가 시작되기까지 머무는 시간(그림 속 나츠, 창밖 시계탑의 두 눈을 볼 시간).")]
+        [Tooltip("경찰서 그림이 완전히 밝아진 뒤 오프닝 대화가 시작되기까지 머무는 시간(그림 속 나츠, 주황빛 하늘의 창을 볼 시간).")]
         public float introRoomHold = 1.5f;
         [Tooltip("오프닝 대화가 끝난 뒤 경찰서 그림이 걷히며 게임(취조실) 화면으로 넘어가는 시간.")]
         public float introRoomOut = 0.8f;
-        [Tooltip("지직거리는 잡음 효과음의 크기(0~1).")]
-        [Range(0f, 1f)] public float introStaticVolume = 0.5f;
-        [Tooltip("자동차 엔진 소리의 크기(0~1). 소리는 엔진 시간 + 주행 시간에 맞춰 코드로 만든다.")]
-        [Range(0f, 1f)] public float introEngineVolume = 0.6f;
+
+        [Header("오프닝 시퀀스 (유키 방 → 포스트잇 → 단어 포스트잇 4장 → 창문 → 소녀 → Death. By. Complex. ?. → 뉴스 → 타이틀 → 메인 화면)")]
+        [Tooltip("장면 사이 암전(검게 덮이고 다시 걷히는) 한 번의 시간.")]
+        public float seqFade = 0.6f;
+        [Tooltip("1: 유키 방이 밝아지며 머무는 시간(포스트잇이 붙기 전).")]
+        public float seqRoomHold = 2.4f;
+        [Tooltip("2: 유키 위에 포스트잇이 붙은 뒤 머무는 시간.")]
+        public float seqYukiNoteHold = 1.8f;
+        [Tooltip("3·6·12: 암전이 유지되는 시간.")]
+        public float seqBlackout = 0.7f;
+        [Tooltip("4: 단어 포스트잇 4장이 하나씩 붙는 간격(붙는 모션이 끝난 뒤부터). 장 사이 세 번이라 전체 등장 구간은 이 값의 세 배만큼 늘어난다.")]
+        public float seqWindowInterval = 0.733f;
+        [Tooltip("4: 4장이 다 붙은 뒤 2×2 창문 모양으로 미끄러져 정렬되는 시간(빠른 스냅).")]
+        public float seqNotesSnap = 0.3f;
+        [Tooltip("5: 정렬된 4장의 색이 흰색에서 주황으로 바뀌는 시간(배경은 그대로 어둡다).")]
+        public float seqNotesRecolor = 0.45f;
+        [Tooltip("7: 창문 앞에 소녀 실루엣이 나타나 정지 자세로 머무는 시간.")]
+        public float seqWindowHold = 1.2f;
+        [Tooltip("7: 소녀 실루엣이 창문 앞에 나타나는(밝아지는) 시간.")]
+        public float seqGirlAppear = 0.6f;
+        [Tooltip("8: 화면 전체가 주황빛으로 변하는 시간(소녀가 걷기 시작하기 직전).")]
+        public float seqOrangeFill = 1f;
+        [Tooltip("8~9: 소녀가 왼쪽 가장자리에서 오른쪽으로 걸어가는(키프레임 A→B→C) 시간.")]
+        public float seqGirlWalk = 4f;
+        [Tooltip("걷기 8프레임이 한 바퀴 도는 동안 나아가는 거리(화면 너비 비율). 클수록 발이 천천히 구른다 — 이동 속도에 프레임 속도를 맞추는 기준. 시트의 발 간격(앞발·뒷발 최대 벌림 약 197px)으로 잰 값이 약 0.18이다.")]
+        [Range(0.05f, 0.6f)] public float seqGirlStride = 0.18f;
+        [Tooltip("11: 종이색 전환이 끝난 뒤 화면 오른쪽 위에 거꾸로 선 소녀가 나타나기까지의 빈 시간. (소녀 사라짐 → 종이색 전환 → 이 시간 → 거꾸로 노출까지 합쳐 약 3.4초.)")]
+        public float seqGirlGap = 0.3f;
+        [Tooltip("11: 종이색 화면 위에 거꾸로 선 소녀가 정지 이미지로 보이는 시간.")]
+        public float seqGirlFlash = 1.9f;
+        [Tooltip("10: 소녀가 사라진 직후 화면이 종이색으로 바뀌고 포스트잇 바탕이 사라지는 시간.")]
+        public float seqPaperTint = 1.2f;
+        [Tooltip("12: 글자가 한 줄로 모이는 시간.")]
+        public float seqTextGather = 1.3f;
+        [Tooltip("12: 한 줄 문장이 타이핑되는 글자당 간격.")]
+        public float seqTypeInterval = 0.11f;
+        [Tooltip("12: 다 쳐진 뒤 머무는 시간.")]
+        public float seqTextHold = 1.6f;
+        [Tooltip("18: 타이틀이 나타나는 시간.")]
+        public float seqTitleFade = 1.2f;
+        [Tooltip("18: 타이틀이 머무는 시간.")]
+        public float seqTitleHold = 1.8f;
+        [Tooltip("19: 메인 화면이 밝아지는 시간.")]
+        public float seqMenuFade = 1.2f;
+        [Tooltip("취조시작을 누른 뒤 메인 화면이 어두워지는 시간, 그리고 게임 화면이 드러나는 시간.")]
+        public float seqStartFade = 0.7f;
 
         [Header("스테이지 클리어 연출 (자물쇠 → 대사 → 컷신 → 다음 스테이지)")]
         [Tooltip("자물쇠 화면으로 넘어가며 화면이 어두워지는 시간.")]

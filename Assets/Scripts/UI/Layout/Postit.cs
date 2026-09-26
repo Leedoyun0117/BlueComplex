@@ -38,6 +38,8 @@ namespace BlueComplex.UI.Layout
         private CanvasGroup _pinGroup;
         private CanvasGroup _pinShadowGroup;
         private PostitGraphic[] _graphics;
+        private Outline _paperEdge;
+        private Outline _flapEdge;
 
         private Vector2 _pinRest;
         private bool _built;
@@ -99,6 +101,29 @@ namespace BlueComplex.UI.Layout
         {
             _restTilt = degrees;
             if (_built && IsAttached && _motion == null) _sheet.localRotation = Quaternion.Euler(0f, 0f, _restTilt);
+        }
+
+        /// <summary>
+        /// 종이 색을 바꾼다(기본은 노랑). 우하단 그라데이션·말린 뒷면·테두리는 이 색에서 파생한다. 모션은 그대로다 — 오프닝처럼 흰색·회색·주황 포스트잇이 필요한 곳에서 쓴다.
+        /// </summary>
+        public void SetPaperColor(Color paper)
+        {
+            EnsureBuilt();
+
+            var shade = new Color(paper.r * 0.95f, paper.g * 0.95f, paper.b * 0.95f, paper.a);
+            var back = new Color(paper.r * 0.88f, paper.g * 0.88f, paper.b * 0.88f, paper.a); // 뒷면은 앞면보다 한 톤 진하게(색조는 그대로).
+            foreach (var graphic in _graphics) graphic.SetPalette(paper, shade, back);
+
+            _paperEdge.effectColor = new Color(paper.r * 0.8f, paper.g * 0.8f, paper.b * 0.8f, 0.95f);
+            _flapEdge.effectColor = new Color(paper.r * 0.6f, paper.g * 0.6f, paper.b * 0.6f, 0.55f);
+        }
+
+        /// <summary>모서리가 말리지 않은 평평한 사각형 포스트잇으로 그린다(붙는 모션·압정·그림자는 그대로).</summary>
+        public void SetFlat(bool flat)
+        {
+            EnsureBuilt();
+            _curl.Flat = flat;
+            MarkGraphicsDirty();
         }
 
         /// <summary><see cref="Content"/> 아래의 모든 글자를 손글씨로 바꾼다. 내용을 다 넣은 뒤 한 번 부른다(이미 손글씨인 글자는 건너뛴다).</summary>
@@ -168,8 +193,9 @@ namespace BlueComplex.UI.Layout
         /// <summary>
         /// 새 포스트잇이 붙는다: 약간 위에서 내려와 자리에 눌리고(살짝 눌렸다 펴지는 스케일 바운스) → 압정이 마지막에 작게 튀며 꽂히고 →
         /// 우하단 모서리는 기본 말림 상태로 돌아온다. 끝나면 <see cref="IsAttached"/>가 true다.
+        /// <paramref name="sound"/>를 끄면 닿는 소리·압정 소리를 내지 않는다(백 장 넘게 연달아 붙이는 연출에서 소리가 겹치지 않게).
         /// </summary>
-        public Sequence Stick()
+        public Sequence Stick(bool sound = true)
         {
             EnsureBuilt();
             KillMotion();
@@ -201,7 +227,7 @@ namespace BlueComplex.UI.Layout
             sequence.Join(TweenShadowLift(0.15f, fall, Ease.InQuad));
 
             // 닿는 순간 눌린다.
-            sequence.AppendCallback(() => UiSoundHooks.Play(UiSoundCue.Paper));
+            if (sound) sequence.AppendCallback(() => UiSoundHooks.Play(UiSoundCue.PostitStick));
             sequence.Append(_sheet.DOScale(new Vector3(1.03f, 0.95f, 1f), press).SetEase(Ease.OutQuad));
             sequence.Join(TweenShadowLift(0f, press, Ease.OutQuad));
 
@@ -211,7 +237,7 @@ namespace BlueComplex.UI.Layout
             sequence.Join(TweenCurl(0f, release, Ease.OutQuad));
 
             // 압정이 마지막에 꽂힌다.
-            sequence.Insert(pinStart, TweenPinDrop(pinDrop, pinBounce));
+            sequence.Insert(pinStart, TweenPinDrop(pinDrop, pinBounce, sound));
 
             sequence.OnComplete(() =>
             {
@@ -269,7 +295,7 @@ namespace BlueComplex.UI.Layout
         }
 
         /// <summary>압정이 위에서 내려꽂힌다: 크게 떠 있다가 종이에 닿고(소리) 작게 튀었다 가라앉는다.</summary>
-        private Sequence TweenPinDrop(float drop, float bounce)
+        private Sequence TweenPinDrop(float drop, float bounce, bool sound = true)
         {
             var sequence = DOTween.Sequence().SetUpdate(true).SetTarget(this);
             sequence.Append(_pinGroup.DOFade(1f, drop * 0.3f));
@@ -278,7 +304,7 @@ namespace BlueComplex.UI.Layout
             sequence.Join(_pin.DOLocalRotate(Vector3.zero, drop).SetEase(Ease.InQuad));
             sequence.Join(_pinShadowGroup.DOFade(1f, drop).SetEase(Ease.InQuad));
 
-            sequence.AppendCallback(() => UiSoundHooks.Play(UiSoundCue.Pin));
+            if (sound) sequence.AppendCallback(() => UiSoundHooks.Play(UiSoundCue.Pin));
             sequence.Append(_pin.DOScale(1.3f, bounce * 0.4f).SetEase(Ease.OutQuad));
             sequence.Append(_pin.DOScale(1f, bounce * 0.6f).SetEase(Ease.InQuad));
             return sequence;
@@ -355,13 +381,13 @@ namespace BlueComplex.UI.Layout
 
             var paper = CreateLayer("Paper", _sheet, PostitGraphic.LayerKind.Paper);
             paper.gameObject.AddComponent<Mask>().showMaskGraphic = true;
-            AddEdge(paper.gameObject, new Color(PostitStyle.Edge.r, PostitStyle.Edge.g, PostitStyle.Edge.b, 0.95f));
+            _paperEdge = AddEdge(paper.gameObject, new Color(PostitStyle.Edge.r, PostitStyle.Edge.g, PostitStyle.Edge.b, 0.95f));
 
             _content = RuntimeUi.CreateStretched(paper.transform, "Content");
             var curlShadow = CreateLayer("Curl Shadow", paper.transform, PostitGraphic.LayerKind.CurlShadow);
 
             var flap = CreateLayer("Flap", _sheet, PostitGraphic.LayerKind.Flap);
-            AddEdge(flap.gameObject, new Color(0.58f, 0.46f, 0.12f, 0.55f));
+            _flapEdge = AddEdge(flap.gameObject, new Color(0.58f, 0.46f, 0.12f, 0.55f));
 
             _overlay = RuntimeUi.CreateStretched(_sheet, "Overlay");
             BuildPin();
@@ -380,12 +406,13 @@ namespace BlueComplex.UI.Layout
             return graphic;
         }
 
-        private static void AddEdge(GameObject target, Color color)
+        private static Outline AddEdge(GameObject target, Color color)
         {
             var outline = target.AddComponent<Outline>();
             outline.effectColor = color;
             outline.effectDistance = new Vector2(1.2f, -1.2f);
             outline.useGraphicAlpha = false;
+            return outline;
         }
 
         private void MarkGraphicsDirty()

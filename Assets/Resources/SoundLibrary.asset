@@ -93,3 +93,33 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 8fae7aad5bb6dda45a4cb47fd774b0b2, type: 3}
     volume: 0.5
     pitchRange: {x: 1, y: 1}
+  - cue: 2
+    clips:
+    - {fileID: 8300000, guid: 4085f32b85285814ca28598d4ac6822e, type: 3}
+    volume: 0.7
+    pitchRange: {x: 0.9, y: 1.1}
+    dedicatedVoices: 5
+    minInterval: 0.02
+  - cue: 21
+    clips:
+    - {fileID: 8300000, guid: 274ddfbe6d98b104099ccde85912d78d, type: 3}
+    volume: 1
+    pitchRange: {x: 0.97, y: 1.03}
+    dedicatedVoices: 1
+    minInterval: 0
+  - cue: 23
+    clips:
+    - {fileID: 8300000, guid: 8719fd7890724e941b8b9ce7002b832a, type: 3}
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    dedicatedVoices: 1
+    minInterval: 0
+    maxSeconds: 0
+  - cue: 24
+    clips:
+    - {fileID: 8300000, guid: 78d8a0a85eec98c4694bc436cf5c6c96, type: 3}
+    volume: 1
+    pitchRange: {x: 0.85, y: 1.25}
+    dedicatedVoices: 3
+    minInterval: 0
+    maxSeconds: 0

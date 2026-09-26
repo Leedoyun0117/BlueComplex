@@ -13,7 +13,10 @@ namespace BlueComplex.Audio
     ///
     /// AudioSource 여러 개를 돌려 쓴다(라운드로빈) — 한 프레임에 서로 다른 큐가 겹쳐 울려도 서로 끊기지 않는다.
     /// 다만 <b>같은</b> 큐가 아주 짧은 간격으로 연달아 오면(예: 단서 카드 여러 장 위로 마우스가 스칠 때) 무시한다 —
-    /// 안 그러면 같은 소리가 겹쳐 뭉개진다(디바운스).
+    /// 안 그러면 같은 소리가 겹쳐 뭉개진다(디바운스). 촘촘한 큐(타자음)는 항목의 minInterval로 간격을 줄인다.
+    ///
+    /// 라이브러리 항목의 dedicatedVoices가 1 이상인 큐는 공용 보이스를 쓰지 않고 자기만의 소스를 갖는다 — 긴 클립이 다른 소리(타자음 등)에 끊기지 않고,
+    /// 1이면 다시 불렀을 때 이전 소리를 끊고 처음부터 울려 겹쳐 쌓이지 않는다. <see cref="UiSoundHooks.Stop"/>은 그 큐를 짧게 페이드아웃해 끈다.
     /// </summary>
     public sealed class SoundManager : MonoBehaviour
     {
@@ -54,13 +57,21 @@ namespace BlueComplex.Audio
         private AmbientLayer _ambient;
         private readonly Dictionary<UiSoundCue, float> _lastPlayedAt = new();
 
+        private const float StopFadeSeconds = UiSoundHooks.DefaultStopFade; // maxSeconds 자르기의 페이드아웃 시간도 이걸 쓴다.
+        private readonly Dictionary<UiSoundCue, AudioSource[]> _dedicated = new();
+        private readonly Dictionary<UiSoundCue, int> _dedicatedNext = new();
+        private readonly List<(AudioSource source, float rate)> _fadingOut = new(); // rate: 초당 볼륨 감소량
+        private readonly List<(AudioSource source, float fadeAt)> _scheduledStops = new(); // maxSeconds가 있는 항목: 이 시각(unscaled)에 페이드아웃을 시작한다.
+        private AudioMixerGroup _sfxGroup;
+        private readonly Dictionary<UiSoundCue, float> _lastPitch = new();
+
         private SoundLibrary Library => _library != null ? _library : UiSoundLibrary.Current;
 
         private void Awake()
         {
             // 믹서가 없으면(에셋 누락) 그룹이 null이라 소스가 기본 출력으로 나간다 — 소리는 나되 채널 볼륨만 안 먹는다.
             var mixer = _mixer != null ? _mixer : Resources.Load<AudioMixer>(AudioSettingsController.DefaultMixerResource);
-            var sfxGroup = FindGroup(mixer, AudioSettingsController.SfxGroupPath);
+            var sfxGroup = _sfxGroup = FindGroup(mixer, AudioSettingsController.SfxGroupPath);
             var bgmGroup = FindGroup(mixer, AudioSettingsController.BgmGroupPath);
             var ambientGroup = FindGroup(mixer, AudioSettingsController.AmbientGroupPath);
 
@@ -107,6 +118,7 @@ namespace BlueComplex.Audio
         private void OnEnable()
         {
             UiSoundHooks.Cue += Play;
+            UiSoundHooks.CueStopped += StopCue;
             UiSoundHooks.BedChanged += SetBed;
             SetBed(UiSoundHooks.CurrentBed); // 배경음이 이미 요청된 뒤에 켜졌어도 따라잡는다.
 
@@ -118,6 +130,7 @@ namespace BlueComplex.Audio
         private void OnDisable()
         {
             UiSoundHooks.Cue -= Play;
+            UiSoundHooks.CueStopped -= StopCue;
             UiSoundHooks.BedChanged -= SetBed;
             UiSoundHooks.AmbientStarted -= StartAmbient;
             UiSoundHooks.AmbientStopped -= StopAmbient;
@@ -128,6 +141,8 @@ namespace BlueComplex.Audio
             if (_bedSources == null) return;
 
             _ambient.Tick(Time.unscaledDeltaTime);
+            TickScheduledStops();
+            TickFadeOut(Time.unscaledDeltaTime);
 
             var step = _bedCrossfade > 0f ? Time.unscaledDeltaTime / _bedCrossfade : 1f;
             for (var i = 0; i < _bedSources.Length; i++)
@@ -182,37 +197,114 @@ namespace BlueComplex.Audio
         public void Play(UiSoundCue cue)
         {
             var now = Time.unscaledTime;
-            if (_lastPlayedAt.TryGetValue(cue, out var last) && now - last < _sameQueueCooldown) return;
-
-            AudioClip clip;
-            float volume;
-            Vector2 pitchRange;
 
             var library = Library;
-            if (library != null && library.TryGet(cue, out var entry) && entry.clips.Length > 0)
-            {
-                clip = entry.clips[Random.Range(0, entry.clips.Length)];
-                volume = entry.volume;
-                pitchRange = entry.pitchRange;
-            }
-            else if (ProceduralSounds.TryGet(cue, out clip, out volume, out pitchRange))
-            {
-                // 코드로 만든 임시 소리 — 라이브러리에 진짜 클립이 채워지면 그쪽이 우선한다.
-            }
-            else
-            {
-                return;
-            }
+            if (library == null || !library.TryGet(cue, out var entry) || entry.clips.Length == 0) return;
 
+            var cooldown = entry.minInterval > 0f ? entry.minInterval : _sameQueueCooldown;
+            if (_lastPlayedAt.TryGetValue(cue, out var last) && now - last < cooldown) return;
+
+            var clip = entry.clips[Random.Range(0, entry.clips.Length)];
             if (clip == null) return;
 
             _lastPlayedAt[cue] = now;
 
-            var source = NextVoice();
-            source.pitch = Random.Range(pitchRange.x, pitchRange.y);
-            source.volume = volume;
+            var source = entry.dedicatedVoices > 0 ? NextDedicatedVoice(cue, entry.dedicatedVoices) : NextVoice();
+            _fadingOut.RemoveAll(fading => fading.source == source); // 끄는 중이던 소리를 다시 부르면 페이드아웃을 취소한다.
+            _scheduledStops.RemoveAll(scheduled => scheduled.source == source);
+            source.Stop();
+            source.pitch = PickPitch(cue, entry.pitchRange);
+            source.volume = entry.volume;
             source.clip = clip;
             source.Play();
+
+            // 클립을 앞부분만 쓰는 항목: 끝의 페이드아웃이 maxSeconds에 맞춰 끝나도록 예약한다. 클립이 그보다 짧으면 자를 것이 없다.
+            if (entry.maxSeconds > 0f && clip.length > entry.maxSeconds)
+                _scheduledStops.Add((source, now + Mathf.Max(0f, entry.maxSeconds - StopFadeSeconds)));
+        }
+
+        /// <summary>범위 안에서 무작위로 고르되, 범위가 넓은(0.15 이상) 항목은 직전 재생과 범위 폭의 1/4 이상 떨어진 값을 고른다 —
+        /// 순수 무작위는 비슷한 값이 연달아 나와 같은 소리가 반복되는 것처럼 들리기 때문이다. 좁은 범위(기본 ±3%)는 그냥 무작위.</summary>
+        private float PickPitch(UiSoundCue cue, Vector2 range)
+        {
+            var width = range.y - range.x;
+            var pitch = Random.Range(range.x, range.y);
+            if (width >= 0.15f && _lastPitch.TryGetValue(cue, out var last))
+                for (var attempt = 0; attempt < 4 && Mathf.Abs(pitch - last) < width * 0.25f; attempt++)
+                    pitch = Random.Range(range.x, range.y);
+
+            _lastPitch[cue] = pitch;
+            return pitch;
+        }
+
+        private void TickScheduledStops()
+        {
+            var now = Time.unscaledTime;
+            for (var i = _scheduledStops.Count - 1; i >= 0; i--)
+            {
+                if (now < _scheduledStops[i].fadeAt) continue;
+
+                BeginFadeOut(_scheduledStops[i].source, StopFadeSeconds);
+                _scheduledStops.RemoveAt(i);
+            }
+        }
+
+        /// <summary>이 큐의 소리를 페이드아웃해 끈다(공용·전용 보이스 모두). 안 울리고 있으면 아무 일도 없다.</summary>
+        public void StopCue(UiSoundCue cue, float fadeSeconds)
+        {
+            var library = Library;
+            if (library == null || !library.TryGet(cue, out var entry)) return;
+
+            if (_dedicated.TryGetValue(cue, out var voices))
+                foreach (var voice in voices) BeginFadeOut(voice, fadeSeconds);
+
+            // 공용 보이스에서 이 큐의 클립을 울리고 있는 것도 끈다.
+            foreach (var voice in _pool)
+                if (voice.isPlaying && System.Array.IndexOf(entry.clips, voice.clip) >= 0) BeginFadeOut(voice, fadeSeconds);
+        }
+
+        private void BeginFadeOut(AudioSource source, float fadeSeconds)
+        {
+            if (source == null || !source.isPlaying) return;
+
+            _fadingOut.RemoveAll(fading => fading.source == source);
+            _fadingOut.Add((source, source.volume / Mathf.Max(0.01f, fadeSeconds)));
+        }
+
+        private void TickFadeOut(float deltaTime)
+        {
+            for (var i = _fadingOut.Count - 1; i >= 0; i--)
+            {
+                var (source, rate) = _fadingOut[i];
+                source.volume = Mathf.MoveTowards(source.volume, 0f, deltaTime * rate);
+                if (source.volume > 0.001f && source.isPlaying) continue;
+
+                source.Stop();
+                _fadingOut.RemoveAt(i);
+            }
+        }
+
+        private AudioSource NextDedicatedVoice(UiSoundCue cue, int count)
+        {
+            if (!_dedicated.TryGetValue(cue, out var voices) || voices.Length != count)
+            {
+                voices = new AudioSource[count];
+                for (var i = 0; i < count; i++)
+                {
+                    var source = gameObject.AddComponent<AudioSource>();
+                    source.outputAudioMixerGroup = _sfxGroup;
+                    source.playOnAwake = false;
+                    source.spatialBlend = 0f;
+                    voices[i] = source;
+                }
+
+                _dedicated[cue] = voices;
+                _dedicatedNext[cue] = 0;
+            }
+
+            var next = _dedicatedNext[cue];
+            _dedicatedNext[cue] = (next + 1) % voices.Length;
+            return voices[next];
         }
 
         private AudioSource NextVoice()

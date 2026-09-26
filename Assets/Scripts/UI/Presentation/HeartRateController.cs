@@ -126,6 +126,9 @@ namespace BlueComplex.UI.Presentation
             ShowBpm(Session.Heartbeat.Value, snap: false);
         }
 
+        /// <summary>디버그: 코어 심박수를 턴 밖에서 바로 바꾼 뒤(StageBootstrapper의 Q/E) 모니터·배경음·나츠·상태 이펙트를 그 값에 맞춘다.</summary>
+        public void PresentCurrentHeartbeat() => ShowBpm(Session.Heartbeat.Value, snap: false);
+
         private void OnStageEnded(StageOutcome outcome) => Hud.CloseOverview();
     }
 }

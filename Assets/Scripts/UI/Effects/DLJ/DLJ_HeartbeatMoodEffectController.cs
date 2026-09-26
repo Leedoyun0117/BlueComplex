@@ -18,7 +18,7 @@ namespace BlueComplex.UI.Effects.DLJ
     public sealed class DLJ_HeartbeatMoodEffectController : MonoBehaviour
     {
         public enum ScatterMode { Lamps, WindowEdges }
-        public enum WindowLightStyle { FineRays, SoftBands, RoomShafts, CenterShafts, WindowGlow }
+        public enum WindowLightStyle { FineRays, SoftBands, RoomShafts, CenterShafts, WindowGlow, ClockShafts, LeftWallShafts, ClockAndLeftWallShafts }
 
         [System.Serializable]
         public sealed class WindowOutline
@@ -31,7 +31,7 @@ namespace BlueComplex.UI.Effects.DLJ
             [HideInInspector]
             public Transform InteriorTarget;
             [HideInInspector] public float Direction = -35f;
-            [Tooltip("화면 높이 기준 빛줄기 길이")]
+            [Tooltip("기본은 화면 높이 기준 빛줄기 길이. Clock Shafts는 시계 중심부터 끝까지, Left Wall Shafts는 화면 너비 기준 벽에서 오른쪽 끝까지의 거리야.")]
             [Range(0.005f, 1f)] public float Length = 0.28f;
             [Range(0f, 2f)] public float Strength = 0.75f;
             [Range(0.001f, 0.05f)] public float EdgeWidth = 0.012f;
@@ -85,10 +85,10 @@ namespace BlueComplex.UI.Effects.DLJ
             [Tooltip("빛줄기 묶음의 전체 벌어짐 각도. 0=평행, 기본 22=참고 이미지처럼 좁게, 120=넓게.")]
             [Range(0f, 160f)] public float WaterScatterAngle = 22f;
 
-            [Header("창문 광선 스타일: 이 방에만 적용")]
+            [Header("광선 스타일: 이 방에만 적용")]
             [InspectorName("광선 방식")]
             public WindowLightStyle WindowStyle = WindowLightStyle.FineRays;
-            [Tooltip("Soft Bands, Room Shafts, Center Shafts의 빛줄기 폭. 화면 높이 기준이며 기존 가는 광선에는 영향이 없어.")]
+            [Tooltip("Soft Bands, Room Shafts, Center Shafts, Clock Shafts의 빛줄기 폭. 화면 높이 기준이며 기존 가는 광선에는 영향이 없어.")]
             [InspectorName("빛줄기 폭")]
             [Range(0.003f, 0.05f)] public float WindowBandWidth = 0.016f;
             [Tooltip("높일수록 빛줄기의 가장자리가 부드러워져.")]
@@ -151,7 +151,7 @@ namespace BlueComplex.UI.Effects.DLJ
             public ScatterMode Mode;
             [Tooltip("전구 산란 출발점. 방 목록에서는 비어 있으면 산란을 끄고 다른 방 광원을 찾지 않아.")]
             public List<Light> ScatterLights = new();
-            [Tooltip("창문 테두리 목록. 한 방에서 최대 8개 변을 렌더링해.")]
+            [Tooltip("창문 테두리 목록. 일반 방식은 최대 8개 변, 시계+왼쪽 벽 동시 방식은 9개 변을 렌더링해.")]
             public List<WindowOutline> Windows = new();
             [InspectorName("연출 설정")] public MoodSettings Settings = new();
             [HideInInspector] public bool SettingsInitialized;
@@ -174,6 +174,13 @@ namespace BlueComplex.UI.Effects.DLJ
         [SerializeField] private Camera _sceneCamera;
         [Tooltip("수중 산란의 출발점으로 허용할 전등(최대 8개). 비워두면 위 광원 중 Point Light만 사용한다.")]
         [SerializeField] private Light[] _scatterLights;
+        [Header("방 2 시계 밝기")]
+        [Tooltip("방 2의 배경 루트. 이 방이 선택되고 침체 상태일 때만 시계 밝기를 낮춘다.")]
+        [SerializeField] private GameObject _clockRoomRoot;
+        [SerializeField] private MeshRenderer _clockFaceRenderer;
+        [SerializeField] private MeshRenderer _clockGlowRenderer;
+        [SerializeField, Range(0f, 1f)] private float _clockFaceDepressedBrightness = 0.7f;
+        [SerializeField, Range(0f, 1f)] private float _clockGlowDepressedBrightness = 0.5f;
         [Tooltip("전등 중심에서 발광부를 포함하는 반경. 화면 높이 기준이며 빛이 퍼지는 폭과는 별개다.")]
         [SerializeField, Range(0.005f, 0.1f)] private float _waterSourceRadius = 0.035f;
 
@@ -322,10 +329,66 @@ namespace BlueComplex.UI.Effects.DLJ
             public bool UseTemperature;
         }
 
+        private sealed class ClockBrightnessState
+        {
+            private MeshRenderer _renderer;
+            private MaterialPropertyBlock _original;
+            private MaterialPropertyBlock _working;
+            private Color _baseColor;
+            private bool _applied;
+
+            public void Apply(MeshRenderer renderer, float depressed, float minimumBrightness)
+            {
+                if (_renderer != renderer)
+                {
+                    Restore();
+                    _renderer = renderer;
+                }
+                if (_renderer == null || depressed <= 0f)
+                {
+                    Restore();
+                    return;
+                }
+
+                var material = _renderer.sharedMaterial;
+                if (material == null || !material.HasProperty(ClockBaseColorId))
+                {
+                    Restore();
+                    return;
+                }
+                if (_original == null)
+                {
+                    _original = new MaterialPropertyBlock();
+                    _working = new MaterialPropertyBlock();
+                    _renderer.GetPropertyBlock(_original);
+                    _baseColor = material.GetColor(ClockBaseColorId);
+                }
+
+                _renderer.GetPropertyBlock(_working);
+                var brightness = Mathf.Lerp(1f, Mathf.Clamp01(minimumBrightness), Mathf.Clamp01(depressed));
+                _working.SetColor(ClockBaseColorId, new Color(
+                    _baseColor.r * brightness, _baseColor.g * brightness,
+                    _baseColor.b * brightness, _baseColor.a));
+                _renderer.SetPropertyBlock(_working);
+                _applied = true;
+            }
+
+            public void Restore()
+            {
+                if (_applied && _renderer != null) _renderer.SetPropertyBlock(_original);
+                _applied = false;
+                _original = null;
+                _working = null;
+            }
+        }
+
         private readonly List<LightState> _lightStates = new();
+        private static readonly int ClockBaseColorId = Shader.PropertyToID("_BaseColor");
+        private readonly ClockBrightnessState _clockFaceBrightness = new();
+        private readonly ClockBrightnessState _clockGlowBrightness = new();
         private const int MaxWaterSources = 8;
         private readonly Vector4[] _waterSources = new Vector4[MaxWaterSources];
-        public const int MaxWindowEdges = 8;
+        public const int MaxWindowEdges = 9;
         private readonly Vector4[] _windowEdges = new Vector4[MaxWindowEdges];
         private readonly Vector4[] _windowDirections = new Vector4[MaxWindowEdges];
         private readonly Vector4[] _windowStyles = new Vector4[MaxWindowEdges];
@@ -343,6 +406,7 @@ namespace BlueComplex.UI.Effects.DLJ
         private bool _subscribedToHeartRate;
 
         public bool IsPreviewing => _preview;
+        public bool HasScreenEffect => _runtimeMaterial != null;
         public int DisplayedHeartbeat => _state.DisplayedHeartbeat;
         public float GlitchRemaining => _state.GlitchRemaining;
         public float ChromaticRemaining => _state.ChromaticRemaining;
@@ -398,23 +462,26 @@ namespace BlueComplex.UI.Effects.DLJ
 
         private bool AcquireMaterial()
         {
-            if (_crtFeature == null || _crtFeature.passMaterial == null || _effectShader == null)
+            if (_crtFeature == null || _effectShader == null)
             {
-                Debug.LogWarning("[DLJ Mood] CRT Feature, 머티리얼 또는 Effect Shader가 없어 화면 셰이더 연출은 건너뛰고 방 광원 연출만 적용해.", this);
+                Debug.LogWarning("[DLJ Mood] CRT Feature 또는 Effect Shader가 없어 화면 셰이더 연출은 건너뛰고 방 광원 연출만 적용해.", this);
                 return true;
             }
-            if (_crtFeature.passMaterial.shader == _effectShader)
+            _originalMaterial = _crtFeature.passMaterial;
+            if (_originalMaterial != null && _originalMaterial.shader == _effectShader)
             {
                 Debug.LogError("[DLJ Mood] 이 CRT 패스를 이미 다른 Mood 컨트롤러가 사용 중이야. 하나만 활성화해 줘.", this);
                 return false;
             }
-            _originalMaterial = _crtFeature.passMaterial;
-            _runtimeMaterial = new Material(_originalMaterial)
-            {
-                name = "DLJ Mood (Runtime)",
-                hideFlags = HideFlags.HideAndDontSave,
-                shader = _effectShader
-            };
+            _runtimeMaterial = _originalMaterial != null
+                ? new Material(_originalMaterial)
+                : new Material(_effectShader);
+            _runtimeMaterial.name = "DLJ Mood (Runtime)";
+            _runtimeMaterial.hideFlags = HideFlags.HideAndDontSave;
+            _runtimeMaterial.shader = _effectShader;
+
+            // Pass Material을 비운 방 작업에서는 UI를 복구하지 않고 배경 연출만 렌더링해.
+            _runtimeMaterial.SetFloat("_MoodOnly", _originalMaterial == null ? 1f : 0f);
             // 기존 드라이버의 상태값이 저장된 머티리얼이어도 기본 CRT만 가져온다.
             // 곡률은 원본 값을 유지해 UI 포인터의 역왜곡 좌표와 일치시킨다.
             var p = _basePreset != null ? _basePreset.Neutral : CrtParams.Default;
@@ -527,7 +594,7 @@ namespace BlueComplex.UI.Effects.DLJ
                 _runtimeMaterial.SetFloat("_WaterDistanceFade", Mathf.Clamp(settings.WaterDistanceFade, 0f, 4f));
                 _runtimeMaterial.SetFloat("_WaterScatterAngle", settings.WaterScatterAngle);
                 _runtimeMaterial.SetFloat("_WaterLightDirection", settings.WaterLightDirection);
-                // 광선 스타일은 현재 방의 창문 모드에만 적용해. 다른 방으로 이동하면 매번 해제해.
+                // 광선 스타일은 현재 방의 지정된 선/창문 모드에만 적용해.
                 var windowStyle = CurrentRoom != null && CurrentRoom.Mode == ScatterMode.WindowEdges
                     ? settings.WindowStyle : WindowLightStyle.FineRays;
                 _runtimeMaterial.SetInt("_WindowLightStyle", (int)windowStyle);
@@ -566,6 +633,16 @@ namespace BlueComplex.UI.Effects.DLJ
                 saved.Light.color = Color.Lerp(saved.Color, Color.white, white);
                 saved.Light.useColorTemperature = white <= 0f && saved.UseTemperature;
             }
+            ApplyClockBrightness();
+        }
+
+        private void ApplyClockBrightness()
+        {
+            var room = CurrentRoom;
+            var depressed = _clockRoomRoot != null && room != null
+                && room.Root == _clockRoomRoot && RoomEnabled(room) ? _state.Depressed : 0f;
+            _clockFaceBrightness.Apply(_clockFaceRenderer, depressed, _clockFaceDepressedBrightness);
+            _clockGlowBrightness.Apply(_clockGlowRenderer, depressed, _clockGlowDepressedBrightness);
         }
 
         private void UpdateWaterSources()
@@ -625,6 +702,12 @@ namespace BlueComplex.UI.Effects.DLJ
         private void AddWindowEdges(WindowOutline window, Camera camera, ref int count)
         {
             if (window == null || window.Corners == null || window.Corners.Count < 2 || window.Strength <= 0f) return;
+            // Clock/Left Wall Shafts는 Blit UV와 Camera viewport Y가 같은 방향이다.
+            // 여기서 CRT 창문용 Y 반전을 적용하면 출발선이 뒤집혀 빛도 반대로 뻗는다.
+            var flipY = SystemInfo.graphicsUVStartsAtTop
+                && GetSettings().WindowStyle != WindowLightStyle.ClockShafts
+                && GetSettings().WindowStyle != WindowLightStyle.LeftWallShafts
+                && GetSettings().WindowStyle != WindowLightStyle.ClockAndLeftWallShafts;
             // 화면 밖으로 잘라내기 전 전체 윤곽의 감김 방향을 사용해. 모서리 등록 순서가 반대여도 바깥은 같아.
             var signedArea = 0f;
             for (var i = 0; i < window.Corners.Count; i++)
@@ -636,9 +719,10 @@ namespace BlueComplex.UI.Effects.DLJ
                 var b = camera.WorldToViewportPoint(next.position);
                 signedArea += a.x * b.y - b.x * a.y;
             }
-            if (SystemInfo.graphicsUVStartsAtTop) signedArea = -signedArea;
+            if (flipY) signedArea = -signedArea;
             var segments = window.Closed && window.Corners.Count > 2 ? window.Corners.Count : window.Corners.Count - 1;
-            for (var i = 0; i < segments && count < MaxWindowEdges; i++)
+            var maxEdges = GetSettings().WindowStyle == WindowLightStyle.ClockAndLeftWallShafts ? MaxWindowEdges : 8;
+            for (var i = 0; i < segments && count < maxEdges; i++)
             {
                 var start = window.Corners[i];
                 var end = window.Corners[(i + 1) % window.Corners.Count];
@@ -646,8 +730,8 @@ namespace BlueComplex.UI.Effects.DLJ
                 var a = camera.WorldToViewportPoint(start.position);
                 var b = camera.WorldToViewportPoint(end.position);
                 if (!ClipWindowEdge(ref a, ref b, camera.nearClipPlane, camera.farClipPlane)) continue;
-                var yA = SystemInfo.graphicsUVStartsAtTop ? 1f - a.y : a.y;
-                var yB = SystemInfo.graphicsUVStartsAtTop ? 1f - b.y : b.y;
+                var yA = flipY ? 1f - a.y : a.y;
+                var yB = flipY ? 1f - b.y : b.y;
                 var outward = WindowOutwardNormal(new Vector2(a.x * camera.aspect, yA),
                     new Vector2(b.x * camera.aspect, yB), signedArea);
                 _windowEdges[count] = new Vector4(a.x, yA, b.x, yB);
@@ -712,6 +796,8 @@ namespace BlueComplex.UI.Effects.DLJ
             _session = null;
             _subscribedToHeartRate = false;
             RestoreLights();
+            _clockFaceBrightness.Restore();
+            _clockGlowBrightness.Restore();
             if (_crtFeature != null && _runtimeMaterial != null && _crtFeature.passMaterial == _runtimeMaterial)
                 _crtFeature.passMaterial = _originalMaterial;
             if (_runtimeMaterial != null) Destroy(_runtimeMaterial);
