@@ -419,7 +419,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6412243248723254082}
   m_Layer: 0
-  m_Name: Yuki_Requiem
+  m_Name: 07_Yuki_Requiem
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
