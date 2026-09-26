@@ -1,5 +1,21 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &1529371324687418916
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15c38f6fa1940124db1ab7f6fe7268d1, type: 3}
+  m_Name: Signal Emitter
+  m_EditorClassIdentifier: Unity.Timeline::UnityEngine.Timeline.SignalEmitter
+  m_Time: 0
+  m_Retroactive: 0
+  m_EmitOnce: 0
+  m_Asset: {fileID: 11400000, guid: 3444f880e8095f545a7766f3a3a960da, type: 2}
 --- !u!114 &1380373291720002477
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -42,6 +58,7 @@ MonoBehaviour:
     - {fileID: -7898651445834842640}
     - {fileID: 2588783578624581742}
     - {fileID: 1380373291720002477}
+    - {fileID: 1529371324687418916}
 --- !u!114 &2327512797338963504
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -489,11 +506,11 @@ MonoBehaviour:
   m_Tracks:
   - {fileID: -8887954955884442160}
   - {fileID: -4412398765432109876}
-  m_FixedDuration: 0
+  m_FixedDuration: 16.838
   m_EditorSettings:
     m_Framerate: 60
     m_ScenePreview: 1
-  m_DurationMode: 0
+  m_DurationMode: 1
   m_MarkerTrack: {fileID: 0}
 --- !u!114 &2588783578624581742
 MonoBehaviour:
