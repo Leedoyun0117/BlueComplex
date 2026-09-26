@@ -150,8 +150,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.Audio.SoundManager
   _library: {fileID: 0}
   _voices: 6
-  _masterVolume: 1
+  _mixer: {fileID: 0}
   _sameQueueCooldown: 0.09
+  _bedCrossfade: 0.6
+  _ambientFadeIn: 2
+  _ambientFadeOut: 2.5
+  _ambientLoopSeam: 3
+  _heartbeatFocusGain: 2
+  _ambientDuckWhenFocused: 0.3
 --- !u!4 &15954282
 Transform:
   m_ObjectHideFlags: 0
@@ -1008,6 +1014,7 @@ MonoBehaviour:
   _lampLightDriver: {fileID: 0}
   _enableKeyboardInput: 1
   _selectedCardIndex: 0
+  _stageNumber: 1
   _seed: 20260916
 --- !u!4 &650770982
 Transform:
