@@ -87,6 +87,18 @@ namespace BlueComplex.Core.Tags
             _persons[person] = CountOfPerson(person) + amount;
         }
 
+        /// <summary>인물 태그를 amount개 뺀다. 0개가 되면 그 종류는 사라진다. 없으면 아무 일도 없다. (스테이지 3 밀착 "타인 -1")</summary>
+        public void RemovePerson(PersonTag person, int amount = 1)
+        {
+            if (!_persons.TryGetValue(person, out var n) || amount <= 0) return;
+            n -= amount;
+            if (n <= 0) _persons.Remove(person);
+            else _persons[person] = n;
+        }
+
+        /// <summary>시간 태그 하나를 뗀다. 없으면 아무 일도 없다. (스테이지 3 시간 혼합 "과거 -1")</summary>
+        public void RemoveTime(TimeTag time) => _times.Remove(time);
+
         public void AddEmotion(EmotionTag emotion, int amount = 1)
         {
             if (amount <= 0) return;

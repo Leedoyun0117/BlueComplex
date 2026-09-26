@@ -214,7 +214,6 @@ namespace BlueComplex.UI.Presentation
             _skip = true;
         }
 
-
         /// <summary>진행 중인 연출을 멈추고 막을 치운다(재시작).</summary>
         public void ResetNow()
         {

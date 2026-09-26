@@ -38,6 +38,7 @@ namespace BlueComplex.UI.Presentation
         private RawImage _bodyImage;
         private RectTransform _key;
         private Image _keyImage;
+        private Vector2 _shackleRest;    // 고리가 몸통에 맞닿은 자리(틀 기준 anchoredPosition).
         private float _scale;
         private Vector2 _keyhole;
         private Vector2 _keyRest;
@@ -49,8 +50,8 @@ namespace BlueComplex.UI.Presentation
         /// <summary>자물쇠·열쇠 그림을 카탈로그에서 다 얻을 수 있는가.</summary>
         public static bool Available => UiIcons.GetExact(LockId) != null && UiIcons.GetExact(KeyId) != null;
 
-        /// <param name="pixelScale">도트 한 칸을 화면 픽셀 몇 개로 그릴지(정수여야 도트가 뭉개지지 않는다).</param>
-        public static StageLockView Create(Transform parent, string name, int pixelScale)
+        /// <param name="pixelScale">도트 한 칸을 캔버스 단위 몇 칸으로 그릴지. 자물쇠가 들어갈 자리 폭에 맞춰 <see cref="StageLockRow"/>가 정한다.</param>
+        public static StageLockView Create(Transform parent, string name, float pixelScale)
         {
             var rect = RuntimeUi.CreateRect(parent, name, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
             var view = rect.gameObject.AddComponent<StageLockView>();
@@ -58,10 +59,10 @@ namespace BlueComplex.UI.Presentation
             return view;
         }
 
-        /// <summary>한 칸의 화면 크기(정사각).</summary>
+        /// <summary>한 칸의 크기(캔버스 단위, 정사각).</summary>
         public float Size => ArtSize * _scale;
 
-        private void Build(int pixelScale)
+        private void Build(float pixelScale)
         {
             _scale = pixelScale;
             var rect = (RectTransform)transform;
@@ -80,6 +81,7 @@ namespace BlueComplex.UI.Presentation
 
             // 위 조각(고리): 틀은 위쪽 25줄.
             _shackle = RuntimeUi.CreateRect(rect, "Shackle", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -shackleHeight), Vector2.zero);
+            _shackleRest = _shackle.anchoredPosition; // 피벗이 중앙이라 0이 아니다(-높이/2) — 0으로 되돌리면 고리가 몸통에서 뜬다.
             _shackleImage = SliceImage(_shackle, lockSprite, 1f - bodyFraction, bodyFraction);
 
             // 열쇠: 끝을 축(pivot)으로 잡아 구멍에 댄 채 그 끝을 중심으로 돌아간다.
@@ -105,7 +107,7 @@ namespace BlueComplex.UI.Presentation
             ResetNow();
         }
 
-        /// <summary>그림 한 장에서 세로 일부만 보이게 uv를 잘라 그린다. RawImage라 스프라이트의 텍스처(Point)를 그대로 쓴다.</summary>
+        /// <summary>그림 한 장에서 세로 일부만 보이게 uv를 잘라 그린다. RawImage라 스프라이트의 텍스처(Point)를 그대로 쓴다. 64칸 전체(투명 여백 포함)를 그려야 다른 코드가 쓰는 칸 좌표(몸통 시작 줄 등)와 맞는다.</summary>
         private static RawImage SliceImage(RectTransform target, Sprite sprite, float uvY, float uvHeight)
         {
             var image = target.gameObject.AddComponent<RawImage>();
@@ -114,7 +116,8 @@ namespace BlueComplex.UI.Presentation
             if (sprite == null) return image;
 
             var texture = sprite.texture;
-            var rect = sprite.textureRect;
+            // textureRect가 아니라 rect — Tight 메시 스프라이트의 textureRect는 불투명 영역으로 잘려 있어(폭 48칸), 그걸 64칸 자리에 펴 그리면 가로로 늘어난다.
+            var rect = sprite.rect;
             var u = rect.x / texture.width;
             var v = rect.y / texture.height;
             var w = rect.width / texture.width;
@@ -131,7 +134,7 @@ namespace BlueComplex.UI.Presentation
             DOTween.Kill(this);
             IsOpen = false;
             transform.localScale = Vector3.one;
-            _shackle.anchoredPosition = Vector2.zero;
+            _shackle.anchoredPosition = _shackleRest;
             _shackle.localRotation = Quaternion.identity;
             _bodyImage.color = Closed;
             _shackleImage.color = Closed;
@@ -140,7 +143,7 @@ namespace BlueComplex.UI.Presentation
             _keyImage.color = new Color(1f, 1f, 1f, 0f);
         }
 
-        /// <summary>열쇠가 날아와 꽂히고 → 돌아가고 → 고리가 열린다. 다 열리면 끝난다.</summary>
+        /// <summary>열쇠가 날아와 꽂히고 → 돌아가고 → 고리가 열리고 → 열쇠가 사라진다. 다 끝나면 자물쇠만 열린 채 남는다.</summary>
         public IEnumerator PlayUnlock()
         {
             var settings = UiMotion.Settings;
@@ -165,7 +168,7 @@ namespace BlueComplex.UI.Presentation
             IsOpen = true;
 
             var unlatch = DOTween.Sequence().SetUpdate(true).SetTarget(this);
-            unlatch.Append(_shackle.DOAnchorPosY(LiftHeight, settings.lockUnlatch).SetEase(Ease.OutBack, 2.2f));
+            unlatch.Append(_shackle.DOAnchorPosY(_shackleRest.y + LiftHeight,settings.lockUnlatch).SetEase(Ease.OutBack, 2.2f));
             unlatch.Join(_shackle.DOLocalRotate(new Vector3(0f, 0f, -8f), settings.lockUnlatch).SetEase(Ease.OutQuad));
             unlatch.Join(DOTween.To(() => 0f, value =>
             {
@@ -174,9 +177,12 @@ namespace BlueComplex.UI.Presentation
                 _shackleImage.color = tint;
             }, 1f, settings.lockUnlatch));
             yield return unlatch.WaitForCompletion(true);
+
+            // 4) 열쇠는 제 할 일을 마쳤다 — 열쇠 그림만 서서히 사라진다. 자물쇠는 열린 채로 화면에 남는다.
+            yield return _keyImage.DOFade(0f, settings.lockKeyFade).SetEase(Ease.InSine).SetUpdate(true).SetTarget(this).WaitForCompletion(true);
         }
 
-        /// <summary>열린 고리가 올라가는 높이(화면 픽셀) — 도트 6칸.</summary>
+        /// <summary>열린 고리가 올라가는 높이(캔버스 단위) — 도트 6칸.</summary>
         private float LiftHeight => 6f * _scale;
 
         /// <summary>자물쇠(와 꽂힌 열쇠)를 <paramref name="amount"/>(0 = 그대로, 1 = 검게) 어둡게 한다. 실패 연출에서 자물쇠도 함께 어두워진다.</summary>
