@@ -5,11 +5,15 @@ using UnityEngine;
 
 namespace BlueComplex.UI.Presentation
 {
-    /// <summary>대사 한 줄의 화자. 플레이어는 작은따옴표(’…’), 유키는 큰따옴표나 따옴표 없이(원문 표기 그대로) 적힌다 — "스테이지 시작 대화" 원문 표기 기준.</summary>
+    /// <summary>대사 한 줄의 화자. 플레이어는 작은따옴표(’…’), 유키는 큰따옴표나 따옴표 없이(원문 표기 그대로) 적힌다 — "스테이지 시작 대화" 원문 표기 기준.
+    /// 값은 에셋(StageDialogueLines)에 정수로 저장된다 — 새 화자는 반드시 끝에 추가하고 기존 순서를 바꾸지 않는다(Player 0, Yuki 1, Chief 2).</summary>
     public enum DialogueSpeaker
     {
         Player,
-        Yuki
+        Yuki,
+
+        /// <summary>튜토리얼의 안내자(청장) — "게임 시작 연출" 원문의 대화 상대.</summary>
+        Chief
     }
 
     [Serializable]
@@ -17,6 +21,10 @@ namespace BlueComplex.UI.Presentation
     {
         public DialogueSpeaker speaker;
         [TextArea] public string text;
+
+        /// <summary>플레이어의 선택지 줄인가. 타이핑 없이 "/ …" 형태의 누를 수 있는 선택지로 나오고, 그걸 눌러야 다음 줄로 넘어간다.
+        /// 기존 에셋의 줄에는 이 값이 없어 false로 읽힌다.</summary>
+        public bool isChoice;
     }
 
     /// <summary>순서대로 재생할 대사 한 묶음(변형 하나).</summary>

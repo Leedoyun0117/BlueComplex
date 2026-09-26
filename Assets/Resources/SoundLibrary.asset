@@ -88,3 +88,8 @@ MonoBehaviour:
     - {fileID: 8300000, guid: c1d28c57080c38047829de180a93e3c6, type: 3}
     volume: 0.5
     pitchRange: {x: 1, y: 1}
+  - cue: 20
+    clips:
+    - {fileID: 8300000, guid: 8fae7aad5bb6dda45a4cb47fd774b0b2, type: 3}
+    volume: 0.5
+    pitchRange: {x: 1, y: 1}

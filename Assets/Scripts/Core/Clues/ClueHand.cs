@@ -271,6 +271,29 @@ namespace BlueComplex.Core.Clues
             return true;
         }
 
+        /// <summary>
+        /// 손패를 정해 준 단서들로 통째로 바꾼다(튜토리얼의 "이 턴엔 이 카드 4장"). 풀도 난수도 쓰지 않는다.
+        /// 기존 카드는 무덤에도 풀에도 가지 않고 그냥 버려지며(<see cref="CardDestroyed"/>), 새 카드는 <see cref="CardAdded"/>로 들어온다 — 화면은 평소 손패 변화와 같은 경로로 갱신된다.
+        /// 같은 정의를 다시 넣어도 새 <see cref="ClueInstance"/>가 만들어진다(이전 턴에 낸 카드와 같은 단서를 다시 손에 쥘 수 있다). 빈 목록이면 손패를 비운다.
+        /// </summary>
+        public void ReplaceWith(IReadOnlyList<ClueDefinition> definitions)
+        {
+            if (definitions == null) throw new ArgumentNullException(nameof(definitions));
+            if (definitions.Count > HandSize)
+                throw new ArgumentException($"손패는 {HandSize}장을 넘을 수 없습니다(요청 {definitions.Count}장).", nameof(definitions));
+
+            var old = _cards.ToList();
+            _cards.Clear();
+            foreach (var card in old) CardDestroyed?.Invoke(card);
+
+            foreach (var definition in definitions)
+            {
+                var card = new ClueInstance(definition);
+                _cards.Add(card);
+                CardAdded?.Invoke(card);
+            }
+        }
+
         /// <summary>아이템 '회상' — 손패 전부를 풀에 돌려놓고 다시 뽑는다.</summary>
         public void RedrawAll()
         {
