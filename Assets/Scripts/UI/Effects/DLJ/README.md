@@ -1,6 +1,6 @@
 # DLJ 침체·흥분 화면 연출
 
-기준: [Notion UI 연출](https://app.notion.com/p/UI-3e2f2999e1d7809fa7e0c39b9b94c1ea). BGM 처리 없음.
+기준: [Notion UI 연출](https://app.notion.com/p/UI-3e2f2999e1d7809fa7e0c39b9b94c1ea). BGM은 침체 시 로우패스로만 먹먹해짐(아래 "BGM 먹먹함").
 
 ## 실행
 
@@ -180,3 +180,11 @@ D3D11 실제 오프스크린 렌더 검사 통과: 이전 Soft Bands의 네 변�
 상태 검사는 `Tools > BlueComplex > DLJ > Validate Mood State Transitions`로 재실행 가능.
 C# 빌드 성공(경고/오류 0개), 상태 회귀 검사 59개 통과. Unity Play 및 실제 화면 품질 검증은 미실행.
 색수차 종료 후 핑크 톤의 밝기와 전환 느낌은 실제 화면에서 확인 필요.
+
+## 기존 CrtEffectDriver와의 역할 분리
+
+컨트롤러가 화면 셰이더를 잡으면(런타임 머티리얼 사용 중) 같은 씬의 `CrtEffectDriver.SetReactionSuppressed(true)`를 호출해, 심박수에 따른 스캔라인·색수차·노이즈·플리커·틴트·파스텔·밝기·흔들림 반응을 끈다. 드라이버는 프리셋의 안정(Neutral) 값과 곡률만 유지하고, 흥분/침체 톤은 이 컨트롤러가 전담한다. 비활성화하면 드라이버 반응이 복구된다.
+
+## BGM 먹먹함
+
+`_state.Depressed`(0~1, 일반 침체 0.75 / 매우 침체 1.0)로 `GameAudioMixer`의 BGM 그룹 Lowpass Simple 컷오프(exposed `BGMLowpassCutoff`)를 22000Hz(정상)→600Hz(최대)로 지수 보간한다(`BgmMuffle`). 전환 시간은 화면 톤과 같다. Ambient 그룹과 `*Volume` 파라미터는 건드리지 않는다.

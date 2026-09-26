@@ -11552,6 +11552,270 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1359216903
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1359216905}
+  - component: {fileID: 1359216904}
+  m_Layer: 0
+  m_Name: DLJ Heartbeat Mood Effects
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1359216904
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1359216903}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ae3747e47e076c7e40cfb4c536de518, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Effects.DLJ.DLJ_HeartbeatMoodEffectController
+  _rooms:
+  - Name: "\uBC29 1"
+    Root: {fileID: 0}
+    SceneCamera: {fileID: 1154547344}
+    Lights:
+    - {fileID: 466152631}
+    - {fileID: 1743202176}
+    Mode: 0
+    ScatterLights:
+    - {fileID: 466152631}
+    Windows: []
+    Settings:
+      WaterSourceRadius: 0.035
+      TransitionSeconds: 0.65
+      NormalStateStrength: 0.75
+      DepressedTint: {r: 0.04, g: 0.36, b: 1, a: 1}
+      BlueTintStrength: 0.9
+      DepressedContrast: 1.3
+      DepressedSharpness: 0.85
+      WaterLightStrength: 0.95
+      WaterLightSpread: 0.28
+      WaterLightSharpness: 12
+      WaterBeamCount: 24
+      WaterBeamWidth: 1
+      WaterWidthVariation: 1
+      WaterWaveStrength: 1
+      WaterWaveSpeed: 0.8
+      WaterScatterStrength: 1.15
+      WaterAfterglowStrength: 0.65
+      WaterAfterglowAngle: 60
+      WaterAfterglowLength: 1.25
+      WaterFadeStart: 0.45
+      WaterDistanceFade: 1.6
+      WaterLightDirection: 0
+      WaterScatterAngle: 22
+      WindowStyle: 0
+      WindowBandWidth: 0.016
+      WindowBandSoftness: 0.8
+      WindowBandOpacity: 1
+      WindowBandCoreBrightness: 2
+      WindowBandTint: {r: 1, g: 0.97, b: 0.88, a: 1}
+      WindowShaftGrouping: 0.75
+      WindowShaftVerticalBias: 0.52
+      WindowShaftTopLength: 0.18
+      WindowShaftBottomLength: 0.85
+      WindowShaftAmbientStrength: 0.2
+      ChromaticSeconds: 3.5
+      ChromaticFadeSeconds: 1
+      PastelSeparation: 0.012
+      PastelStrength: 0.82
+      PastelPink: {r: 0.96, g: 0.7, b: 0.86, a: 1}
+      PastelMint: {r: 0.67, g: 0.94, b: 0.87, a: 1}
+      PastelLavender: {r: 0.78, g: 0.75, b: 0.97, a: 1}
+      PastelSaturation: 0.58
+      PastelContrast: 0.84
+      PastelGradeStrength: 0.8
+      GlitchSeconds: 2
+      GlitchDisplacement: 0.012
+    SettingsInitialized: 1
+  - Name: "\uBC29 2"
+    Root: {fileID: 0}
+    SceneCamera: {fileID: 0}
+    Lights: []
+    Mode: 0
+    ScatterLights: []
+    Windows: []
+    Settings:
+      WaterSourceRadius: 0.035
+      TransitionSeconds: 0.65
+      NormalStateStrength: 0.75
+      DepressedTint: {r: 0.04, g: 0.36, b: 1, a: 1}
+      BlueTintStrength: 0.9
+      DepressedContrast: 1.3
+      DepressedSharpness: 0.85
+      WaterLightStrength: 0.95
+      WaterLightSpread: 0.28
+      WaterLightSharpness: 12
+      WaterBeamCount: 24
+      WaterBeamWidth: 1
+      WaterWidthVariation: 1
+      WaterWaveStrength: 1
+      WaterWaveSpeed: 0.8
+      WaterScatterStrength: 1.15
+      WaterAfterglowStrength: 0.65
+      WaterAfterglowAngle: 60
+      WaterAfterglowLength: 1.25
+      WaterFadeStart: 0.45
+      WaterDistanceFade: 1.6
+      WaterLightDirection: 0
+      WaterScatterAngle: 22
+      WindowStyle: 0
+      WindowBandWidth: 0.016
+      WindowBandSoftness: 0.8
+      WindowBandOpacity: 1
+      WindowBandCoreBrightness: 2
+      WindowBandTint: {r: 1, g: 0.97, b: 0.88, a: 1}
+      WindowShaftGrouping: 0.75
+      WindowShaftVerticalBias: 0.52
+      WindowShaftTopLength: 0.18
+      WindowShaftBottomLength: 0.85
+      WindowShaftAmbientStrength: 0.2
+      ChromaticSeconds: 3.5
+      ChromaticFadeSeconds: 1
+      PastelSeparation: 0.012
+      PastelStrength: 0.82
+      PastelPink: {r: 0.96, g: 0.7, b: 0.86, a: 1}
+      PastelMint: {r: 0.67, g: 0.94, b: 0.87, a: 1}
+      PastelLavender: {r: 0.78, g: 0.75, b: 0.97, a: 1}
+      PastelSaturation: 0.58
+      PastelContrast: 0.84
+      PastelGradeStrength: 0.8
+      GlitchSeconds: 2
+      GlitchDisplacement: 0.012
+    SettingsInitialized: 1
+  - Name: "\uBC29 3"
+    Root: {fileID: 0}
+    SceneCamera: {fileID: 0}
+    Lights: []
+    Mode: 1
+    ScatterLights: []
+    Windows: []
+    Settings:
+      WaterSourceRadius: 0.035
+      TransitionSeconds: 0.65
+      NormalStateStrength: 0.75
+      DepressedTint: {r: 0.04, g: 0.36, b: 1, a: 1}
+      BlueTintStrength: 0.9
+      DepressedContrast: 1.3
+      DepressedSharpness: 0.85
+      WaterLightStrength: 0.95
+      WaterLightSpread: 0.28
+      WaterLightSharpness: 12
+      WaterBeamCount: 24
+      WaterBeamWidth: 1
+      WaterWidthVariation: 1
+      WaterWaveStrength: 1
+      WaterWaveSpeed: 0.8
+      WaterScatterStrength: 1.15
+      WaterAfterglowStrength: 0.65
+      WaterAfterglowAngle: 60
+      WaterAfterglowLength: 1.25
+      WaterFadeStart: 0.45
+      WaterDistanceFade: 1.6
+      WaterLightDirection: 0
+      WaterScatterAngle: 22
+      WindowStyle: 0
+      WindowBandWidth: 0.016
+      WindowBandSoftness: 0.8
+      WindowBandOpacity: 1
+      WindowBandCoreBrightness: 2
+      WindowBandTint: {r: 1, g: 0.97, b: 0.88, a: 1}
+      WindowShaftGrouping: 0.75
+      WindowShaftVerticalBias: 0.52
+      WindowShaftTopLength: 0.18
+      WindowShaftBottomLength: 0.85
+      WindowShaftAmbientStrength: 0.2
+      ChromaticSeconds: 3.5
+      ChromaticFadeSeconds: 1
+      PastelSeparation: 0.012
+      PastelStrength: 0.82
+      PastelPink: {r: 0.96, g: 0.7, b: 0.86, a: 1}
+      PastelMint: {r: 0.67, g: 0.94, b: 0.87, a: 1}
+      PastelLavender: {r: 0.78, g: 0.75, b: 0.97, a: 1}
+      PastelSaturation: 0.58
+      PastelContrast: 0.84
+      PastelGradeStrength: 0.8
+      GlitchSeconds: 2
+      GlitchDisplacement: 0.012
+    SettingsInitialized: 1
+  _activeRoomIndex: 0
+  _crtFeature: {fileID: 8139080203877313755, guid: f288ae1f4751b564a96ac7587541f7a2, type: 2}
+  _effectShader: {fileID: 4800000, guid: 37d5d4f3d6ef4f2cc68ff99bff8dc381, type: 3}
+  _basePreset: {fileID: 11400000, guid: fa73395ad0244e042958793c5481a4f8, type: 2}
+  _bootstrapper: {fileID: 650770981}
+  _heartRate: {fileID: 2080064226}
+  _lights:
+  - {fileID: 466152631}
+  - {fileID: 1743202176}
+  _sceneCamera: {fileID: 0}
+  _scatterLights: []
+  _clockRoomRoot: {fileID: 0}
+  _clockFaceRenderer: {fileID: 0}
+  _clockGlowRenderer: {fileID: 0}
+  _clockFaceDepressedBrightness: 0.7
+  _clockGlowDepressedBrightness: 0.5
+  _waterSourceRadius: 0.035
+  _transitionSeconds: 0.65
+  _normalStateStrength: 0.75
+  _depressedTint: {r: 0.04, g: 0.36, b: 1, a: 1}
+  _blueTintStrength: 0.9
+  _depressedContrast: 1.3
+  _depressedSharpness: 0.85
+  _waterLightStrength: 0.95
+  _waterLightSpread: 0.28
+  _waterLightSharpness: 12
+  _waterBeamCount: 24
+  _waterBeamWidth: 1
+  _waterWidthVariation: 1
+  _waterWaveStrength: 1
+  _waterWaveSpeed: 0.8
+  _waterScatterStrength: 1.15
+  _waterAfterglowStrength: 0.65
+  _waterAfterglowAngle: 60
+  _waterAfterglowLength: 1.25
+  _waterFadeStart: 0.45
+  _waterDistanceFade: 1.6
+  _waterLightDirection: 0
+  _waterScatterAngle: 22
+  _chromaticSeconds: 3.5
+  _chromaticFadeSeconds: 1
+  _pastelSeparation: 0.012
+  _pastelStrength: 0.82
+  _pastelPink: {r: 0.96, g: 0.7, b: 0.86, a: 1}
+  _pastelMint: {r: 0.67, g: 0.94, b: 0.87, a: 1}
+  _pastelLavender: {r: 0.78, g: 0.75, b: 0.97, a: 1}
+  _pastelSaturation: 0.58
+  _pastelContrast: 0.84
+  _pastelGradeStrength: 0.8
+  _glitchSeconds: 2
+  _glitchDisplacement: 0.012
+--- !u!4 &1359216905
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1359216903}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1412631439
 GameObject:
   m_ObjectHideFlags: 0
@@ -13099,6 +13363,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b75a573cce94ee44489aabd91cafbdd3, type: 3}
+--- !u!114 &2080064226 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2475244412193237646, guid: b75a573cce94ee44489aabd91cafbdd3, type: 3}
+  m_PrefabInstance: {fileID: 2080064225}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28dabd48d0e921145a663e03e665cdfd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.HeartRateController
 --- !u!1 &2084255381
 GameObject:
   m_ObjectHideFlags: 0
@@ -13268,3 +13543,4 @@ SceneRoots:
   - {fileID: 2080064225}
   - {fileID: 2054903985}
   - {fileID: 15954282}
+  - {fileID: 1359216905}
