@@ -172,8 +172,13 @@ namespace BlueComplex.UI.Presentation
             _choiceLabel.text = "/ " + (line.text ?? string.Empty);
             _choiceButton.SetActive(true);
 
+            // 대사 묶음(_textGroup)은 평소 클릭을 받지 않는다(blocksRaycasts=false — 글자는 클릭과 무관하다). 그 안의 선택지 버튼도 같이 막히므로,
+            // 선택지가 떠 있는 동안만 켠다. 안 그러면 버튼이 보이는데 눌러도 배경(이 오버레이)이 클릭을 받는다.
+            _textGroup.blocksRaycasts = true;
+
             while (!_choicePicked) yield return null;
 
+            _textGroup.blocksRaycasts = false;
             _choiceButton.SetActive(false);
             _lineIsChoice = false;
             _skip = false;
@@ -221,6 +226,7 @@ namespace BlueComplex.UI.Presentation
             _group.alpha = 0f;
             _group.blocksRaycasts = false;
             if (_choiceButton != null) _choiceButton.SetActive(false);
+            _textGroup.blocksRaycasts = false;
             _lineIsChoice = false;
             gameObject.SetActive(false);
         }
