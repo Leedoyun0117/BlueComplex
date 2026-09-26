@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BlueComplex.UI.Motion;
 using BlueComplex.UI.Presentation;
+using BlueComplex.UI.Rendering;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -175,6 +176,9 @@ namespace BlueComplex.UI.Layout
         private static readonly Color TraitTagBorderColor = new(0.30f, 0.52f, 0.78f, 1f);
 
         private readonly List<RectTransform> _chips = new();
+        private RectTransform _tagContainer;
+        private Canvas _tagCanvas;
+        private ClueBookPanel _book;
 
         /// <summary>지금 풍선 안에 결과 태그가 떠 있으면 true.</summary>
         public bool HasResultTags => _chips.Count > 0;
@@ -321,6 +325,37 @@ namespace BlueComplex.UI.Layout
             _chips.Clear();
         }
 
+        /// <summary>
+        /// 칩(감정 태그·특성 태그)이 붙을 부모. 무드 화면 효과가 켜져 있으면(<see cref="UiTagLayer.Current"/>) 풍선 전체를 덮는 중첩 캔버스를 태그 레이어에 두고 거기에 붙인다 —
+        /// UI 카메라는 이 레이어를 못 봐서 칩이 RT_UI(=색조/글리치 대상)에 안 들어가고, UiTagLayer가 따로 그린 것을 셰이더가 효과 뒤에 얹는다.
+        /// 컨테이너가 풍선 루트와 같은 사각형이라 칩 좌표는 예전과 같다. 무드 효과가 없으면 예전처럼 풍선 자체에 붙인다.
+        /// </summary>
+        private RectTransform ChipParent()
+        {
+            if (UiTagLayer.Current == null) return Root;
+
+            if (_tagContainer == null)
+            {
+                _tagContainer = RuntimeUi.CreateStretched(transform, "Result Tags (mood-exempt)");
+                _tagContainer.gameObject.layer = UiTagLayer.Layer;
+                _tagCanvas = _tagContainer.gameObject.AddComponent<Canvas>();
+            }
+
+            return _tagContainer;
+        }
+
+        /// <summary>
+        /// 태그 레이어는 UI 카메라와 따로 그려져 항상 다른 UI 위에 얹힌다. 예전엔 단서 책이 열리면 칩이 책 뒤로 가려졌으니, 책이 열려 있는 동안은 칩 캔버스를 꺼서 같은 모습을 지킨다
+        /// (칩 연출은 계속 돌고, 책을 닫으면 그대로 다시 보인다). 다른 오버레이(튜토리얼 가이드·대사창 등)는 Presenter가 쉬는 동안에만 떠서 칩과 겹치지 않는다.
+        /// </summary>
+        private void LateUpdate()
+        {
+            if (_tagCanvas == null || _chips.Count == 0) return;
+
+            if (_book == null) _book = transform.root.GetComponentInChildren<ClueBookPanel>(true);
+            _tagCanvas.enabled = _book == null || !_book.gameObject.activeInHierarchy;
+        }
+
         /// <summary>칩이 놓이는 영역(풍선 루트 기준 픽셀): 선 안쪽 가운데. 최종 감정 요약 글자(아래쪽 띠)와 겹치지 않게 위로 올려 잡는다.</summary>
         private Rect ChipArea()
         {
@@ -333,11 +368,12 @@ namespace BlueComplex.UI.Layout
         /// <summary>특성 이름 태그 하나: 파란 테두리(바깥 이미지) 안에 회색 바탕(안쪽 이미지) + 흰 글자. 태그 전체가 하나의 RectTransform이라 감정 칩과 같이 뜨고 올라간다.</summary>
         private TMP_Text CreateTraitTag(string name, int index, out RectTransform tag)
         {
+            var parent = ChipParent();
             var go = new GameObject($"Trait Tag {index}", typeof(RectTransform), typeof(CanvasGroup), typeof(Image))
             {
-                layer = gameObject.layer
+                layer = parent.gameObject.layer
             };
-            go.transform.SetParent(transform, false);
+            go.transform.SetParent(parent, false);
 
             tag = (RectTransform)go.transform;
             tag.anchorMin = tag.anchorMax = tag.pivot = new Vector2(0.5f, 0.5f);
@@ -367,11 +403,12 @@ namespace BlueComplex.UI.Layout
         private TMP_Text CreateChip(ResultTag tag, int index, out RectTransform chip)
         {
             // 레이어를 부모에서 물려받아야 UI 카메라가 그린다(RuntimeUi 문서 참고) — new GameObject는 기본 레이어(0)로 만든다.
+            var parent = ChipParent();
             var go = new GameObject($"Result Tag {index}", typeof(RectTransform), typeof(CanvasGroup), typeof(Image))
             {
-                layer = gameObject.layer
+                layer = parent.gameObject.layer
             };
-            go.transform.SetParent(transform, false);
+            go.transform.SetParent(parent, false);
 
             chip = (RectTransform)go.transform;
             chip.anchorMin = chip.anchorMax = chip.pivot = new Vector2(0.5f, 0.5f);

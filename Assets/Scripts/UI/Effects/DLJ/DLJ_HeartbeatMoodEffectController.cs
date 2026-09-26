@@ -5,6 +5,7 @@ using BlueComplex.Core.Stability;
 using BlueComplex.Core.Turn;
 using BlueComplex.UI.Bootstrap;
 using BlueComplex.UI.Presentation;
+using BlueComplex.UI.Rendering;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
@@ -402,6 +403,7 @@ namespace BlueComplex.UI.Effects.DLJ
         private Material _originalMaterial;
         private Material _runtimeMaterial;
         private CrtEffectDriver _crtDriver;
+        private UiTagLayer _tagLayer;
         private StageSession _session;
         private float _clock;
         private int _lastPresentedValue = Heartbeat.DefaultStartValue;
@@ -508,6 +510,13 @@ namespace BlueComplex.UI.Effects.DLJ
             _runtimeMaterial.SetFloat("_TintR", 0f);
             _runtimeMaterial.SetFloat("_Pastel", 0f);
             _runtimeMaterial.SetFloat("_Brightness", p.Brightness);
+            // 감정 태그 칩은 색조/글리치를 받지 않는다: UI를 합성하는 원본 패스일 때만 별도 태그 레이어(RT_UITag)를 만들어 셰이더가 그 뒤에 얹게 한다.
+            if (_originalMaterial != null)
+            {
+                _tagLayer = UiTagLayer.Create(_originalMaterial.GetTexture("_UITex") as RenderTexture);
+                if (_tagLayer == null)
+                    Debug.LogWarning("[DLJ Mood] UI 카메라(RT_UI)를 못 찾아 태그 UI를 무드 효과에서 분리하지 못했어. 태그도 함께 색조/글리치를 받아.", this);
+            }
             _crtFeature.passMaterial = _runtimeMaterial;
             return true;
         }
@@ -584,6 +593,9 @@ namespace BlueComplex.UI.Effects.DLJ
                 if (_originalMaterial != null)
                     _runtimeMaterial.SetFloat("_Curvature", _originalMaterial.GetFloat("_Curvature"));
                 _runtimeMaterial.SetFloat("_MoodTime", _clock);
+                var tagTexture = _tagLayer != null ? _tagLayer.Texture : null;
+                _runtimeMaterial.SetFloat("_TagEnabled", tagTexture != null ? 1f : 0f);
+                if (tagTexture != null) _runtimeMaterial.SetTexture("_TagTex", tagTexture);
                 _runtimeMaterial.SetFloat("_DepressedAmount", _state.Depressed);
                 _runtimeMaterial.SetColor("_DepressedTint", settings.DepressedTint);
                 _runtimeMaterial.SetFloat("_BlueTintStrength", settings.BlueTintStrength);
@@ -816,6 +828,8 @@ namespace BlueComplex.UI.Effects.DLJ
                 _crtFeature.passMaterial = _originalMaterial;
             if (_runtimeMaterial != null) Destroy(_runtimeMaterial);
             _runtimeMaterial = null;
+            if (_tagLayer != null) Destroy(_tagLayer.gameObject);
+            _tagLayer = null;
             _originalMaterial = null;
             _preview = false;
             _state.Reset();

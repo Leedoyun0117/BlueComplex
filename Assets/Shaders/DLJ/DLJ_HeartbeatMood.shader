@@ -74,6 +74,11 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
         // 깨져 화면 전체가 배럴 클리핑으로 새까맣게 나오는 문제가 있었다 — 그래서 한 패스로 합쳤다.
         // RT_UI를 에디터에서 이 슬롯에 직접 할당한다(전역 텍스처 아님).
         _UITex ("UI Texture", 2D) = "black" {}
+
+        // 무드 효과(색조/글리치/블룸/색수차)를 받지 않는 UI(감정 태그 칩). 별도 태그 카메라(UiTagLayer)가 그린 RT_UITag를
+        // 컨트롤러가 런타임에 할당하고 _TagEnabled를 1로 켠다 — 꺼져 있으면 기본 텍스처가 무엇이든 아무것도 얹지 않는다.
+        [HideInInspector] _TagEnabled ("Mood-exempt UI Enabled", Float) = 0
+        _TagTex ("Mood-exempt UI Texture", 2D) = "black" {}
     }
 
     SubShader
@@ -101,9 +106,12 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
 
             TEXTURE2D(_UITex);
             SAMPLER(sampler_UITex);
+            TEXTURE2D(_TagTex);
+            SAMPLER(sampler_TagTex);
 
             CBUFFER_START(UnityPerMaterial)
                 float _MoodOnly;
+                float _TagEnabled;
                 float _ScanIntensity;
                 float _ScanCount;
                 float _ScanThickness;
@@ -943,6 +951,8 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
                 float2 res = _BlitTexture_TexelSize.zw;
                 float time = _Time.y;
                 float2 c = input.texcoord;
+                // 태그 UI는 글리치 변위를 받지 않는다 — 원래 좌표를 따로 쥐고 있다가 흔들림/배럴만 같이 적용한다.
+                float2 tagC = c;
 
                 // 진입 후 2초만 활성화되는 가로 슬라이스 글리치. 진입 색수차와 별도 제어.
                 float frame = floor(_MoodTime * 13.0);
@@ -965,9 +975,12 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
                 // 화면 흔들림
                 c.x += sin(time * 37.0) * _Shake * 0.5;
                 c.y += cos(time * 23.0) * _Shake * 0.35;
+                tagC.x += sin(time * 37.0) * _Shake * 0.5;
+                tagC.y += cos(time * 23.0) * _Shake * 0.35;
 
                 // 배럴 왜곡
                 c = Barrel(c);
+                tagC = Barrel(tagC);
 
                 // 화면 밖 클리핑
                 if (c.x < 0.0 || c.x > 1.0 || c.y < 0.0 || c.y > 1.0)
@@ -998,6 +1011,11 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
 
                 [branch]
                 if (_DepressedAmount > 0.001) col = Underwater(c, col);
+
+                // 감정 태그 UI: 파스텔/침체 색조와 글리치가 끝난 뒤에 원래 색으로 얹는다(색으로 구분되는 라벨이라 톤이 입혀지면 읽기 어렵다).
+                // 이 뒤의 스캔라인/섀도우 마스크/비네트/밝기는 화면 전체가 공유하는 CRT 질감이라 그대로 적용된다.
+                float4 tag = SAMPLE_TEXTURE2D(_TagTex, sampler_TagTex, tagC);
+                col = lerp(col, tag.rgb, tag.a * _TagEnabled);
 
                 // 스캔라인 (두께: sin파를 지수로 눌러서 어두운 대역의 폭을 넓힘)
                 float sl = sin((c.y + time * _ScanSpeed * 0.05) * _ScanCount * 3.14159);
