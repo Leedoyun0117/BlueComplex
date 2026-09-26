@@ -29,6 +29,9 @@ namespace BlueComplex.UI.Layout
 
         private PostitCurl _curl;
         private LayerKind _kind;
+        private Color _paper = PostitStyle.Paper;
+        private Color _paperShade = PostitStyle.PaperShade;
+        private Color _back = PostitStyle.Back;
 
         public void Init(PostitCurl curl, LayerKind kind)
         {
@@ -39,6 +42,15 @@ namespace BlueComplex.UI.Layout
         }
 
         public void Dirty() => SetVerticesDirty();
+
+        /// <summary>종이 색을 바꾼다(기본은 <see cref="PostitStyle"/>의 노랑). 종이 면(Paper)과 말린 뒷면(Flap)이 쓴다.</summary>
+        public void SetPalette(Color paper, Color paperShade, Color back)
+        {
+            _paper = paper;
+            _paperShade = paperShade;
+            _back = back;
+            SetVerticesDirty();
+        }
 
         protected override void OnPopulateMesh(VertexHelper vh)
         {
@@ -89,7 +101,7 @@ namespace BlueComplex.UI.Layout
             {
                 // 좌상단에서 우하단으로 살짝 어두워지는 종이 결.
                 var gradient = Mathf.Clamp01(((point.x - rect.xMin) / rect.width + (rect.yMax - point.y) / rect.height) * 0.5f);
-                vh.AddVert(point, Color.Lerp(PostitStyle.Paper, PostitStyle.PaperShade, gradient) * color, Vector2.zero);
+                vh.AddVert(point, Color.Lerp(_paper, _paperShade, gradient) * color, Vector2.zero);
             }
 
             AddFan(vh, start, polygon.Count);
@@ -98,6 +110,7 @@ namespace BlueComplex.UI.Layout
         /// <summary>말린 부분이 종이 위에 드리우는 그림자 — 말린 조각을 살짝 키워 옆으로 밀어 두 겹으로 깐다. 접힘선에 가까울수록 짙다.</summary>
         private void BuildCurlShadow(VertexHelper vh, PostitCurl.Layout layout)
         {
+            if (_curl.Flat) return; // 평평한 종이엔 말린 부분이 없다.
             var slices = FlapStrips(layout);
             if (slices.Count < 2) return;
 
@@ -108,6 +121,7 @@ namespace BlueComplex.UI.Layout
 
         private void BuildFlap(VertexHelper vh, PostitCurl.Layout layout)
         {
+            if (_curl.Flat) return; // 평평한 종이엔 말린 부분이 없다.
             var slices = FlapStrips(layout);
             if (slices.Count < 2) return;
 
@@ -127,7 +141,7 @@ namespace BlueComplex.UI.Layout
 
         private Color Shaded(float shade)
         {
-            var back = PostitStyle.Back;
+            var back = _back;
             return new Color(Mathf.Clamp01(back.r * shade), Mathf.Clamp01(back.g * shade), Mathf.Clamp01(back.b * shade), back.a) * color;
         }
 

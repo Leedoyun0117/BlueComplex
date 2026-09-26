@@ -13,10 +13,32 @@ Unity에서 외부 수정된 씬을 Reload하거나 다시 열고 Play한 뒤, �
 
 ## 동작
 
+### 방 2 시계탑 침체 빛
+
+`Active Room Index = 1`, `Rooms > 방 2 > Mode = Window Edges`, `Window Style = Clock Shafts` 사용.
+`Background Rig (3)/Layers/ClockLight/DLJ Clock Depression Line` 아래 9개 지점으로 시계 중심을 지나는 가로선을 연결. `ClockLight` 이미지의 중심·반지름과 같은 좌표를 사용하므로 배경 레이어 이동을 따라감.
+가로선의 왼쪽 끝부터 오른쪽 끝까지 8개 변을 사용. 이 스타일에는 중심선 하나만 연결.
+침체 중에만 시계 중심선 아래에서 흰 심·청록빛 산란광이 난간 아래쪽으로 퍼지고, 시계판 아래쪽과 시계탑 앞면도 옅게 덮음. `Transition Seconds`로 기존처럼 천천히 전환하며 Pass Material이 None인 연출 전용 모드에서도 동일하게 적용.
+`Windows > Length = 0.51`은 화면 높이 대비 시계 중심부터 빛 끝까지의 거리. `Strength = 0.85`, `Window Band Opacity = 0.72`로 세기를 조절.
+`Water Scatter Angle = 30`으로 아래쪽 퍼짐을 조절. `Water Beam Count = 32`는 중심선 전체의 빛줄기 수이며 `Window Band Width`, `Water Wave Strength/Speed`, `Water Fade Start/Distance Fade`로 폭·일렁임·끝 감쇠를 조절.
+
+### 방 2 왼쪽 벽 버전
+
+`Active Room Index = 3`은 기존 방 2 배경을 공유하면서 왼쪽 벽에서 시계탑 쪽으로 침체 광선을 비추는 별도 항목. `1`로 바꾸면 시계 중심선 버전으로 돌아감.
+`Background Rig (3)/DLJ Left Wall Light Line`의 아래·위 지점을 벽에 맞춘 세로 출발선으로 사용. `Mode = Window Edges`, `Window Style = Left Wall Shafts`이며 출발선 왼쪽에는 빛을 합성하지 않음.
+`Windows > Length = 0.72`는 화면 너비에 대한 오른쪽 빛 길이. `Water Scatter Angle = 17`은 표시한 영역의 퍼짐, `Window Band Width`와 `Water Beam Width`는 빛줄기 폭을 조절. 전환 속도와 흥분 설정은 시계 버전과 같음.
+
+### 방 2 두 빛 동시 연출
+
+`Active Room Index = 4`는 시계 중심선 8개 변과 왼쪽 벽 1개 변을 함께 연결. `1`은 시계만, `3`은 벽만 표시.
+`Window Style = Clock And Left Wall Shafts`에서는 겹치는 광선 값의 45%를 더함. `Water Scatter Angle`은 두 빛의 퍼짐을 함께 조절하되 벽 쪽은 조금 좁게 유지. 각 출발선의 `Edge Width`로 빛줄기 폭을 따로 정할 수 있음. 방 2 배경과 전환 시간은 기존 버전과 공유.
+
+시계 밝기는 방 2에서 침체 중일 때만 낮아짐. `방 2 시계 밝기`의 `Clock Face Depressed Brightness`와 `Clock Glow Depressed Brightness`로 침체 끝 밝기를 따로 조절. 평소에는 원래 재질의 밝기로 돌아오고, `Transition Seconds`에 맞춰 천천히 바뀜.
+
 ### 방별 연결 / 방 3 창문 산란
 
 `DLJ Heartbeat Mood Effects`를 선택하면 Inspector의 `Rooms` 목록에 Hierarchy 오브젝트를 끌어 넣을 수 있음.
-DLJ 테스트 씬에는 3개 항목을 저장했고 기존 연결은 방 1로 이동. 방 3에 현재 테스트 씬의 창문 연결을 옮겼고 `Window Edges` 모드를 적용. 방 2는 미연결 상태.
+DLJ 테스트 씬에는 3개 항목을 저장했고 기존 연결은 방 1로 이동. 방 2는 시계 중심선, 방 3은 창문 테두리를 `Window Edges` 모드로 연결.
 다른 기존 씬은 인스펙터의 `기존 연결을 방 1로 옮기고 방 2·3 목록 만들기` 버튼으로 변환 가능.
 목록을 만들지 않은 기존 씬은 이전 직렬화 필드 그대로 동작. 원래 연출의 수치는 변환 시 변경하지 않음.
 
@@ -30,7 +52,7 @@ DLJ 테스트 씬에는 3개 항목을 저장했고 기존 연결은 방 1로 �
 현재 감정 강도와 전환 시간은 선택한 방의 설정에 맞게 갱신. CRT 연결과 기본 프리셋만 컨트롤러에서 공통 사용.
 
 방 3에는 중앙 광선 없이 창문 바깥 둘레의 빛만 남기는 `Window Style = Window Glow` 적용.
-`Fine Rays`는 이전 광선 그대로 유지하며, 방 1·2의 저장값과 기존 셰이더 경로는 변경하지 않음.
+`Fine Rays`는 기존 전구·창문 광선 스타일로 유지.
 스타일은 현재 방이 `Window Edges` 모드일 때만 활성화되고, 다른 방으로 전환하면 매 프레임 해당 방 설정으로 갱신.
 `Room Shafts`는 네 변에서 바깥으로 나뉜 굵은 빛줄기를 만들고, 모서리에서는 대각선으로 펼친다. 창문 안쪽은 광선 합성에서 제외. 변마다 줄기 수와 묶음 위치가 다르고, 폭·밝기·길이도 줄기마다 달라짐. 빛의 세기는 약하게 일렁임.
 `Center Shafts`는 창문 네 변의 평균 중심을 출발점으로 삼고, 각 줄기가 창틀의 다른 지점을 통과해 바깥으로 뻗는다. 광선 폭과 주변 확산 범위를 좁혀 배경을 덮지 않으며, 기존 `Room Shafts`도 스타일 목록에 남아 있음.
@@ -43,7 +65,7 @@ Window Glow의 확산 반경은 창틀 근처로 제한하며 네 변에 같은 
 방 3의 `Water Width Variation=0.9`로 줄기별 폭 차이를 조금 더 키움.
 `Water Fade Start=0.3`, `Water Distance Fade=0.85`로 빛이 방 안쪽까지 이어지게 함. 파란 침체 색감과 흥분 설정은 기존 방 3 값 유지.
 `Soft Bands`는 이전 창문 둘레 빛 띠 스타일로 남아 있음. 창틀 바깥 방향과 모서리 연결을 유지하고, 기울어진 시작면의 검은 잘림은 창틀 선에서 메움.
-`Window Band Opacity`는 Soft Bands, Room Shafts, Center Shafts, Window Glow의 전체 투명도(0=투명, 1=불투명)를 조절. `Window Band Core Brightness`는 광선 스타일 세 종류의 중심 밝기만 조절하며 Window Glow에는 적용하지 않음. Fine Rays/전구에도 적용하지 않음.
+`Window Band Opacity`는 Soft Bands, Room Shafts, Center Shafts, Window Glow, Clock Shafts의 전체 투명도(0=투명, 1=불투명)를 조절. `Window Band Core Brightness`는 광선 중심 밝기를 조절하며 Window Glow에는 적용하지 않음. Fine Rays/전구에도 적용하지 않음.
 
 1. `Rooms > 방 3`에서 `Scene Camera`에 해당 방의 배경 카메라, `Lights`에 침체 중 흰색으로 바꿀 광원을 연결.
 2. `Active Room Index`를 `2`로 설정. 0=방 1, 1=방 2, 2=방 3.
@@ -66,8 +88,8 @@ Window Glow의 확산 반경은 창틀 근처로 제한하며 네 변에 같은 
 창문 출발점은 실제 테두리를 따르고, 창틀 바깥으로 뻗는 흰 심·청록 산란·끝 잔광을 기존 파란 색감에 합성.
 어두운 창틀도 지정 가능하도록 창문 산란은 밝기 추출에 의존하지 않음. `Strength=0`으로 해당 창문 산란을 끔.
 기존 전구 광선의 회전과 원뿔을 복제하지 않고, 창문 변에 고정된 출발점에서 바깥쪽으로 빛줄기를 펼침. 밝기·작은 각도·얕은 휨이 천천히 변화하고, 안쪽 픽셀은 광선 반복 전에 제외.
-`Water Beam Count`는 창문 변당 8~48개 광선, 방당 최대 8개 변. 창문 모드에는 전구의 넓은 각도 자동 수량 보강을 적용하지 않음.
-`Water Afterglow Angle/Length`, `Water Scatter Angle`, `Water Source Radius/Light Spread/Direction`은 전구용이며 창문 길이·폭은 창문 항목에서 조절.
+`Water Beam Count`는 창문 변당 8~48개 광선, 방당 최대 8개 변. Clock Shafts는 중심선 전체의 수량. 창문 모드에는 전구의 넓은 각도 자동 수량 보강을 적용하지 않음.
+`Water Afterglow Angle/Length`, `Water Source Radius/Light Spread/Direction`은 전구용이며 창문 길이·폭은 창문 항목에서 조절. `Water Scatter Angle`은 전구와 Clock Shafts의 퍼짐 각도에 적용.
 파란 색감, 빛줄기 굵기·거리 감쇠·일렁임, 흥분 진입 및 유지 연출은 선택한 방의 `연출 설정` 사용.
 
 방 전환 스크립트/UnityEvent에서는 `SelectRoom(0/1/2)` 호출. 이 API는 연출 연결과 수치를 변경하고 배경 오브젝트의 활성화는 변경하지 않음.
