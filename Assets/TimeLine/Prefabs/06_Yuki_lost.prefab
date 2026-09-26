@@ -1,5 +1,153 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &370100000000000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 370100000000000004}
+  - component: {fileID: 370100000000000082}
+  - component: {fileID: 370100000000000114}
+  m_Layer: 0
+  m_Name: Ambient_Typoon
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &370100000000000004
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 370100000000000001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2176883114598401732}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!82 &370100000000000082
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 370100000000000001}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 1
+  m_Volume: 0.3
+  m_Pitch: 1
+  Loop: 1
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &370100000000000114
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 370100000000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de28affe0897fe94486e8cb209367bb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineAudioSignal
+  clip: {fileID: 8300000, guid: 9ec8192afe0a51d47b6b5fb79e3a8534, type: 3}
+  volume: 0.12
+  fadeInDuration: 3
+  fadeOutDuration: 3
+  channel: 3
+  mixer: {fileID: 0}
 --- !u!1 &397489808495179898
 GameObject:
   m_ObjectHideFlags: 0
@@ -14,6 +162,8 @@ GameObject:
   - component: {fileID: 4986850192204410887}
   - component: {fileID: 3440000000000000082}
   - component: {fileID: 3440000000000000114}
+  - component: {fileID: 3506000000000000777}
+  - component: {fileID: 3801000000000000555}
   m_Layer: 0
   m_Name: Signal
   m_TagString: Untagged
@@ -33,7 +183,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 370100000000000004}
   m_Father: {fileID: 6119960598769542100}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2258856120176429205
@@ -97,11 +248,59 @@ MonoBehaviour:
             m_StringArgument: 
             m_BoolArgument: 0
           m_CallState: 2
+        - m_Target: {fileID: 370100000000000114}
+          m_TargetAssemblyTypeName: KTH.KTH_TimelineAudioSignal, Assembly-CSharp
+          m_MethodName: SoundOn
+          m_Mode: 1
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+        - m_Target: {fileID: 3801000000000000555}
+          m_TargetAssemblyTypeName: KTH.KTH_RepeatSfx, Assembly-CSharp
+          m_MethodName: StartRepeat
+          m_Mode: 1
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
     - m_PersistentCalls:
         m_Calls:
         - m_Target: {fileID: 3440000000000000114}
           m_TargetAssemblyTypeName: KTH.KTH_TimelineAudioSignal, Assembly-CSharp
           m_MethodName: SoundOff
+          m_Mode: 1
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+        - m_Target: {fileID: 370100000000000114}
+          m_TargetAssemblyTypeName: KTH.KTH_TimelineAudioSignal, Assembly-CSharp
+          m_MethodName: SoundOff
+          m_Mode: 1
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+        - m_Target: {fileID: 3801000000000000555}
+          m_TargetAssemblyTypeName: KTH.KTH_RepeatSfx, Assembly-CSharp
+          m_MethodName: StopRepeat
           m_Mode: 1
           m_Arguments:
             m_ObjectArgument: {fileID: 0}
@@ -142,50 +341,226 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TypingTextSignal
   text: {fileID: 3976288946333571265}
   lines:
-  - "비가 거세게 몰아쳤다."
-  - "나는 B씨의 말처럼 해변가에 서 있다가\n부모님이 무언가를 가지러 간 사이"
-  - "멀리 있는 바위 뒤에 몸을 숨겼다."
-  - "작게 웃음이 나왔다."
-  - "부모님이 날 찾을 수 있을까?"
-  - "곳 이어, 랜턴을 든 아버지가\n해변가를 비추며 내 이름을 부르기 시작했다."
-  - "조금만 더 있다가 나가면 깜짝 놀랄 게 분명해."
-  - "나는 눈만 내밀고 계속 지켜 보았다."
-  - "빗줄기는 계속 굵어지기만 했다."
-  - "거센 빗방울과 바람이 만나\n해변가의 모습이 흐려지기 시작했다."
-  - "어느 순간, 랜턴의 빛이 더 이상 움직이지 않았다."
-  - "”아빠! 엄마! 저 여기 있어요!”"
-  - "무언가 불안해진 나는\n온 힘을 다해 부모님을 불렀다."
-  - "하지만 내 목소리는 폭풍에 막혀 흩어져 버렸다."
-  - "잠깐 스쳐가는 장면에,\n부모님이 바닷 속을 들여다 보는 모습이 보였다."
-  - "나는 서둘러 몸을 일으켰다."
-  - "”아!”"
-  - "하지만 바위 틈에 끼어버린\n왼 발목에서 통증이 올라왔다."
-  - "두 손으로 종아리를 잡아 빼내려 했지만\n단단한 바위는 거친 손아귀로 나를 놓지 않았다."
-  - "흐린 실루엣."
-  - "엄마가 바닷속으로 걸어 들어갔다."
-  - "아빠는 계속 내 이름을 부르며\n여기 저기를 비추고 있었다."
-  - "”엄마! 나.. 여기 있어요!”"
-  - "나는 다리를 빼내려 애쓰며 계속해서 소리쳤다."
-  - "”아빠…!”"
-  - "철썩거리는 소리와 함께 엄청난 물보라가 일었다."
-  - "바람을 맞은 파도가 몸집을 불리고 있었다."
-  - "”제발…여기 있다고요!”"
-  - "눈물 콧물이 흘러 빗물과 섞였다."
-  - "양 뺨으로 흘러내려온 빗물에서 짠 맛이 돌았다."
-  - "얼마나 지났을까."
-  - "빗줄기가 옅어졌다."
-  - "나는 얼굴을 닦아내고 해변가를 바라보았다."
-  - "모래 사장에 아무렇게 쓰러진 랜턴."
-  - "그리고 아버지의 겉옷이 보였다."
-  - "하지만 두 분의 모습은 어디에도 보이지 않았다."
-  - "정신을 차려 보니\n내 발목을 붙잡던 바위의 모습에 집중할 수 있었다."
-  - "피가 베어나왔지만 통증이 느껴지지 않았다."
-  - "다리를 빼내고, 나는 해변가로 달려갔다."
-  - "파도에 휩쓸려 알아보기 쉽지 않았지만,\n사람 두 명의 발자국이 남아있었다."
-  - "그리고, 그 발자국은 물 속으로 걸어 들어 갔다."
-  - "몇 시간을 뒤져도 다시 나온 흔적은 찾아볼 수 없었다."
+  - "\uBE44\uAC00 \uAC70\uC138\uAC8C \uBAB0\uC544\uCCE4\uB2E4."
+  - "\uB098\uB294 B\uC528\uC758 \uB9D0\uCC98\uB7FC \uD574\uBCC0\uAC00\uC5D0 \uC11C
+    \uC788\uB2E4\uAC00\n\uBD80\uBAA8\uB2D8\uC774 \uBB34\uC5B8\uAC00\uB97C \uAC00\uC9C0\uB7EC
+    \uAC04 \uC0AC\uC774"
+  - "\uBA40\uB9AC \uC788\uB294 \uBC14\uC704 \uB4A4\uC5D0 \uBAB8\uC744 \uC228\uACBC\uB2E4."
+  - "\uC791\uAC8C \uC6C3\uC74C\uC774 \uB098\uC654\uB2E4."
+  - "\uBD80\uBAA8\uB2D8\uC774 \uB0A0 \uCC3E\uC744 \uC218 \uC788\uC744\uAE4C?"
+  - "\uACF3 \uC774\uC5B4, \uB79C\uD134\uC744 \uB4E0 \uC544\uBC84\uC9C0\uAC00\n\uD574\uBCC0\uAC00\uB97C
+    \uBE44\uCD94\uBA70 \uB0B4 \uC774\uB984\uC744 \uBD80\uB974\uAE30 \uC2DC\uC791\uD588\uB2E4."
+  - "\uC870\uAE08\uB9CC \uB354 \uC788\uB2E4\uAC00 \uB098\uAC00\uBA74 \uAE5C\uC9DD
+    \uB180\uB784 \uAC8C \uBD84\uBA85\uD574."
+  - "\uB098\uB294 \uB208\uB9CC \uB0B4\uBC00\uACE0 \uACC4\uC18D \uC9C0\uCF1C \uBCF4\uC558\uB2E4."
+  - "\uBE57\uC904\uAE30\uB294 \uACC4\uC18D \uAD75\uC5B4\uC9C0\uAE30\uB9CC \uD588\uB2E4."
+  - "\uAC70\uC13C \uBE57\uBC29\uC6B8\uACFC \uBC14\uB78C\uC774 \uB9CC\uB098\n\uD574\uBCC0\uAC00\uC758
+    \uBAA8\uC2B5\uC774 \uD750\uB824\uC9C0\uAE30 \uC2DC\uC791\uD588\uB2E4."
+  - "\uC5B4\uB290 \uC21C\uAC04, \uB79C\uD134\uC758 \uBE5B\uC774 \uB354 \uC774\uC0C1
+    \uC6C0\uC9C1\uC774\uC9C0 \uC54A\uC558\uB2E4."
+  - "\u201D\uC544\uBE60! \uC5C4\uB9C8! \uC800 \uC5EC\uAE30 \uC788\uC5B4\uC694!\u201D"
+  - "\uBB34\uC5B8\uAC00 \uBD88\uC548\uD574\uC9C4 \uB098\uB294\n\uC628 \uD798\uC744
+    \uB2E4\uD574 \uBD80\uBAA8\uB2D8\uC744 \uBD88\uB800\uB2E4."
+  - "\uD558\uC9C0\uB9CC \uB0B4 \uBAA9\uC18C\uB9AC\uB294 \uD3ED\uD48D\uC5D0 \uB9C9\uD600
+    \uD769\uC5B4\uC838 \uBC84\uB838\uB2E4."
+  - "\uC7A0\uAE50 \uC2A4\uCCD0\uAC00\uB294 \uC7A5\uBA74\uC5D0,\n\uBD80\uBAA8\uB2D8\uC774
+    \uBC14\uB2F7 \uC18D\uC744 \uB4E4\uC5EC\uB2E4 \uBCF4\uB294 \uBAA8\uC2B5\uC774
+    \uBCF4\uC600\uB2E4."
+  - "\uB098\uB294 \uC11C\uB458\uB7EC \uBAB8\uC744 \uC77C\uC73C\uCF30\uB2E4."
+  - "\u201D\uC544!\u201D"
+  - "\uD558\uC9C0\uB9CC \uBC14\uC704 \uD2C8\uC5D0 \uB07C\uC5B4\uBC84\uB9B0\n\uC67C
+    \uBC1C\uBAA9\uC5D0\uC11C \uD1B5\uC99D\uC774 \uC62C\uB77C\uC654\uB2E4."
+  - "\uB450 \uC190\uC73C\uB85C \uC885\uC544\uB9AC\uB97C \uC7A1\uC544 \uBE7C\uB0B4\uB824
+    \uD588\uC9C0\uB9CC\n\uB2E8\uB2E8\uD55C \uBC14\uC704\uB294 \uAC70\uCE5C \uC190\uC544\uADC0\uB85C
+    \uB098\uB97C \uB193\uC9C0 \uC54A\uC558\uB2E4."
+  - "\uD750\uB9B0 \uC2E4\uB8E8\uC5E3."
+  - "\uC5C4\uB9C8\uAC00 \uBC14\uB2F7\uC18D\uC73C\uB85C \uAC78\uC5B4 \uB4E4\uC5B4\uAC14\uB2E4."
+  - "\uC544\uBE60\uB294 \uACC4\uC18D \uB0B4 \uC774\uB984\uC744 \uBD80\uB974\uBA70\n\uC5EC\uAE30
+    \uC800\uAE30\uB97C \uBE44\uCD94\uACE0 \uC788\uC5C8\uB2E4."
+  - "\u201D\uC5C4\uB9C8! \uB098.. \uC5EC\uAE30 \uC788\uC5B4\uC694!\u201D"
+  - "\uB098\uB294 \uB2E4\uB9AC\uB97C \uBE7C\uB0B4\uB824 \uC560\uC4F0\uBA70 \uACC4\uC18D\uD574\uC11C
+    \uC18C\uB9AC\uCCE4\uB2E4."
+  - "\u201D\uC544\uBE60\u2026!\u201D"
+  - "\uCCA0\uC369\uAC70\uB9AC\uB294 \uC18C\uB9AC\uC640 \uD568\uAED8 \uC5C4\uCCAD\uB09C
+    \uBB3C\uBCF4\uB77C\uAC00 \uC77C\uC5C8\uB2E4."
+  - "\uBC14\uB78C\uC744 \uB9DE\uC740 \uD30C\uB3C4\uAC00 \uBAB8\uC9D1\uC744 \uBD88\uB9AC\uACE0
+    \uC788\uC5C8\uB2E4."
+  - "\u201D\uC81C\uBC1C\u2026\uC5EC\uAE30 \uC788\uB2E4\uACE0\uC694!\u201D"
+  - "\uB208\uBB3C \uCF67\uBB3C\uC774 \uD758\uB7EC \uBE57\uBB3C\uACFC \uC11E\uC600\uB2E4."
+  - "\uC591 \uBEA8\uC73C\uB85C \uD758\uB7EC\uB0B4\uB824\uC628 \uBE57\uBB3C\uC5D0\uC11C
+    \uC9E0 \uB9DB\uC774 \uB3CC\uC558\uB2E4."
+  - "\uC5BC\uB9C8\uB098 \uC9C0\uB0AC\uC744\uAE4C."
+  - "\uBE57\uC904\uAE30\uAC00 \uC605\uC5B4\uC84C\uB2E4."
+  - "\uB098\uB294 \uC5BC\uAD74\uC744 \uB2E6\uC544\uB0B4\uACE0 \uD574\uBCC0\uAC00\uB97C
+    \uBC14\uB77C\uBCF4\uC558\uB2E4."
+  - "\uBAA8\uB798 \uC0AC\uC7A5\uC5D0 \uC544\uBB34\uB807\uAC8C \uC4F0\uB7EC\uC9C4
+    \uB79C\uD134."
+  - "\uADF8\uB9AC\uACE0 \uC544\uBC84\uC9C0\uC758 \uAC89\uC637\uC774 \uBCF4\uC600\uB2E4."
+  - "\uD558\uC9C0\uB9CC \uB450 \uBD84\uC758 \uBAA8\uC2B5\uC740 \uC5B4\uB514\uC5D0\uB3C4
+    \uBCF4\uC774\uC9C0 \uC54A\uC558\uB2E4."
+  - "\uC815\uC2E0\uC744 \uCC28\uB824 \uBCF4\uB2C8\n\uB0B4 \uBC1C\uBAA9\uC744 \uBD99\uC7A1\uB358
+    \uBC14\uC704\uC758 \uBAA8\uC2B5\uC5D0 \uC9D1\uC911\uD560 \uC218 \uC788\uC5C8\uB2E4."
+  - "\uD53C\uAC00 \uBCA0\uC5B4\uB098\uC654\uC9C0\uB9CC \uD1B5\uC99D\uC774 \uB290\uAEF4\uC9C0\uC9C0
+    \uC54A\uC558\uB2E4."
+  - "\uB2E4\uB9AC\uB97C \uBE7C\uB0B4\uACE0, \uB098\uB294 \uD574\uBCC0\uAC00\uB85C
+    \uB2EC\uB824\uAC14\uB2E4."
+  - "\uD30C\uB3C4\uC5D0 \uD729\uC4F8\uB824 \uC54C\uC544\uBCF4\uAE30 \uC27D\uC9C0
+    \uC54A\uC558\uC9C0\uB9CC,\n\uC0AC\uB78C \uB450 \uBA85\uC758 \uBC1C\uC790\uAD6D\uC774
+    \uB0A8\uC544\uC788\uC5C8\uB2E4."
+  - "\uADF8\uB9AC\uACE0, \uADF8 \uBC1C\uC790\uAD6D\uC740 \uBB3C \uC18D\uC73C\uB85C
+    \uAC78\uC5B4 \uB4E4\uC5B4 \uAC14\uB2E4."
+  - "\uBA87 \uC2DC\uAC04\uC744 \uB4A4\uC838\uB3C4 \uB2E4\uC2DC \uB098\uC628 \uD754\uC801\uC740
+    \uCC3E\uC544\uBCFC \uC218 \uC5C6\uC5C8\uB2E4."
   charInterval: 0.05
   clearOnEnable: 1
+  typingSfx: {fileID: 8300000, guid: babdb331464db794aa4a7a31388a951c, type: 3}
+  typingSfxVolume: 0.35
+  typingSfxMinInterval: 0.06
+  typingSfxPitch: {x: 0.95, y: 1.05}
+--- !u!82 &3440000000000000082
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 397489808495179898}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 1
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &3440000000000000114
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 397489808495179898}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de28affe0897fe94486e8cb209367bb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineAudioSignal
+  clip: {fileID: 8300000, guid: d59e9f5a544f3e54eb0e5e659fce889d, type: 3}
+  volume: 0.3
+  fadeInDuration: 3
+  fadeOutDuration: 3
+  channel: 2
+  mixer: {fileID: 0}
+--- !u!114 &3506000000000000777
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 397489808495179898}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fbac7c361c34b6e87f7d5016557a4a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineSfxReceiver
+  volume: 1
+--- !u!114 &3801000000000000555
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 397489808495179898}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 50ab7ef0455140e38a7cb41119faf46c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_RepeatSfx
+  clip: {fileID: 8300000, guid: 443d203be0c1d8c4697099d825439727, type: 3}
+  volume: 1
+  interval: 8
+  startDelay: 0
 --- !u!1 &460739033293596037
 GameObject:
   m_ObjectHideFlags: 0
@@ -809,115 +1184,3 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!82 &3440000000000000082
-AudioSource:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 397489808495179898}
-  m_Enabled: 1
-  serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 0}
-  m_PlayOnAwake: 0
-  m_Volume: 1
-  m_Pitch: 1
-  Loop: 1
-  Mute: 0
-  Spatialize: 0
-  SpatializePostEffects: 0
-  Priority: 128
-  DopplerLevel: 1
-  MinDistance: 1
-  MaxDistance: 500
-  Pan2D: 0
-  rolloffMode: 0
-  BypassEffects: 0
-  BypassListenerEffects: 0
-  BypassReverbZones: 0
-  rolloffCustomCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    - serializedVersion: 3
-      time: 1
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  panLevelCustomCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  spreadCustomCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  reverbZoneMixCustomCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
---- !u!114 &3440000000000000114
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 397489808495179898}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: de28affe0897fe94486e8cb209367bb1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineAudioSignal
-  clip: {fileID: 8300000, guid: d59e9f5a544f3e54eb0e5e659fce889d, type: 3}
-  fadeInDuration: 3
-  fadeOutDuration: 3
