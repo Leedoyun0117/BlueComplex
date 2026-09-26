@@ -139,6 +139,10 @@ namespace BlueComplex.UI.Motion
         [Tooltip("확대 배율의 하한/상한 — 표시기가 아주 작거나 커도 이 범위 안에서만 확대한다.")]
         public Vector2 heartFocusZoomRange = new Vector2(1.6f, 3f);
 
+        [Header("분기 대사 장면 (쿼터가 끝날 때 게임 UI가 빠지고 배경과 대사만 남는다)")]
+        [Tooltip("게임 UI가 사라지는 시간, 그리고 대사가 끝난 뒤 다시 나타나는 시간.")]
+        public float branchSceneFade = 0.5f;
+
         [Header("스테이지 클리어 연출 (자물쇠 → 대사 → 컷신 → 다음 스테이지)")]
         [Tooltip("자물쇠 화면으로 넘어가며 화면이 어두워지는 시간.")]
         public float clearDimFade = 0.9f;

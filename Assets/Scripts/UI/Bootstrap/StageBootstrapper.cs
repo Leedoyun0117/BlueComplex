@@ -234,6 +234,7 @@ namespace BlueComplex.UI.Bootstrap
             // 튜토리얼 가이드(청장의 말풍선·강조·클릭 막)는 튜토리얼 세션에만 붙는다 — 첫 턴이 시작될 때(시작 대화 뒤) 안내가 시작된다. 다른 세션이면 남은 것을 치운다.
             if (_isTutorial) TutorialGuide.GetOrCreate(canvasRoot)?.Begin(Session);
             else TutorialGuide.Find(canvasRoot)?.ResetNow();
+            BranchSceneDirector.GetOrCreate(canvasRoot)?.ResetNow(); // 분기 대사 장면 도중이었으면 게임 UI를 되돌린다.
 
             // 상시 배경음은 스테이지(재시작 포함)가 시작될 때 처음부터 — 시작 대화 재생 중에도 이미 깔려 있다.
             var ambient = StageSounds.For(config).Ambient;
@@ -317,16 +318,24 @@ namespace BlueComplex.UI.Bootstrap
             var variant = StageDialogues.PickQuarterEnd(Config.Id, mood);
             if (!variant.HasValue) yield break;
 
+            // 분기 대사 장면: 게임 UI가 빠지고 배경과 대사만 남는다(스테이지 시작·클리어 대화는 그대로 어두운 막 위에서 한다).
             InputBlocked = true;
-            yield return StageDialoguePlayer.GetOrCreate(canvasRoot).Play(variant.Value);
+            yield return BranchSceneDirector.GetOrCreate(canvasRoot).Play(variant.Value);
             InputBlocked = false;
         }
 
-        /// <summary>StageBootstrapper가 MainHud 캔버스의 자식이라는 보장이 없어(씬 배치에 따라 다르다) 대화 오버레이를 지을 캔버스를 직접 찾는다.</summary>
+        /// <summary>StageBootstrapper가 MainHud 캔버스의 자식이라는 보장이 없어(씬 배치에 따라 다르다) 대화 오버레이를 지을 캔버스를 직접 찾는다.
+        /// 대사 오버레이처럼 자기 캔버스를 가진 중첩 캔버스가 먼저 잡히지 않게, 부모 쪽에 다른 캔버스가 없는 최상위 캔버스만 고른다
+        /// (꺼져 있는 중첩 캔버스는 rootCanvas가 자기 자신을 돌려주므로 그걸 믿지 않는다).</summary>
         private static Transform FindCanvasRoot()
         {
-            var canvas = FindFirstObjectByType<Canvas>(FindObjectsInactive.Include);
-            return canvas != null ? canvas.transform : null;
+            foreach (var canvas in FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.InstanceID))
+            {
+                var parent = canvas.transform.parent;
+                if (parent == null || parent.GetComponentInParent<Canvas>(true) == null) return canvas.transform;
+            }
+
+            return null;
         }
 
         /// <summary>구독자마다 따로 부른다 — 뷰 하나의 초기화가 예외로 죽어도(참조가 끊긴 프리팹 등) 뒤의 뷰들이 초기화를 못 받아 화면이 통째로 비는 일이 없게 한다.

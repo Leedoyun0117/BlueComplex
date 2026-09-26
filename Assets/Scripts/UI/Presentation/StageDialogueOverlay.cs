@@ -3,6 +3,7 @@ using System.Collections;
 using BlueComplex.Core.Stage;
 using BlueComplex.UI.Layout;
 using BlueComplex.UI.Motion;
+using BlueComplex.UI.Rendering;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -242,6 +243,14 @@ namespace BlueComplex.UI.Presentation
             _group = GetComponent<CanvasGroup>();
             _group.alpha = 0f;
             _group.blocksRaycasts = false;
+            _group.ignoreParentGroups = true; // 분기 대사 장면에서 게임 UI를 숨기는 캔버스 그룹(BranchSceneDirector)의 영향을 받지 않는다.
+
+            // 최상위 캔버스는 그 그룹의 알파가 0이면 통째로 그려지지 않아 ignoreParentGroups만으로는 대사 글자까지 사라진다 —
+            // 자기 캔버스(중첩)를 가지면 따로 그려진다. 중첩 캔버스의 그래픽은 자기 GraphicRaycaster가 있어야 클릭을 받는다(왜곡 보정도 부모와 같게).
+            gameObject.AddComponent<Canvas>();
+            var raycaster = gameObject.AddComponent<DistortionCorrectedGraphicRaycaster>();
+            var parentRaycaster = transform.parent != null ? transform.parent.GetComponentInParent<DistortionCorrectedGraphicRaycaster>() : null;
+            if (parentRaycaster != null) raycaster.SetCrtMaterial(parentRaycaster.CrtMaterial);
 
             _dim = GetComponent<Image>();
             _dim.raycastTarget = true;
