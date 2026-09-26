@@ -32,14 +32,18 @@ namespace BlueComplex.UI.Bootstrap
         [SerializeField] private int _selectedCardIndex;
 
         [Header("스테이지 (임시 디버그 선택)")]
-        [Tooltip("시작할 스테이지 번호(1 또는 2). Play 중에는 F1/F2 키로 해당 스테이지를 새로 시작한다.")]
-        [SerializeField, Range(1, 2)] private int _stageNumber = 1;
+        [Tooltip("시작할 스테이지 번호(1~3). Play 중에는 F1/F2/F3 키로 해당 스테이지를 새로 시작한다.")]
+        [SerializeField, Range(1, 3)] private int _stageNumber = 1;
 
         [Header("시드")]
         [SerializeField] private int _seed = 20260916;
 
-        /// <summary>플레이할 수 있는 마지막 스테이지 번호. 이보다 큰 스테이지는 없다 — 클리어 뒤 이어질 다음 스테이지가 있는지 가리는 기준이다.</summary>
+        /// <summary>진행 흐름상 마지막 스테이지 번호 — 클리어 뒤 이어질 다음 스테이지가 있는지 가리는 기준이다.
+        /// 스테이지 3은 데이터(<see cref="Stage3Content"/>)만 있고 시작·클리어 대사와 연출이 아직 없어 진행 흐름에는 잇지 않았다(디버그 시작으로만 들어간다).</summary>
         public const int LastStageNumber = 2;
+
+        /// <summary>디버그로 시작할 수 있는 마지막 스테이지 번호(F1~F3, <see cref="StartStage"/>).</summary>
+        public const int LastDebugStageNumber = 3;
 
         public StageSession Session { get; private set; }
 
@@ -92,13 +96,19 @@ namespace BlueComplex.UI.Bootstrap
             _polarityTable = new DefaultEmotionPolarityTable();
             _ledger = new ClueKnowledgeLedger();
 
+            // 튜토리얼 시작 컷신(나이프 → 눈 → 뉴스 → 경찰서)을 흐름의 훅에 연결한다. 정적 값이라 OnDestroy에서 되돌린다.
+            StageFlowHooks.PlayTutorialIntro = PlayTutorialIntro;
+
             BeginNewSession(_seed);
         }
+
+        private IEnumerator PlayTutorialIntro() => IntroCutsceneDirector.GetOrCreate(FindCanvasRoot())?.Play();
 
         private void OnDestroy()
         {
             _logger?.Dispose();
             UiSoundHooks.StopAmbient();
+            StageFlowHooks.PlayTutorialIntro = null;
         }
 
         private void Update()
@@ -108,6 +118,7 @@ namespace BlueComplex.UI.Bootstrap
             // 스테이지 선택은 대화 재생 중(InputBlocked)에도 통한다 — BeginNewSession이 재생 중인 대화를 끊는다.
             if (Keyboard.current.f1Key.wasPressedThisFrame) StartStage(1);
             else if (Keyboard.current.f2Key.wasPressedThisFrame) StartStage(2);
+            else if (Keyboard.current.f3Key.wasPressedThisFrame) StartStage(3);
             else if (Keyboard.current.f4Key.wasPressedThisFrame) StartTutorial();
 
             if (InputBlocked) return;
@@ -142,12 +153,12 @@ namespace BlueComplex.UI.Bootstrap
             Session.Runner.PlayClue(card);
         }
 
-        /// <summary>스테이지 번호(1 또는 2)를 골라 새 무작위 시드로 시작한다. 해금 지식(Ledger)은 유지된다. 임시 디버그 선택용.</summary>
+        /// <summary>스테이지 번호(1~3)를 골라 새 무작위 시드로 시작한다. 해금 지식(Ledger)은 유지된다. 임시 디버그 선택용.</summary>
         public void StartStage(int stageNumber)
         {
-            if (stageNumber < 1 || stageNumber > LastStageNumber)
+            if (stageNumber < 1 || stageNumber > LastDebugStageNumber)
             {
-                Debug.LogWarning($"스테이지 {stageNumber}는 없습니다. (1~{LastStageNumber})");
+                Debug.LogWarning($"스테이지 {stageNumber}는 없습니다. (1~{LastDebugStageNumber})");
                 return;
             }
 
@@ -179,9 +190,15 @@ namespace BlueComplex.UI.Bootstrap
         [ContextMenu("Start Stage 2")]
         private void StartStage2FromInspector() => StartStage(2);
 
-        private StageConfig CreateConfig() => _stageNumber == 2
-            ? Stage2Content.Stage2(_polarityTable)
-            : PrototypeContent.PrototypeStage(_polarityTable);
+        [ContextMenu("Start Stage 3")]
+        private void StartStage3FromInspector() => StartStage(3);
+
+        private StageConfig CreateConfig() => _stageNumber switch
+        {
+            2 => Stage2Content.Stage2(_polarityTable),
+            3 => Stage3Content.Stage3(_polarityTable),
+            _ => PrototypeContent.PrototypeStage(_polarityTable)
+        };
 
         /// <summary>같은 시드로 스테이지를 재시작한다. 해금 지식(Ledger)은 그대로 유지된다.</summary>
         public void RestartWithSameSeed() => BeginNewSession(CurrentSeed);
@@ -235,6 +252,7 @@ namespace BlueComplex.UI.Bootstrap
             if (_isTutorial) TutorialGuide.GetOrCreate(canvasRoot)?.Begin(Session);
             else TutorialGuide.Find(canvasRoot)?.ResetNow();
             BranchSceneDirector.GetOrCreate(canvasRoot)?.ResetNow(); // 분기 대사 장면 도중이었으면 게임 UI를 되돌린다.
+            IntroCutsceneDirector.Find(canvasRoot)?.ResetNow(); // 시작 컷신 도중이었으면 막을 치우고 나츠를 되돌린다.
 
             // 상시 배경음은 스테이지(재시작 포함)가 시작될 때 처음부터 — 시작 대화 재생 중에도 이미 깔려 있다.
             var ambient = StageSounds.For(config).Ambient;

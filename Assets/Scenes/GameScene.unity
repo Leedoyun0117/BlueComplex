@@ -157,8 +157,6 @@ MonoBehaviour:
   _ambientFadeIn: 2
   _ambientFadeOut: 2.5
   _ambientLoopSeam: 3
-  _heartbeatFocusGain: 2
-  _ambientDuckWhenFocused: 0.3
 --- !u!4 &15954282
 Transform:
   m_ObjectHideFlags: 0

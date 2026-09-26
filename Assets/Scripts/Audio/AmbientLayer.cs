@@ -38,9 +38,6 @@ namespace BlueComplex.Audio
 
         public bool IsActive => _active >= 0;
 
-        /// <summary>다른 소리가 앞으로 나올 때 이 레이어를 물리는 배율(1 = 그대로). 페이드 이득과 별개로 곱해진다.</summary>
-        public float Duck { get; set; } = 1f;
-
         /// <summary>곡을 처음부터 시작한다. 이미 재생 중이면 그 곡은 페이드아웃하고 새로 처음부터 올라온다(재시작).</summary>
         public void Begin(AudioClip clip, float volume, float fadeIn, float seam)
         {
@@ -68,7 +65,7 @@ namespace BlueComplex.Audio
             {
                 var source = _sources[i];
                 _gain[i] = Mathf.MoveTowards(_gain[i], _goal[i], _fadeSeconds[i] > 0f ? deltaTime / _fadeSeconds[i] : 1f);
-                source.volume = _gain[i] * _volume * Duck;
+                source.volume = _gain[i] * _volume;
 
                 // 완전히 사라진 소스는 멈춘다(재생 위치를 붙들고 있지 않게).
                 if (_goal[i] <= 0f && _gain[i] <= 0f && source.isPlaying) source.Stop();
