@@ -69,6 +69,13 @@ namespace BlueComplex.UI.Presentation
             var presenter = transform.root.GetComponentInChildren<ITurnResultPresenter>(true);
             if (presenter != null) yield return new WaitUntil(() => !presenter.IsPresenting);
 
+            // 튜토리얼은 자물쇠 연출·본편 클리어 대사·다음 스테이지 흐름을 타지 않는다 — 간단한 완료 메시지만.
+            if (Bootstrapper.IsTutorial)
+            {
+                yield return PlayTutorialEnding(outcome);
+                yield break;
+            }
+
             // 자물쇠 그림이 없으면(카탈로그 미빌드) 연출 없이 예전처럼 대사 → 패널로 간다 — 종료 화면이 통째로 비면 안 된다.
             if (!StageLockView.Available)
             {
@@ -132,6 +139,26 @@ namespace BlueComplex.UI.Presentation
 
             _panel.Show(KoreanLabels.Outcome(outcome));
             director.FadeFromBlack();
+        }
+
+        /// <summary>임시 완료 메시지. 원문의 청장 대사("…완벽해. 당장 수사에 투입될 수 있도록 절차를 밟겠네.")는 청장 화자가 붙는 다음 단계에서 옮긴다.</summary>
+        private static readonly DialogueVariant TutorialClearMessage = new()
+        {
+            lines = new[] { new DialogueLine { speaker = DialogueSpeaker.Player, text = "튜토리얼을 마쳤습니다." } }
+        };
+
+        /// <summary>튜토리얼 종료: 클리어면 완료 메시지 → 완료 알림 → 결과 패널, 실패면 바로 결과 패널(다시 시작).</summary>
+        private IEnumerator PlayTutorialEnding(StageOutcome outcome)
+        {
+            if (outcome == StageOutcome.Cleared)
+            {
+                Bootstrapper.InputBlocked = true;
+                yield return StageDialoguePlayer.GetOrCreate(transform.root).Play(TutorialClearMessage);
+                Bootstrapper.InputBlocked = false;
+                Bootstrapper.NotifyTutorialCompleted();
+            }
+
+            _panel.Show(KoreanLabels.Outcome(outcome));
         }
 
         /// <summary>자물쇠 연출이 없던 때의 종료: 클리어는 대사 → 패널, 실패는 바로 패널.</summary>

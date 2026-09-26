@@ -46,8 +46,17 @@ namespace BlueComplex.UI.Bootstrap
         /// <summary>지금 돌고 있는(또는 마지막으로 시작한) 스테이지 번호.</summary>
         public int StageNumber => _stageNumber;
 
-        /// <summary>클리어하면 이어서 시작할 다음 스테이지가 있는가.</summary>
-        public bool HasNextStage => _stageNumber < LastStageNumber;
+        /// <summary>클리어하면 이어서 시작할 다음 스테이지가 있는가. 튜토리얼은 스테이지 번호 흐름 밖이라 없다.</summary>
+        public bool HasNextStage => !_isTutorial && _stageNumber < LastStageNumber;
+
+        /// <summary>지금 돌고 있는 것이 튜토리얼인가(<see cref="TutorialContent.StageId"/>). 스테이지 번호(<see cref="StageNumber"/>)는 마지막으로 시작한 본편 스테이지 그대로다.</summary>
+        public bool IsTutorial => _isTutorial;
+
+        /// <summary>튜토리얼을 클리어한 뒤 종료 연출이 끝나면 한 번 알린다. 본편 시작으로 넘어가는 연결은 이 이벤트를 구독하는 쪽이 정한다(구독이 없으면 결과 패널만 남는다).</summary>
+        public event Action TutorialCompleted;
+
+        /// <summary>튜토리얼 종료 연출이 끝났음을 알린다(<see cref="StageEndController"/>가 부른다).</summary>
+        public void NotifyTutorialCompleted() => TutorialCompleted?.Invoke();
 
         /// <summary>지금 돌고 있는 스테이지의 저작 설정 — 스테이지 이름 표시 같은 UI가 읽는다. 세션이 바뀌면 함께 바뀐다.</summary>
         public StageConfig Config { get; private set; }
@@ -61,6 +70,11 @@ namespace BlueComplex.UI.Bootstrap
         public event Action<StageSession> SessionStarted;
 
         private ClueKnowledgeLedger _ledger;
+
+        /// <summary>튜토리얼 전용 해금 장부 — 튜토리얼을 시작할 때마다 새로 만든다. 본편 장부(<see cref="_ledger"/>)와 완전히 분리되어, 튜토리얼에서 밝혀진 단서 속성이 본편에 새어 들지 않는다.</summary>
+        private ClueKnowledgeLedger _tutorialLedger;
+
+        private bool _isTutorial;
         private IEmotionPolarityTable _polarityTable;
         private StageTurnLogger _logger;
 
@@ -94,6 +108,7 @@ namespace BlueComplex.UI.Bootstrap
             // 스테이지 선택은 대화 재생 중(InputBlocked)에도 통한다 — BeginNewSession이 재생 중인 대화를 끊는다.
             if (Keyboard.current.f1Key.wasPressedThisFrame) StartStage(1);
             else if (Keyboard.current.f2Key.wasPressedThisFrame) StartStage(2);
+            else if (Keyboard.current.f4Key.wasPressedThisFrame) StartTutorial();
 
             if (InputBlocked) return;
 
@@ -116,7 +131,15 @@ namespace BlueComplex.UI.Bootstrap
                 return;
             }
 
-            Session.Runner.PlayClue(Session.Hand.Cards[index]);
+            var card = Session.Hand.Cards[index];
+            var verdict = Session.CheckPlay(card);
+            if (!verdict.Allowed)
+            {
+                PlayGateFeedback.Show(FindCanvasRoot(), verdict);
+                return;
+            }
+
+            Session.Runner.PlayClue(card);
         }
 
         /// <summary>스테이지 번호(1 또는 2)를 골라 새 무작위 시드로 시작한다. 해금 지식(Ledger)은 유지된다. 임시 디버그 선택용.</summary>
@@ -128,9 +151,21 @@ namespace BlueComplex.UI.Bootstrap
                 return;
             }
 
+            _isTutorial = false;
             _stageNumber = stageNumber;
             BeginNewSession(Environment.TickCount);
         }
+
+        /// <summary>튜토리얼을 시작한다(새 시드, 새 튜토리얼 장부). 스테이지 번호 흐름과 무관하다 — 클리어해도 다음 스테이지로 이어지지 않는다(<see cref="TutorialCompleted"/>).
+        /// 시작 컷신은 <see cref="StageFlowHooks.PlayTutorialIntro"/> 훅으로 걸린다. 임시 디버그 시작은 F4.</summary>
+        public void StartTutorial()
+        {
+            _isTutorial = true;
+            BeginNewSession(Environment.TickCount);
+        }
+
+        [ContextMenu("Start Tutorial")]
+        private void StartTutorialFromInspector() => StartTutorial();
 
         /// <summary>다음 스테이지를 새 무작위 시드로 시작한다(스테이지 클리어 연출이 컷신 뒤에 부른다). 다음 스테이지가 없으면 아무 일도 안 한다.</summary>
         public void StartNextStage()
@@ -161,6 +196,7 @@ namespace BlueComplex.UI.Bootstrap
             // 끝나지 않은 채 버려지는 판(F1/F2 등 StageEnded를 안 거친 재시작)의 미확정 관찰은 다음 판에 딸려 가지 않게 버린다.
             // 결과 패널 경로는 StageEnded에서 이미 CommitRun했으므로 여기서 비는 게 정상이다.
             _ledger.DiscardPending();
+            _tutorialLedger?.DiscardPending();
 
             // 재시작이 대화 재생 도중이면 그 코루틴을 끊고 막을 치운다 — InputBlocked도 켜진 채로 남지 않게.
             StopAllCoroutines();
@@ -169,11 +205,21 @@ namespace BlueComplex.UI.Bootstrap
             _quarterDialoguePlaying = false;
 
             CurrentSeed = seed;
-            var config = CreateConfig();
             var random = new SystemRandomSource(seed);
 
+            // 튜토리얼은 본편과 다른 장부·다른 조립 경로(스크립트 손패·고정 키 구역·정해진 컴플렉스)를 쓴다. 그 뒤의 흐름(뷰 연결, 시작 대화, 쿼터 대화)은 똑같다.
+            if (_isTutorial)
+            {
+                _tutorialLedger = new ClueKnowledgeLedger();
+                Session = TutorialContent.CreateSession(_polarityTable, random, _tutorialLedger);
+            }
+            else
+            {
+                Session = StageFactory.Create(CreateConfig(), random, _ledger, _polarityTable);
+            }
+
+            var config = Session.Config;
             Config = config;
-            Session = StageFactory.Create(config, random, _ledger, _polarityTable);
             _logger = new StageTurnLogger(Session);
 
             if (_crtEffectDriver != null)
@@ -209,6 +255,18 @@ namespace BlueComplex.UI.Bootstrap
         /// <summary>스테이지 시작 대화(있으면) 재생 → 입력 잠금 해제 → StartStage(). 대화가 없으면 그대로 바로 시작한다.</summary>
         private IEnumerator BeginStageAfterIntro(Transform canvasRoot, string stageId, bool isFirstEntry)
         {
+            // 튜토리얼의 시작 컷신 훅(컷신 담당 영역이 채운다). 걸려 있지 않으면 건너뛴다.
+            if (_isTutorial)
+            {
+                var cutscene = StageFlowHooks.PlayTutorialIntro?.Invoke();
+                if (cutscene != null)
+                {
+                    InputBlocked = true;
+                    yield return cutscene;
+                    InputBlocked = false;
+                }
+            }
+
             var variant = StageDialogues.PickStageStart(stageId, isFirstEntry);
             if (variant.HasValue && canvasRoot != null)
             {
