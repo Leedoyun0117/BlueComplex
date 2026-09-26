@@ -75,8 +75,8 @@ namespace BlueComplex.UI.DebugPlay
                     var result = Session.Keys.Results[quarter - 1];
                     var mark = result == true ? " ✓" : result == false ? " ✗" : string.Empty;
                     var text = Session.Keys.Zones.TryGetValue(turn, out var zone)
-                        ? $"{quarter}쿼터({turn}턴): {zone.StartSlot}~{zone.StartSlot + zone.Width - 1}{mark}"
-                        : $"{quarter}쿼터({turn}턴): (미확정)";
+                        ? $"{quarter}분기점({turn}턴): {zone.StartSlot}~{zone.StartSlot + zone.Width - 1}{mark}"
+                        : $"{quarter}분기점({turn}턴): (미확정)";
                     return quarter == currentQuarter ? $"▶ {text}" : $"   {text}";
                 });
             _listText.text = string.Join("   ", lines);

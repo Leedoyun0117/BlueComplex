@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace BlueComplex.UI.Motion
 {
@@ -71,6 +72,12 @@ namespace BlueComplex.UI.Motion
 
         /// <summary>스테이지 2의 기본 배경음(ClockTower) — 안정 구간에서 <see cref="HeartbeatBase"/> 자리를 대신한다. 침체·흥분 배경음과 크로스페이드로 오간다.</summary>
         HeartbeatBaseStage2,
+
+        /// <summary>스테이지 3의 기본 배경음(Faded Scribbles) — 안정 구간에서 <see cref="HeartbeatBase"/> 자리를 대신한다.</summary>
+        HeartbeatBaseStage3,
+
+        /// <summary>TV 뉴스의 지직거리는 잡음(시작 컷신). 라이브러리에 클립이 없으면 코드로 만든 잡음(ProceduralSounds)이 난다 — 진짜 소리를 채우면 그게 우선한다.</summary>
+        TvStatic,
     }
 
     /// <summary>

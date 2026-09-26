@@ -8,7 +8,7 @@ using UnityEngine.UI;
 namespace BlueComplex.UI.Layout
 {
     /// <summary>
-    /// 쿼터 진행 스테이터스 창(UI 가이드 12번) — 목업의 노란 포스트잇(대화 포스트잇). "대화 / 현재 쿼터 / 전체 쿼터" 글자와, 현재 쿼터의 턴 수만큼 칸이 있고
+    /// 쿼터 진행 스테이터스 창(UI 가이드 12번) — 목업의 노란 포스트잇(분기 포스트잇). "분기 / 현재 쿼터 / 전체 쿼터" 글자와, 현재 쿼터의 턴 수만큼 칸이 있고
     /// 현재 턴의 칸이 어둡게 칠해지며 하얀 점이 놓인다. 지난 턴의 칸은 회색, 마지막 칸은 노랑(키를 얻는 턴).
     /// 종이·압정·말림·떼어졌다 붙는 모션은 <see cref="Postit"/>이 맡고 이 패널은 내용만 채운다.
     /// 마우스를 올리면 테두리가 켜지고, 클릭하면 <see cref="Clicked"/>가 온다 —
@@ -68,7 +68,7 @@ namespace BlueComplex.UI.Layout
             _postit.SetRestTilt(TiltDegrees);
 
             var body = _postit.Content;
-            RuntimeUi.CreateText(body, "Title", "대화", font, 26f, PostitStyle.Ink, TextAlignmentOptions.Center,
+            RuntimeUi.CreateText(body, "Title", "분기", font, 26f, PostitStyle.Ink, TextAlignmentOptions.Center,
                 new Vector2(0f, 0.6f), new Vector2(1f, 0.92f));
             _counter = RuntimeUi.CreateText(body, "Counter", "1 / 1", font, 26f, PostitStyle.Ink, TextAlignmentOptions.Center,
                 new Vector2(0f, 0.32f), new Vector2(1f, 0.62f));

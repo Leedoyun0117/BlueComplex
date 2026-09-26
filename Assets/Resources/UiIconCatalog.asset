@@ -13,10 +13,22 @@ MonoBehaviour:
   m_Name: UiIconCatalog
   m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.UiIconCatalog
   _entries:
+  - Id: item_coexistence
+    Sprite: {fileID: 21300000, guid: 1aa0212639402b54cbc80bf3d9c8d5c4, type: 3}
+  - Id: item_deep_breath
+    Sprite: {fileID: 21300000, guid: d2301577ad619bd41ba16591612b66ed, type: 3}
+  - Id: item_ego_inflation
+    Sprite: {fileID: 21300000, guid: d1010111aacb3624b9eb66bda4f471e7, type: 3}
   - Id: item_empathy
     Sprite: {fileID: 21300000, guid: 79599b254bf9e0f4699ec64d5829d1fc, type: 3}
+  - Id: item_indifference
+    Sprite: {fileID: 21300000, guid: 93beca5f6c3b4584fab9615e3200a66f, type: 3}
   - Id: item_logic
     Sprite: {fileID: 21300000, guid: 6389f73f20b406a459b6cc8b9e5fb0ae, type: 3}
+  - Id: item_madness
+    Sprite: {fileID: 21300000, guid: 5813fcc7f058cbd45a75e9df66aaab37, type: 3}
+  - Id: item_meditation
+    Sprite: {fileID: 21300000, guid: 261000a5748cd1b479d85bbe3a68378f, type: 3}
   - Id: item_overcome
     Sprite: {fileID: 21300000, guid: bc331a3864246a7419c87dc587366e02, type: 3}
   - Id: item_persuasion
@@ -33,13 +45,83 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: 039018f5d1d77aa42ae73ab4ecfa73b4, type: 3}
   - Id: s1_amusement_ticket
     Sprite: {fileID: 21300000, guid: 09aee6ce12c0f2848b16aeb64acadabd, type: 3}
+  - Id: s1_broccoli
+    Sprite: {fileID: 21300000, guid: 48eb249214991854c8c92196f9f7fb02, type: 3}
+  - Id: s1_clock
+    Sprite: {fileID: 21300000, guid: 8567406c91a50954186e9daabbe20d46, type: 3}
   - Id: s1_cookie_box
     Sprite: {fileID: 21300000, guid: 690d2547ec9e70b4eb2862be55b0f33c, type: 3}
   - Id: s1_family_photo
-    Sprite: {fileID: 21300000, guid: 9317387f21f419e4d893fc0893f75fa1, type: 3}
+    Sprite: {fileID: 21300000, guid: 1a43918ac17a06341a78bd246ea6681e, type: 3}
   - Id: s1_flower
     Sprite: {fileID: 21300000, guid: 3d091df80ad52994fa1b467be852e036, type: 3}
+  - Id: s1_horror_novel
+    Sprite: {fileID: 21300000, guid: 746149a3c4fb8ad44b5e08ebaf21620f, type: 3}
+  - Id: s1_kids_doodle
+    Sprite: {fileID: 21300000, guid: 2116daf13531a854babd01ca1d5830a1, type: 3}
+  - Id: s1_landscape
+    Sprite: {fileID: 21300000, guid: ffbb791defb88744b902572f35a53c76, type: 3}
   - Id: s1_old_rabbit
-    Sprite: {fileID: 21300000, guid: 65e866f310802384cbeb9974af967068, type: 3}
+    Sprite: {fileID: 21300000, guid: 2eb09ed8f15c60446961936abf94d216, type: 3}
   - Id: s1_school_calendar
     Sprite: {fileID: 21300000, guid: e8ccb398177f01842a0632601db361bd, type: 3}
+  - Id: s1_torn_backpack
+    Sprite: {fileID: 21300000, guid: dd99c0356bfdfb342a8f2ed351178fdc, type: 3}
+  - Id: s2_application_form
+    Sprite: {fileID: 21300000, guid: 87c21e04b08ae0146a9c399e8e3bbcef, type: 3}
+  - Id: s2_b_letter
+    Sprite: {fileID: 21300000, guid: 118aa571670084944b3d0364fb460f81, type: 3}
+  - Id: s2_baguette
+    Sprite: {fileID: 21300000, guid: 7bead0403887d9d45ab560d09bc56a77, type: 3}
+  - Id: s2_broken_frame
+    Sprite: {fileID: 21300000, guid: 7f21dc84de129764c86f60fb2e14ff34, type: 3}
+  - Id: s2_clock
+    Sprite: {fileID: 21300000, guid: 42f8125fdfe00ac4bb105e531d3a6b9f, type: 3}
+  - Id: s2_death_notice
+    Sprite: {fileID: 21300000, guid: 87c21e04b08ae0146a9c399e8e3bbcef, type: 3}
+  - Id: s2_fountain_pen
+    Sprite: {fileID: 21300000, guid: ee372cbabf06af2499edb94d06c037a3, type: 3}
+  - Id: s2_rainwater_bowl
+    Sprite: {fileID: 21300000, guid: c53c9dd2f25bd574d9a564b27db6c056, type: 3}
+  - Id: s2_soft_icecream
+    Sprite: {fileID: 21300000, guid: 93816f8e97f8f90429973a865a50184e, type: 3}
+  - Id: s2_table_note
+    Sprite: {fileID: 21300000, guid: afdb58f46bdfae74388eb66ce44c60ed, type: 3}
+  - Id: s2_tv_news
+    Sprite: {fileID: 21300000, guid: c1c018c5aa7c10045bf502a3c4ddeeb7, type: 3}
+  - Id: s2_umbrella
+    Sprite: {fileID: 21300000, guid: a1d93154a7a8e344cbdd352124a9a3be, type: 3}
+  - Id: s2_water_cup
+    Sprite: {fileID: 21300000, guid: 7635eac17117ecf4f9501d58f91b1cd3, type: 3}
+  - Id: s2_white_flower
+    Sprite: {fileID: 21300000, guid: d3dbdf58244b174499b5d86da658df4c, type: 3}
+  - Id: s2_withered_flower
+    Sprite: {fileID: 21300000, guid: 7e0bbdc2f95f9ea46b7fe88b9f997cbb, type: 3}
+  - Id: s3_bloody_knife
+    Sprite: {fileID: 21300000, guid: c406fff6a6e9d214fb74405fa09eceb3, type: 3}
+  - Id: s3_bouquet
+    Sprite: {fileID: 21300000, guid: 4d6d980d4925d9641a24aafdb90872eb, type: 3}
+  - Id: s3_clock
+    Sprite: {fileID: 21300000, guid: d2c6dcdcd54ca7b40b621f77a4826e69, type: 3}
+  - Id: s3_coat
+    Sprite: {fileID: 21300000, guid: 5d22c1d98b08f9f4c8eadf5d09019ea4, type: 3}
+  - Id: s3_mannequin
+    Sprite: {fileID: 21300000, guid: c0cd12de8709db044a71ee074cbf2c10, type: 3}
+  - Id: s3_marked_map
+    Sprite: {fileID: 21300000, guid: ae75d99c383bbca4993a2ba06fa6b6c5, type: 3}
+  - Id: s3_old_coat
+    Sprite: {fileID: 21300000, guid: 61938da24c7c3c648bbb7dfaa93a07d2, type: 3}
+  - Id: s3_old_letter
+    Sprite: {fileID: 21300000, guid: 34ea1c5ac9cd45e4bbcbb4a415f97780, type: 3}
+  - Id: s3_picture_frame
+    Sprite: {fileID: 21300000, guid: 672a561f8e6dd73448094c49f607134b, type: 3}
+  - Id: s3_scribbled_notebook
+    Sprite: {fileID: 21300000, guid: f22e9c4918a00f444a3251238386cfab, type: 3}
+  - Id: s3_soft_icecream
+    Sprite: {fileID: 21300000, guid: 93816f8e97f8f90429973a865a50184e, type: 3}
+  - Id: s3_urn
+    Sprite: {fileID: 21300000, guid: e4c4e94123db3c6439ec1a0da597c079, type: 3}
+  - Id: stage_key
+    Sprite: {fileID: 21300000, guid: 6cc17e69f09aed243b599bad25d02f39, type: 3}
+  - Id: stage_lock
+    Sprite: {fileID: 21300000, guid: 223267a2c6d95b24eb6fc9c5e8840aef, type: 3}

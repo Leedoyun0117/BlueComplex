@@ -40,6 +40,21 @@ namespace BlueComplex.Core.Complexes
         }
     }
 
+    /// <summary>인물 태그를 amount개 더한다. 변형(<see cref="ConvertMatchedPersonsTo"/>)과 달리 있던 태그는 그대로 두고 더하기만 한다. (스테이지 2 합리화 "타인 +1", 전이 "가족 +1")</summary>
+    public sealed class AddPerson : IComplexEffect
+    {
+        private readonly PersonTag _person;
+        private readonly int _amount;
+
+        public AddPerson(PersonTag person, int amount = 1)
+        {
+            _person = person;
+            _amount = amount;
+        }
+
+        public void Apply(ComplexContext context) => context.Tags.AddPerson(_person, _amount);
+    }
+
     /// <summary>지금 붙어 있는 감정 종류마다 하나씩 더 붙인다. (예: 되새김 — 과거의 감정을 한 번 더 느낀다)</summary>
     public sealed class RepeatEachEmotion : IComplexEffect
     {
@@ -150,6 +165,34 @@ namespace BlueComplex.Core.Complexes
         }
     }
 
+    /// <summary>
+    /// 해당 극성 감정 태그의 개수(중첩 포함)에 배수를 곱한 만큼 지정 감정을 더한다. 개수는 효과를 적용하기 전 값으로 센다.
+    /// (스테이지 2 자기 분노 — "감정 태그 '행복'을 단서의 흥분 태그 갯수 * 2만큼 추가")
+    /// </summary>
+    public sealed class AddEmotionPerEmotionOfPolarity : IComplexEffect
+    {
+        private readonly EmotionTag _emotion;
+        private readonly Polarity _polarity;
+        private readonly int _multiplier;
+        private readonly IEmotionPolarityTable _polarityTable;
+
+        public AddEmotionPerEmotionOfPolarity(EmotionTag emotion, Polarity polarity, int multiplier, IEmotionPolarityTable polarityTable)
+        {
+            _emotion = emotion;
+            _polarity = polarity;
+            _multiplier = multiplier;
+            _polarityTable = polarityTable;
+        }
+
+        public void Apply(ComplexContext context)
+        {
+            var count = context.Tags.Emotions
+                .Where(pair => _polarityTable.GetPolarity(pair.Key) == _polarity)
+                .Sum(pair => pair.Value);
+            if (count > 0) context.Tags.AddEmotion(_emotion, count * _multiplier);
+        }
+    }
+
     /// <summary>지정한 감정을 뺀 나머지 감정 태그를 전부 지운다. (스테이지 2 과대 해석 — "다른 감정 태그 모두 제거")</summary>
     public sealed class KeepOnlyEmotion : IComplexEffect
     {
@@ -182,5 +225,73 @@ namespace BlueComplex.Core.Complexes
 
         public void Apply(ComplexContext context) =>
             (context.Tags.HasTime(_time) ? _ifPresent : _otherwise).Apply(context);
+    }
+
+    /// <summary>인물 태그를 amount개 뗀다. 없으면 아무 일도 없다. (스테이지 3 밀착 "타인 -1")</summary>
+    public sealed class RemovePerson : IComplexEffect
+    {
+        private readonly PersonTag _person;
+        private readonly int _amount;
+
+        public RemovePerson(PersonTag person, int amount = 1)
+        {
+            _person = person;
+            _amount = amount;
+        }
+
+        public void Apply(ComplexContext context) => context.Tags.RemovePerson(_person, _amount);
+    }
+
+    /// <summary>시간 태그 하나를 뗀다. 없으면 아무 일도 없다. (스테이지 3 시간 혼합 "과거 -1")</summary>
+    public sealed class RemoveTime : IComplexEffect
+    {
+        private readonly TimeTag _time;
+        public RemoveTime(TimeTag time) => _time = time;
+
+        public void Apply(ComplexContext context) => context.Tags.RemoveTime(_time);
+    }
+
+    /// <summary>해당 극성 감정 태그를 중첩까지 전부 지운다. (스테이지 3 부모 애착 — "침체 감정 모두 제거")</summary>
+    public sealed class RemoveEmotionsOfPolarity : IComplexEffect
+    {
+        private readonly Polarity _polarity;
+        private readonly IEmotionPolarityTable _polarityTable;
+
+        public RemoveEmotionsOfPolarity(Polarity polarity, IEmotionPolarityTable polarityTable)
+        {
+            _polarity = polarity;
+            _polarityTable = polarityTable;
+        }
+
+        public void Apply(ComplexContext context)
+        {
+            foreach (var pair in context.Tags.Emotions.ToList())
+            {
+                if (_polarityTable.GetPolarity(pair.Key) != _polarity) continue;
+                context.Tags.RemoveEmotion(pair.Key, pair.Value);
+            }
+        }
+    }
+
+    /// <summary>침체 태그가 더 많으면 <c>ifDepressed</c>, 흥분 태그가 더 많으면 <c>ifExcited</c>, 같으면 아무것도 안 한다(개수는 중첩 포함, 효과 적용 전 값). (스테이지 3 자아 부정)</summary>
+    public sealed class ByDominantPolarity : IComplexEffect
+    {
+        private readonly IEmotionPolarityTable _polarityTable;
+        private readonly IComplexEffect _ifDepressed;
+        private readonly IComplexEffect _ifExcited;
+
+        public ByDominantPolarity(IEmotionPolarityTable polarityTable, IComplexEffect ifDepressed, IComplexEffect ifExcited)
+        {
+            _polarityTable = polarityTable;
+            _ifDepressed = ifDepressed;
+            _ifExcited = ifExcited;
+        }
+
+        public void Apply(ComplexContext context)
+        {
+            var (depressed, excited) = EmotionPolarityCounts.Of(context.Tags, _polarityTable);
+            if (depressed > excited) _ifDepressed.Apply(context);
+            else if (excited > depressed) _ifExcited.Apply(context);
+        }
     }
 }
