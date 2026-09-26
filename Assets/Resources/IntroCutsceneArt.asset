@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e875bcfcf37001e438f4f2403310cbfe, type: 3}
+  m_Name: IntroCutsceneArt
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.IntroCutsceneArt
+  car: {fileID: 2800000, guid: 08cc617048a54ff8ac97db76ae8f8172, type: 3}
+  clock: {fileID: 2800000, guid: e03baff8b6934f02a00b177e70836511, type: 3}
+  clockHour: {fileID: 2800000, guid: e8c24fe78a47472e8a8a6db84eaefb43, type: 3}
+  clockMinute: {fileID: 2800000, guid: 422790bbdaae463a80ba93b67bc18c3c, type: 3}
+  room: {fileID: 2800000, guid: 4f9bcde1ecde58842b51c4cf236e4985, type: 3}

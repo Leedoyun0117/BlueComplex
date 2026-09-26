@@ -195,9 +195,9 @@ namespace BlueComplex.Audio
                 volume = entry.volume;
                 pitchRange = entry.pitchRange;
             }
-            else if (ProceduralSounds.TryGet(cue, out clip, out volume))
+            else if (ProceduralSounds.TryGet(cue, out clip, out volume, out pitchRange))
             {
-                pitchRange = Vector2.one; // 코드로 만든 임시 소리 — 라이브러리에 진짜 클립이 채워지면 그쪽이 우선한다.
+                // 코드로 만든 임시 소리 — 라이브러리에 진짜 클립이 채워지면 그쪽이 우선한다.
             }
             else
             {

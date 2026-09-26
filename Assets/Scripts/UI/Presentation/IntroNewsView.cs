@@ -97,7 +97,7 @@ namespace BlueComplex.UI.Presentation
             _group.alpha = 0f;
             _group.blocksRaycasts = false;
 
-            _noiseTexture = IntroProceduralArt.Noise();
+            _noiseTexture = BuildNoise();
             _noise = CreateRaw("Noise", _noiseTexture, new Color(1f, 1f, 1f, NoiseAlpha));
 
             for (var i = 0; i < _bars.Length; i++)
@@ -109,7 +109,7 @@ namespace BlueComplex.UI.Presentation
                 _bars[i].offsetMin = _bars[i].offsetMax = Vector2.zero;
             }
 
-            _scanTexture = IntroProceduralArt.Scanlines();
+            _scanTexture = BuildScanlines();
             var scan = CreateRaw("Scanlines", _scanTexture, Color.white);
             scan.uvRect = new Rect(0f, 0f, 1f, canvasSize.y / _scanTexture.height);
 
@@ -169,6 +169,36 @@ namespace BlueComplex.UI.Presentation
             raw.color = color;
             raw.raycastTarget = false;
             return raw;
+        }
+
+        /// <summary>TV 잡음: 픽셀마다 무작위 회색. RawImage의 uvRect를 흔들어 지직거리게 한다.</summary>
+        private static Texture2D BuildNoise()
+        {
+            const int size = 256;
+            var random = new System.Random(926);
+            var pixels = new Color32[size * size];
+            for (var i = 0; i < pixels.Length; i++)
+            {
+                var g = (byte)random.Next(0, 256);
+                pixels[i] = new Color32(g, g, g, 255);
+            }
+
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Repeat };
+            texture.SetPixels32(pixels);
+            texture.Apply(false, true);
+            return texture;
+        }
+
+        /// <summary>주사선: 4픽셀마다 어두운 줄 두 개. 검정 RawImage에 얹어 세로로 반복시킨다.</summary>
+        private static Texture2D BuildScanlines()
+        {
+            var texture = new Texture2D(1, 4, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Repeat };
+            texture.SetPixels32(new[]
+            {
+                new Color32(0, 0, 0, 0), new Color32(0, 0, 0, 0), new Color32(0, 0, 0, 110), new Color32(0, 0, 0, 110)
+            });
+            texture.Apply(false, true);
+            return texture;
         }
 
         private static void Stretch(RectTransform rect)
