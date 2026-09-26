@@ -47,7 +47,7 @@ namespace BlueComplex.Editor.DLJ
             }
             if (rooms.arraySize > 0)
             {
-                EditorGUILayout.HelpBox("Rooms > 각 방 > 연출 설정에서 침체·흥분·전환 수치를 따로 조절해. 다른 방의 값은 바뀌지 않아. Active Room Index는 0=방 1, 1=방 2, 2=방 3이며 방 전환 시 SelectRoom(index)를 호출해. 창문 길이·폭은 Windows 항목에서 조절해.", MessageType.Info);
+                EditorGUILayout.HelpBox("Rooms > 각 방 > 연출 설정에서 침체·흥분·전환 수치를 따로 조절해. Active Room Index는 0=방 1, 1=방 2 시계, 2=방 3, 3=방 2 왼쪽 벽, 4=방 2 두 빛 동시 연출이야. 방 전환 시 SelectRoom(index)를 호출해.", MessageType.Info);
                 ValidateRoom(effect);
             }
             EditorGUILayout.Space();
@@ -67,6 +67,8 @@ namespace BlueComplex.Editor.DLJ
             }
             if (Application.isPlaying)
             {
+                if (!effect.HasScreenEffect)
+                    EditorGUILayout.HelpBox("화면 셰이더가 연결되지 않았어. CRT Feature와 Effect Shader 연결 및 다른 Mood 컨트롤러의 패스 점유를 확인해. Pass Material은 비워도 방 연출을 볼 수 있어.", MessageType.Warning);
                 EditorGUILayout.LabelField(effect.IsPreviewing ? "미리보기" : "게임 연동", effect.DisplayedHeartbeat.ToString());
                 EditorGUILayout.LabelField("글리치 남은 시간", effect.GlitchRemaining.ToString("F2") + "s");
                 EditorGUILayout.LabelField("색수차 남은 시간", effect.ChromaticRemaining.ToString("F2") + "s");
@@ -86,6 +88,12 @@ namespace BlueComplex.Editor.DLJ
             if (room.SceneCamera == null)
                 EditorGUILayout.HelpBox("선택한 방의 Scene Camera가 비어 있어. 배경 카메라를 연결해.", MessageType.Warning);
             if (room.Mode != DLJ_HeartbeatMoodEffectController.ScatterMode.WindowEdges) return;
+            if (room.Settings?.WindowStyle == DLJ_HeartbeatMoodEffectController.WindowLightStyle.ClockShafts)
+                EditorGUILayout.HelpBox("Clock Shafts는 시계 중심을 지나는 가로선 하나를 사용해. 왼쪽 끝 → 오른쪽 끝 순서로 연결해. Windows > Length는 시계 중심부터 빛 끝까지의 거리, Water Scatter Angle은 아래쪽 퍼짐 각도야.", MessageType.Info);
+            if (room.Settings?.WindowStyle == DLJ_HeartbeatMoodEffectController.WindowLightStyle.LeftWallShafts)
+                EditorGUILayout.HelpBox("Left Wall Shafts는 왼쪽 벽의 세로선 한 개를 사용해. 아래 → 위 순서로 연결해. Windows > Length는 화면 너비 기준 오른쪽 빛 길이, Water Scatter Angle은 펼쳐지는 각도야.", MessageType.Info);
+            if (room.Settings?.WindowStyle == DLJ_HeartbeatMoodEffectController.WindowLightStyle.ClockAndLeftWallShafts)
+                EditorGUILayout.HelpBox("Clock And Left Wall Shafts는 시계 중심선 8개 변 다음에 왼쪽 벽 세로선 1개 변을 연결해. 두 빛이 겹치는 부분은 더 밝아져.", MessageType.Info);
             var edges = 0;
             if (room.Windows != null)
                 foreach (var window in room.Windows)
@@ -97,8 +105,10 @@ namespace BlueComplex.Editor.DLJ
                 }
             if (edges == 0)
                 EditorGUILayout.HelpBox("창문 테두리 지점을 만들고 Scene 뷰에서 실제 창틀 모서리에 맞춰 줘. 빛은 각 테두리의 바깥 방향으로 퍼져.", MessageType.Warning);
-            if (edges > DLJ_HeartbeatMoodEffectController.MaxWindowEdges)
-                EditorGUILayout.HelpBox("창문 변은 한 방당 8개까지 표시돼. 초과한 변은 제외돼.", MessageType.Warning);
+            var maxEdges = room.Settings?.WindowStyle == DLJ_HeartbeatMoodEffectController.WindowLightStyle.ClockAndLeftWallShafts
+                ? DLJ_HeartbeatMoodEffectController.MaxWindowEdges : 8;
+            if (edges > maxEdges)
+                EditorGUILayout.HelpBox($"창문 변은 한 방당 {maxEdges}개까지 표시돼. 초과한 변은 제외돼.", MessageType.Warning);
         }
 
         public static void CreateRoomList(DLJ_HeartbeatMoodEffectController effect)

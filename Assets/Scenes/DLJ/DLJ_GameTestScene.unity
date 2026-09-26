@@ -7147,7 +7147,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &502492430
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10714,7 +10714,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1185150711
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10768,6 +10768,7 @@ Transform:
   - {fileID: 141503372}
   - {fileID: 1493702591}
   - {fileID: 1469709262}
+  - {fileID: 2147020001}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1193492161
@@ -19880,6 +19881,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1640913160}
+  - {fileID: 2147010001}
   m_Father: {fileID: 1469709262}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2118231930
@@ -20063,7 +20065,7 @@ MonoBehaviour:
       WaterSourceRadius: 0.035
       TransitionSeconds: 0.65
       NormalStateStrength: 0.75
-      DepressedTint: {r: 0.04, g: 0.36, b: 1, a: 1}
+      DepressedTint: {r: 0.5254902, g: 0.68235296, b: 1, a: 1}
       BlueTintStrength: 0.783
       DepressedContrast: 1.8
       DepressedSharpness: 0.85
@@ -20111,39 +20113,56 @@ MonoBehaviour:
     Root: {fileID: 1185150710}
     SceneCamera: {fileID: 1154547344}
     Lights: []
-    Mode: 0
+    Mode: 1
     ScatterLights: []
-    Windows: []
+    Windows:
+    - Name: DLJ Clock Center Line
+      Corners:
+      - {fileID: 2147010101}
+      - {fileID: 2147010111}
+      - {fileID: 2147010121}
+      - {fileID: 2147010131}
+      - {fileID: 2147010141}
+      - {fileID: 2147010151}
+      - {fileID: 2147010161}
+      - {fileID: 2147010171}
+      - {fileID: 2147010181}
+      Closed: 0
+      InteriorTarget: {fileID: 0}
+      Direction: 0
+      Length: 0.51
+      Strength: 0.85
+      EdgeWidth: 0.012
     Settings:
       WaterSourceRadius: 0.035
       TransitionSeconds: 0.65
       NormalStateStrength: 0.75
-      DepressedTint: {r: 0.04, g: 0.36, b: 1, a: 1}
+      DepressedTint: {r: 0.5251572, g: 0.6840842, b: 1, a: 1}
       BlueTintStrength: 0.783
       DepressedContrast: 1.8
       DepressedSharpness: 0.85
-      WaterLightStrength: 0.43
+      WaterLightStrength: 0.75
       WaterLightSpread: 0.6
-      WaterLightSharpness: 4
-      WaterBeamCount: 33
-      WaterBeamWidth: 1.15
-      WaterWidthVariation: 0.587
-      WaterWaveStrength: 0.89
-      WaterWaveSpeed: 0.2
-      WaterScatterStrength: 1.1
-      WaterAfterglowStrength: 2
+      WaterLightSharpness: 8
+      WaterBeamCount: 32
+      WaterBeamWidth: 1
+      WaterWidthVariation: 0.75
+      WaterWaveStrength: 0.45
+      WaterWaveSpeed: 0.22
+      WaterScatterStrength: 0.9
+      WaterAfterglowStrength: 0.6
       WaterAfterglowAngle: 105
       WaterAfterglowLength: 2
-      WaterFadeStart: 0
-      WaterDistanceFade: 1.9
+      WaterFadeStart: 0.35
+      WaterDistanceFade: 0.8
       WaterLightDirection: -2
-      WaterScatterAngle: 72
-      WindowStyle: 0
-      WindowBandWidth: 0.016
-      WindowBandSoftness: 0.8
-      WindowBandOpacity: 1
-      WindowBandCoreBrightness: 2
-      WindowBandTint: {r: 1, g: 0.97, b: 0.88, a: 1}
+      WaterScatterAngle: 22
+      WindowStyle: 5
+      WindowBandWidth: 0.0351
+      WindowBandSoftness: 0
+      WindowBandOpacity: 0.362
+      WindowBandCoreBrightness: 1.4
+      WindowBandTint: {r: 0.7530951, g: 0.9099007, b: 0.99371064, a: 1}
       WindowShaftGrouping: 0.75
       WindowShaftVerticalBias: 0.52
       WindowShaftTopLength: 0.18
@@ -20187,7 +20206,7 @@ MonoBehaviour:
       WaterSourceRadius: 0.035
       TransitionSeconds: 0.65
       NormalStateStrength: 0.75
-      DepressedTint: {r: 0.04, g: 0.36, b: 1, a: 1}
+      DepressedTint: {r: 0.5254902, g: 0.68235296, b: 1, a: 1}
       BlueTintStrength: 0.783
       DepressedContrast: 1.8
       DepressedSharpness: 0.85
@@ -20231,7 +20250,154 @@ MonoBehaviour:
       GlitchSeconds: 2
       GlitchDisplacement: 0.012
     SettingsInitialized: 1
-  _activeRoomIndex: 2
+  - Name: Room 2 - Left Wall
+    Root: {fileID: 1185150710}
+    SceneCamera: {fileID: 1154547344}
+    Lights: []
+    Mode: 1
+    ScatterLights: []
+    Windows:
+    - Name: DLJ Left Wall Line
+      Corners:
+      - {fileID: 2147020101}
+      - {fileID: 2147020111}
+      Closed: 0
+      InteriorTarget: {fileID: 0}
+      Direction: 0
+      Length: 0.72
+      Strength: 0.85
+      EdgeWidth: 0.012
+    Settings:
+      WaterSourceRadius: 0.045
+      TransitionSeconds: 0.65
+      NormalStateStrength: 0.75
+      DepressedTint: {r: 0.04, g: 0.36, b: 1, a: 1}
+      BlueTintStrength: 0.783
+      DepressedContrast: 1.8
+      DepressedSharpness: 0.85
+      WaterLightStrength: 0.75
+      WaterLightSpread: 0.6
+      WaterLightSharpness: 8
+      WaterBeamCount: 32
+      WaterBeamWidth: 1
+      WaterWidthVariation: 0.75
+      WaterWaveStrength: 0.45
+      WaterWaveSpeed: 0.22
+      WaterScatterStrength: 0.9
+      WaterAfterglowStrength: 0.4
+      WaterAfterglowAngle: 60
+      WaterAfterglowLength: 1.4
+      WaterFadeStart: 0.35
+      WaterDistanceFade: 0.8
+      WaterLightDirection: 90
+      WaterScatterAngle: 17
+      WindowStyle: 6
+      WindowBandWidth: 0.012
+      WindowBandSoftness: 1
+      WindowBandOpacity: 0.65
+      WindowBandCoreBrightness: 1.4
+      WindowBandTint: {r: 0.65, g: 0.88, b: 1, a: 1}
+      WindowShaftGrouping: 0.75
+      WindowShaftVerticalBias: 0.52
+      WindowShaftTopLength: 0.18
+      WindowShaftBottomLength: 0.85
+      WindowShaftAmbientStrength: 0.2
+      ChromaticSeconds: 3.5
+      ChromaticFadeSeconds: 1
+      PastelSeparation: 0.012
+      PastelStrength: 0.82
+      PastelPink: {r: 0.96, g: 0.7, b: 0.86, a: 1}
+      PastelMint: {r: 0.67, g: 0.94, b: 0.87, a: 1}
+      PastelLavender: {r: 0.78, g: 0.75, b: 0.97, a: 1}
+      PastelSaturation: 0.58
+      PastelContrast: 0.84
+      PastelGradeStrength: 0.8
+      GlitchSeconds: 2
+      GlitchDisplacement: 0.012
+    SettingsInitialized: 1
+  - Name: Room 2 - Clock and Left Wall
+    Root: {fileID: 1185150710}
+    SceneCamera: {fileID: 1154547344}
+    Lights: []
+    Mode: 1
+    ScatterLights: []
+    Windows:
+    - Name: DLJ Clock Center Line
+      Corners:
+      - {fileID: 2147010101}
+      - {fileID: 2147010111}
+      - {fileID: 2147010121}
+      - {fileID: 2147010131}
+      - {fileID: 2147010141}
+      - {fileID: 2147010151}
+      - {fileID: 2147010161}
+      - {fileID: 2147010171}
+      - {fileID: 2147010181}
+      Closed: 0
+      InteriorTarget: {fileID: 0}
+      Direction: 0
+      Length: 0.51
+      Strength: 0.85
+      EdgeWidth: 0.0351
+    - Name: DLJ Left Wall Line
+      Corners:
+      - {fileID: 2147020101}
+      - {fileID: 2147020111}
+      Closed: 0
+      InteriorTarget: {fileID: 0}
+      Direction: 0
+      Length: 0.72
+      Strength: 0.85
+      EdgeWidth: 0.012
+    Settings:
+      WaterSourceRadius: 0.035
+      TransitionSeconds: 0.65
+      NormalStateStrength: 0.75
+      DepressedTint: {r: 0.04, g: 0.36, b: 1, a: 1}
+      BlueTintStrength: 0.783
+      DepressedContrast: 1.8
+      DepressedSharpness: 0.85
+      WaterLightStrength: 0.75
+      WaterLightSpread: 0.6
+      WaterLightSharpness: 8
+      WaterBeamCount: 32
+      WaterBeamWidth: 1
+      WaterWidthVariation: 0.75
+      WaterWaveStrength: 0.45
+      WaterWaveSpeed: 0.22
+      WaterScatterStrength: 0.9
+      WaterAfterglowStrength: 0.6
+      WaterAfterglowAngle: 105
+      WaterAfterglowLength: 2
+      WaterFadeStart: 0.35
+      WaterDistanceFade: 0.8
+      WaterLightDirection: -2
+      WaterScatterAngle: 22
+      WindowStyle: 7
+      WindowBandWidth: 0.0351
+      WindowBandSoftness: 0
+      WindowBandOpacity: 0.65
+      WindowBandCoreBrightness: 1.4
+      WindowBandTint: {r: 0.65, g: 0.88, b: 1, a: 1}
+      WindowShaftGrouping: 0.75
+      WindowShaftVerticalBias: 0.52
+      WindowShaftTopLength: 0.18
+      WindowShaftBottomLength: 0.85
+      WindowShaftAmbientStrength: 0.2
+      ChromaticSeconds: 3.5
+      ChromaticFadeSeconds: 1
+      PastelSeparation: 0.012
+      PastelStrength: 0.82
+      PastelPink: {r: 0.96, g: 0.7, b: 0.86, a: 1}
+      PastelMint: {r: 0.67, g: 0.94, b: 0.87, a: 1}
+      PastelLavender: {r: 0.78, g: 0.75, b: 0.97, a: 1}
+      PastelSaturation: 0.58
+      PastelContrast: 0.84
+      PastelGradeStrength: 0.8
+      GlitchSeconds: 2
+      GlitchDisplacement: 0.012
+    SettingsInitialized: 1
+  _activeRoomIndex: 1
   _crtFeature: {fileID: 8139080203877313755, guid: f288ae1f4751b564a96ac7587541f7a2, type: 2}
   _effectShader: {fileID: 4800000, guid: 37d5d4f3d6ef4f2cc68ff99bff8dc381, type: 3}
   _basePreset: {fileID: 11400000, guid: fa73395ad0244e042958793c5481a4f8, type: 2}
@@ -20243,6 +20409,11 @@ MonoBehaviour:
   _sceneCamera: {fileID: 1154547344}
   _scatterLights:
   - {fileID: 466152631}
+  _clockRoomRoot: {fileID: 1185150710}
+  _clockFaceRenderer: {fileID: 15578216}
+  _clockGlowRenderer: {fileID: 1640913161}
+  _clockFaceDepressedBrightness: 0.7
+  _clockGlowDepressedBrightness: 0.5
   _waterSourceRadius: 0.035
   _transitionSeconds: 0.65
   _normalStateStrength: 0.75
@@ -20278,6 +20449,420 @@ MonoBehaviour:
   _pastelGradeStrength: 0.8
   _glitchSeconds: 2
   _glitchDisplacement: 0.012
+--- !u!1 &2147010000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2147010001}
+  m_Layer: 0
+  m_Name: DLJ Clock Depression Line
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2147010001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147010000}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.104348, y: 0.869565, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2147010101}
+  - {fileID: 2147010111}
+  - {fileID: 2147010121}
+  - {fileID: 2147010131}
+  - {fileID: 2147010141}
+  - {fileID: 2147010151}
+  - {fileID: 2147010161}
+  - {fileID: 2147010171}
+  - {fileID: 2147010181}
+  m_Father: {fileID: 2114463390}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2147010100
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2147010101}
+  m_Layer: 0
+  m_Name: DLJ Clock Line 00
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2147010101
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147010100}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -2.78, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2147010001}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2147010110
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2147010111}
+  m_Layer: 0
+  m_Name: DLJ Clock Line 01
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2147010111
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147010110}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -2.085, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2147010001}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2147010120
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2147010121}
+  m_Layer: 0
+  m_Name: DLJ Clock Line 02
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2147010121
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147010120}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -1.39, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2147010001}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2147010130
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2147010131}
+  m_Layer: 0
+  m_Name: DLJ Clock Line 03
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2147010131
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147010130}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.695, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2147010001}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2147010140
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2147010141}
+  m_Layer: 0
+  m_Name: DLJ Clock Line 04
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2147010141
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147010140}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2147010001}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2147010150
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2147010151}
+  m_Layer: 0
+  m_Name: DLJ Clock Line 05
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2147010151
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147010150}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.695, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2147010001}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2147010160
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2147010161}
+  m_Layer: 0
+  m_Name: DLJ Clock Line 06
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2147010161
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147010160}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.39, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2147010001}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2147010170
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2147010171}
+  m_Layer: 0
+  m_Name: DLJ Clock Line 07
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2147010171
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147010170}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2.085, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2147010001}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2147010180
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2147010181}
+  m_Layer: 0
+  m_Name: DLJ Clock Line 08
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2147010181
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147010180}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2.78, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2147010001}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2147020000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2147020001}
+  m_Layer: 0
+  m_Name: DLJ Left Wall Light Line
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2147020001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147020000}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -7.22, y: -4.1, z: 13.54}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2147020101}
+  - {fileID: 2147020111}
+  m_Father: {fileID: 1185150712}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2147020100
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2147020101}
+  m_Layer: 0
+  m_Name: DLJ Left Wall Bottom
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2147020101
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147020100}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -1.67, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2147020001}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2147020110
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2147020111}
+  m_Layer: 0
+  m_Name: DLJ Left Wall Top
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2147020111
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147020110}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.67, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2147020001}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

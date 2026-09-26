@@ -312,7 +312,7 @@ MonoBehaviour:
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
-  m_PresetInfoIsWorld: 0
+  m_PresetInfoIsWorld: 1
 --- !u!114 &800899975685070616
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -381,6 +381,8 @@ PlayableDirector:
   m_SceneBindings:
   - key: {fileID: -4747461451227025907, guid: 9f8b2366512cd5241abc2bb9d28b6bd0, type: 2}
     value: {fileID: 2735075418383191225}
+  - key: {fileID: -4412398765432109879, guid: 9f8b2366512cd5241abc2bb9d28b6bd0, type: 2}
+    value: {fileID: 2735075418383191225}
   m_ExposedReferences:
     m_References: []
 --- !u!114 &4958505755917984770
@@ -423,6 +425,8 @@ GameObject:
   - component: {fileID: 2735075418383191225}
   - component: {fileID: 1212320175107600451}
   - component: {fileID: 3252079501964518346}
+  - component: {fileID: 3450000000000000082}
+  - component: {fileID: 3450000000000000114}
   m_Layer: 0
   m_Name: Signal
   m_TagString: Untagged
@@ -461,6 +465,8 @@ MonoBehaviour:
     m_Signals:
     - {fileID: 11400000, guid: 78686574afcafc246b92df690ee8572c, type: 2}
     - {fileID: 11400000, guid: e1113a74ed143ff4babffbee5720e782, type: 2}
+    - {fileID: 11400000, guid: 3444f880e8095f545a7766f3a3a960da, type: 2}
+    - {fileID: 11400000, guid: e7c7ffbe09b40f24f966254640dcdb3a, type: 2}
     m_Events:
     - m_PersistentCalls:
         m_Calls:
@@ -490,6 +496,34 @@ MonoBehaviour:
             m_StringArgument: 
             m_BoolArgument: 0
           m_CallState: 2
+    - m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 3450000000000000114}
+          m_TargetAssemblyTypeName: KTH.KTH_TimelineAudioSignal, Assembly-CSharp
+          m_MethodName: SoundOn
+          m_Mode: 1
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+    - m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 3450000000000000114}
+          m_TargetAssemblyTypeName: KTH.KTH_TimelineAudioSignal, Assembly-CSharp
+          m_MethodName: SoundOff
+          m_Mode: 1
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
 --- !u!114 &1212320175107600451
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -506,7 +540,7 @@ MonoBehaviour:
   - {fileID: 1086961808024310570}
   - {fileID: 1922556265134842488}
   - {fileID: 3724714634234916676}
-  fadeDuration: 0.5
+  fadeDuration: 1.2
 --- !u!114 &3252079501964518346
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -521,10 +555,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TypingTextSignal
   text: {fileID: 839149752057918389}
   lines:
-  - b
-  - v
-  - f
-  - s
+  - "음악이 건물을 가득 채웠다."
+  - "B씨의 날카로운 손동작은\n스테이크를 가르며 지나갔다."
+  - "시곗바늘은 엇박으로 춤추었다."
+  - "마침내, 시계는 정각을 알렸고,"
+  - "나는 스테이크 나이프를 들고 자리에서 일어났다."
+  - "아수라장이 된 연회장 안에서 내가 마지막으로 본 것은,\n창문 너머로 사라지는 B씨를 태운 자동차의 매연이었다."
+  - "얼마 지나지 않아 흰 연기를 뚫고\n경찰이 들이닥치는 광경이 보였다."
   charInterval: 0.05
   clearOnEnable: 1
 --- !u!1 &7354880001919879205
@@ -713,7 +750,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4224612578249622835}
   m_Layer: 0
-  m_Name: Conference
+  m_Name: 11_Yuki_Hall
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -737,3 +774,115 @@ Transform:
   - {fileID: 4596485609441851790}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!82 &3450000000000000082
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7173760710162637212}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 1
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &3450000000000000114
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7173760710162637212}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de28affe0897fe94486e8cb209367bb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineAudioSignal
+  clip: {fileID: 8300000, guid: 1f602b12aa2e90546b1bde3f870b8067, type: 3}
+  fadeInDuration: 3
+  fadeOutDuration: 3

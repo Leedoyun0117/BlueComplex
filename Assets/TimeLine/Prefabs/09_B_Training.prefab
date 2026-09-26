@@ -690,7 +690,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1830149578316438428}
   m_Layer: 0
-  m_Name: B_Training
+  m_Name: 09_B_Training
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
