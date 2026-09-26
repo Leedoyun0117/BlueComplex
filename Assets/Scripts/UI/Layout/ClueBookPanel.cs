@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using BlueComplex.UI.Motion;
 using BlueComplex.UI.Presentation;
@@ -56,6 +57,18 @@ namespace BlueComplex.UI.Layout
         private RectTransform _rightPage;
         private Canvas _canvas;
 
+        /// <summary>책이 열렸을 때(단서를 눌러 <see cref="Show"/>가 불렸을 때). 튜토리얼 가이드가 "단서를 눌러 보게" 단계를 끝내는 데 쓴다.</summary>
+        public event Action Opened;
+
+        /// <summary>"메뉴얼" 탭 버튼을 눌렀을 때.</summary>
+        public event Action ManualTabShown;
+
+        /// <summary>책이 닫혔을 때("돌아가기"나 배경을 눌렀을 때).</summary>
+        public event Action Closed;
+
+        /// <summary>"메뉴얼" 탭 버튼의 사각형 — 가이드가 이 버튼을 강조한다.</summary>
+        public RectTransform ManualTabButtonRect => _manualTabButton.rectTransform;
+
         public static ClueBookPanel GetOrCreate(Transform canvasRoot)
         {
             var existing = canvasRoot.GetComponentInChildren<ClueBookPanel>(true);
@@ -91,6 +104,7 @@ namespace BlueComplex.UI.Layout
             // 책이 막 열리는 참이라 넘김 연출 없이 "단서" 탭인 상태로 시작한다(아직 꺼져 있어 트윈도 못 돈다).
             SwitchTab(showClue: true, animate: false);
             gameObject.SetActive(true);
+            Opened?.Invoke();
         }
 
         public void Hide()
@@ -98,13 +112,18 @@ namespace BlueComplex.UI.Layout
             UiSoundHooks.Play(UiSoundCue.ButtonClick);
             KillPageTurn();
             gameObject.SetActive(false);
+            Closed?.Invoke();
         }
 
         /// <summary>프리팹의 "단서" 탭 Button.onClick이 부른다 — 이름을 바꾸면 배선이 조용히 끊긴다.</summary>
         public void ShowClueTab() => SwitchTab(showClue: true, animate: true);
 
         /// <summary>프리팹의 "메뉴얼" 탭 Button.onClick이 부른다 — 이름을 바꾸면 배선이 조용히 끊긴다.</summary>
-        public void ShowManualTab() => SwitchTab(showClue: false, animate: true);
+        public void ShowManualTab()
+        {
+            SwitchTab(showClue: false, animate: true);
+            ManualTabShown?.Invoke();
+        }
 
         /// <summary>
         /// 오른쪽 페이지를 갈아 끼운다. <paramref name="animate"/>면 페이지가 통째로 책등을 축으로 넘어간다 —

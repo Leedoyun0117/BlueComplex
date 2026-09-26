@@ -35,8 +35,14 @@ namespace BlueComplex.Core.Complexes
         }
     }
 
+    /// <summary>발현이 결정된 턴에 어떤 컴플렉스를 붙일지 정한다. 기본 구현은 무작위(<see cref="ComplexSpawner"/>), 튜토리얼은 정해진 순서(<see cref="ScriptedComplexSchedule"/>).</summary>
+    public interface IComplexSpawner
+    {
+        bool TrySpawn(ComplexBoard board, out ComplexInstance spawned);
+    }
+
     /// <summary>스테이지 컴플렉스 목록에서 아직 붙지 않은 것을 하나 뽑는다.</summary>
-    public sealed class ComplexSpawner
+    public sealed class ComplexSpawner : IComplexSpawner
     {
         private readonly IReadOnlyList<ComplexDefinition> _candidates;
         private readonly IRandomSource _random;

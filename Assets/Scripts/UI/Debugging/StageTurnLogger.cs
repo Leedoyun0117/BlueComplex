@@ -77,9 +77,9 @@ namespace BlueComplex.UI.Debugging
         private void AppendQuarterAndOutcome(StringBuilder log, TurnReport report)
         {
             var judgeText = report.KeyResult is { } j
-                ? $"{j.Quarter}쿼터 {(j.Success ? "성공" : "실패")}(구역 {j.Zone.StartSlot}~{j.Zone.StartSlot + j.Zone.Width - 1}, 심박수 {j.Position})"
+                ? $"{j.Quarter}분기점 {(j.Success ? "성공" : "실패")}(구역 {j.Zone.StartSlot}~{j.Zone.StartSlot + j.Zone.Width - 1}, 심박수 {j.Position})"
                 : "-";
-            log.AppendLine($"  쿼터 {report.Quarter} · {report.TurnInQuarter}/{_session.Runner.Schedule.TurnsPerQuarter}턴  키 판정: {judgeText}");
+            log.AppendLine($"  분기점 {report.Quarter} · {report.TurnInQuarter}/{_session.Runner.Schedule.TurnsPerQuarter}턴  키 판정: {judgeText}");
 
             var state = _session.Zone.StateOf(report.HeartbeatValue);
             log.AppendLine($"  상태: {FormatState(state)}");

@@ -170,6 +170,13 @@ namespace BlueComplex.UI.Presentation
             }
 
             PostitDirector.GetOrCreate(transform.root).ResetAll();
+
+            // 옛 연출이 남긴 화면 상태도 되돌린다 — 코루틴만 끊으면 칩·열린 판넬·풍선 선·요약 글자·타이핑 중이던 대사가 새 판 위에 그대로 남는다.
+            // 이 뷰들은 트윈/자체 타이핑으로 도므로 StopAllCoroutines로는 안 멈춘다. IsPresenting과 무관하게 항상 되돌린다(연출이 끝난 뒤의 잔상도 지운다).
+            _memoryBubble?.ResetNow();
+            _xrayPanel?.ResetNow();
+            _dialogue?.ResetNow();
+
             _brain.Refresh(Session.Complexes.InPriorityOrder().ToList());
         }
 
@@ -227,13 +234,15 @@ namespace BlueComplex.UI.Presentation
             }
 
             var runner = Session.Runner;
+
             if (runner.Outcome != StageOutcome.InProgress)
             {
                 RefreshContent();
                 yield break;
             }
 
-            var keyTurn = runner.CurrentTurnInQuarter == Session.Keys.Schedule.TurnsPerQuarter;
+            var keyTurn = TurnTransitionRules.IsKeyTurn(runner.CurrentTurnInQuarter, Session.Keys.Schedule.TurnsPerQuarter);
+
             yield return PostitDirector.GetOrCreate(transform.root)
                 .PlayRefresh(_monologueSpeaker, keyTurn ? _keyTurnMonologue : null, RefreshContent);
 
@@ -268,8 +277,9 @@ namespace BlueComplex.UI.Presentation
 
             // TickDurations/스폰은 Resolve 이후에 일어나 이 시점의 보드에는 이미 만료된 컴플렉스가 없다 — 그대로 배치하면 마지막 턴에
             // 발동한 컴플렉스(지속 1턴짜리는 항상)가 영역을 못 찾아 발광·대사가 통째로 빠진다. 그래서 발광 동안은 해석 당시의
-            // 컴플렉스(Steps, 우선순위 순서)로 배치하고, 반응이 끝난 뒤에 최신 보드로 맞춘다.
-            _brain.Refresh(report.Interpretation.Steps.Select(step => step.Complex).ToList());
+            // 컴플렉스(DisplayOrder, 화면에 보이는 우선순위 순서 — 평가 순서와 다를 수 있어 Steps 순서로 배치하면 칸이 뒤바뀐다)로 배치하고,
+            // 반응이 끝난 뒤에 최신 보드로 맞춘다.
+            _brain.Refresh(report.Interpretation.DisplayOrder);
             yield return PlayComplexReactions(report);
             _brain.Refresh(Session.Complexes.InPriorityOrder().ToList());
 
@@ -286,7 +296,7 @@ namespace BlueComplex.UI.Presentation
             _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger);
         }
 
-        /// <summary>발동한 컴플렉스를 우선순위 순서(InterpretationResult.Steps 순서)대로 한 번에 하나씩 빛내고, 그때마다 대사창에 짧은 이벤트 대사를 띄운다.
+        /// <summary>발동한 컴플렉스를 평가 순서(InterpretationResult.Steps 순서)대로 한 번에 하나씩 빛내고, 그때마다 대사창에 짧은 이벤트 대사를 띄운다.
         /// 대사가 다 나와야(클릭으로 건너뛰어도 된다) 다음 컴플렉스로 넘어간다 — 발광과 대사가 서로 끊기지 않는다.</summary>
         private IEnumerator PlayComplexReactions(TurnReport report)
         {

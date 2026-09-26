@@ -184,18 +184,33 @@ namespace BlueComplex.Audio
             var now = Time.unscaledTime;
             if (_lastPlayedAt.TryGetValue(cue, out var last) && now - last < _sameQueueCooldown) return;
 
-            var library = Library;
-            if (library == null || !library.TryGet(cue, out var entry)) return;
-            if (entry.clips.Length == 0) return;
+            AudioClip clip;
+            float volume;
+            Vector2 pitchRange;
 
-            var clip = entry.clips[Random.Range(0, entry.clips.Length)];
+            var library = Library;
+            if (library != null && library.TryGet(cue, out var entry) && entry.clips.Length > 0)
+            {
+                clip = entry.clips[Random.Range(0, entry.clips.Length)];
+                volume = entry.volume;
+                pitchRange = entry.pitchRange;
+            }
+            else if (ProceduralSounds.TryGet(cue, out clip, out volume))
+            {
+                pitchRange = Vector2.one; // 코드로 만든 임시 소리 — 라이브러리에 진짜 클립이 채워지면 그쪽이 우선한다.
+            }
+            else
+            {
+                return;
+            }
+
             if (clip == null) return;
 
             _lastPlayedAt[cue] = now;
 
             var source = NextVoice();
-            source.pitch = Random.Range(entry.pitchRange.x, entry.pitchRange.y);
-            source.volume = entry.volume;
+            source.pitch = Random.Range(pitchRange.x, pitchRange.y);
+            source.volume = volume;
             source.clip = clip;
             source.Play();
         }
