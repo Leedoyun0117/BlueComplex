@@ -51,7 +51,7 @@ namespace BlueComplex.Editor.DLJ
                 ValidateRoom(effect);
             }
             EditorGUILayout.Space();
-            EditorGUILayout.HelpBox("Play 중 미리보기 버튼으로 화면만 바꿀 수 있어. 게임 심박수와 BGM에는 영향이 없어. 흥분 진입 시 기본 글리치 2초, 색수차 3.5초(마지막 1초 감쇠) 뒤 핑크 단색 톤이 유지돼.", MessageType.Info);
+            EditorGUILayout.HelpBox("Play 중 미리보기 버튼으로 화면만 바꿀 수 있어. 게임 심박수에는 영향이 없어. 침체 미리보기는 BGM 먹먹함(BGMLowpassCutoff)도 함께 움직여. 흥분 진입 시 기본 글리치 2초, 색수차 3.5초(마지막 1초 감쇠) 뒤 핑크 단색 톤이 유지돼.", MessageType.Info);
             using (new EditorGUI.DisabledScope(!Application.isPlaying || !effect.isActiveAndEnabled))
             {
                 EditorGUILayout.BeginHorizontal();
