@@ -20,9 +20,6 @@ namespace BlueComplex.Core.Stage
         public const string SetBrokenFrame = "stage2_set2";
         public const string SetRain = "stage2_set3";
 
-        /// <summary>실험용 임시 단서(set3 세 번째)의 id. 기획서 표에 없는 항목이라 표 대조 테스트는 이 id를 뺀다.</summary>
-        public const string DummyClueId = "s2_set3_dummy";
-
         public static IReadOnlyList<ClueDefinition> Clues() => new[]
         {
             new ClueDefinition("s2_application_form", "지원 신청서",
@@ -109,10 +106,9 @@ namespace BlueComplex.Core.Stage
                 new[] { EmotionTag.Disgust },
                 SetRain),
 
-            // 실험용 임시 단서 — 최종 콘텐츠 아님. set3가 침체 태그뿐이라 흥분 쪽으로 못 가는 문제가 실제로 우측 성공률을 막는지 확인하려고 둔다.
-            // 효과가 확인되면 정식 이름·스토리로 교체하고, 아니면 이 항목과 DummyClueId를 지운다.
-            new ClueDefinition(DummyClueId, "임시 단서",
-                "임시 단서 — 콘텐츠 미정",
+            // set3의 세 번째 단서(09/25 노션). set3가 침체 태그뿐이라 흥분 쪽으로 못 가던 것을 행복·사랑 태그로 메운다.
+            new ClueDefinition("s2_umbrella", "우산",
+                "우산\n\n예전에, 가족들과 비 오는 날 처음으로 갓 구운 빵을 먹었어. 그 때도 부모님은 내게 빵 조각을 더 나누어 주지 못해서 아쉬워 하셨지. 그 순간 만큼은 누구보다 행복했어.",
                 new[] { TimeTag.Past },
                 new[] { PersonTag.Family },
                 new[] { EmotionTag.Happiness, EmotionTag.Love },

@@ -112,7 +112,7 @@ namespace BlueComplex.UI.Motion
         [Range(0.3f, 0.9f)] public float postitPinPopAt = 0.6f;
         [Tooltip("새 포스트잇이 위에서 내려와 눌리고 압정이 꽂히기까지 걸리는 시간.")]
         public float postitStick = 0.55f;
-        [Tooltip("두 포스트잇(컴플렉스 → 대화)이 떼어지고 붙는 시작 시차.")]
+        [Tooltip("두 포스트잇(컴플렉스 → 분기)이 떼어지고 붙는 시작 시차.")]
         public float postitStagger = 0.1f;
         [Tooltip("떼어진 사이에 글자 쓰는 소리가 나며 내용이 새로 쓰이는 시간.")]
         public float postitWrite = 0.55f;
@@ -127,17 +127,33 @@ namespace BlueComplex.UI.Motion
         [Tooltip("독백이 다 나온 뒤 화면이 밝아지기 전까지 머무는 시간(클릭하면 건너뛴다).")]
         public float keyTurnHold = 1.1f;
 
-        [Header("심박수 변화 연출 (카메라 확대)")]
-        [Tooltip("포스트잇이 떼어진 뒤 카메라가 심박수 표시기 쪽으로 확대되는 시간.")]
-        public float heartFocusZoomIn = 0.7f;
-        [Tooltip("확대된 채 심박수 소리가 앞으로 나와 머무는 시간. 기획: 심박수 사운드 2초 출력.")]
-        public float heartFocusHold = 2f;
-        [Tooltip("소리가 잦아들며 원래 화면으로 돌아오는 시간.")]
-        public float heartFocusZoomOut = 1.0f;
-        [Tooltip("표시기가 화면(가로·세로 중 큰 쪽)의 이만큼을 채우도록 확대한다.")]
-        [Range(0.2f, 0.9f)] public float heartFocusFill = 0.75f;
-        [Tooltip("확대 배율의 하한/상한 — 표시기가 아주 작거나 커도 이 범위 안에서만 확대한다.")]
-        public Vector2 heartFocusZoomRange = new Vector2(1.6f, 3f);
+        [Header("분기 대사 장면 (쿼터가 끝날 때 게임 UI가 빠지고 배경과 대사만 남는다)")]
+        [Tooltip("게임 UI가 사라지는 시간, 그리고 대사가 끝난 뒤 다시 나타나는 시간.")]
+        public float branchSceneFade = 0.5f;
+
+        [Header("시작 컷신 (나이프 낙하 → 눈 → 암전 → TV 뉴스 → 경찰서). 전체 = 나이프 + 감긴 눈 + 뜨임 + 확대 + 암전 + 뉴스 줄 수×줄 시간 + 밝아짐")]
+        [Tooltip("컷신이 시작되며 화면이 검게 덮이는 시간(나이프 낙하와 겹쳐 흐른다 — 전체 길이에 더해지지 않는다).")]
+        public float introFadeIn = 0.4f;
+        [Tooltip("나이프가 우상단에서 좌하단으로 떨어지는 시간.")]
+        public float introKnifeFall = 3f;
+        [Tooltip("낙하하는 동안 나이프가 도는 각도(도). 음수면 시계 방향.")]
+        public float introKnifeSpin = -900f;
+        [Tooltip("나이프 한 변의 길이(캔버스 높이에 대한 비율). 스프라이트는 64x64 도트라 정수 배로 확대해도 깨끗하다.")]
+        [Range(0.1f, 0.8f)] public float introKnifeSize = 0.45f;
+        [Tooltip("감긴 눈(가로선 하나): 선이 서서히 나타나 머무는 시간.")]
+        public float introEyeClosed = 1.2f;
+        [Tooltip("눈이 뜨이며 홍채가 드러나는 시간.")]
+        public float introEyeOpen = 1.3f;
+        [Tooltip("동공 중심으로 화면이 빨려 들어가듯 확대되는 시간.")]
+        public float introEyeZoom = 1.5f;
+        [Tooltip("눈 연출과 뉴스 사이의 암전(호흡).")]
+        public float introBlackout = 0.8f;
+        [Tooltip("뉴스 자막 한 줄이 떠 있는 시간.")]
+        public float introNewsLine = 2f;
+        [Tooltip("검은 화면이 걷히며 경찰서 배경(게임 화면)이 드러나는 시간. 나츠는 이 도중에 나타난다.")]
+        public float introReveal = 1.4f;
+        [Tooltip("지직거리는 잡음 효과음의 크기(0~1).")]
+        [Range(0f, 1f)] public float introStaticVolume = 0.5f;
 
         [Header("스테이지 클리어 연출 (자물쇠 → 대사 → 컷신 → 다음 스테이지)")]
         [Tooltip("자물쇠 화면으로 넘어가며 화면이 어두워지는 시간.")]
@@ -150,6 +166,8 @@ namespace BlueComplex.UI.Motion
         public float lockKeyTwist = 0.3f;
         [Tooltip("자물쇠 고리가 열리며 들리는 시간.")]
         public float lockUnlatch = 0.35f;
+        [Tooltip("자물쇠가 열린 뒤 열쇠 그림만 서서히 사라지는 시간(자물쇠는 열린 채 남는다).")]
+        public float lockKeyFade = 0.4f;
         [Tooltip("자물쇠 하나가 열린 뒤 다음 자물쇠로 넘어가기 전 쉼.")]
         public float lockInterval = 0.3f;
         [Tooltip("자물쇠가 다 열린 뒤(또는 못 열린 채로) 다음 단계로 넘어가기 전에 머무는 시간.")]

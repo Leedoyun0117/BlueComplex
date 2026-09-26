@@ -20,11 +20,6 @@ Shader "BlueComplex/CRT/PostProcess"
         _Pastel ("Excited Pastel Shift", Range(0, 1)) = 0
         _Brightness ("Brightness", Range(0.3, 1.6)) = 1.0
 
-        // 카메라 확대 연출(심박수 변화). 합성된 화면(씬 + UI)을 통째로 확대해 읽는다 — 배경도 UI도 함께 커진다.
-        // _Zoom = 확대 배율(1이면 그대로), _ZoomShift = 확대된 창의 중심이 화면 중앙에서 벗어난 만큼(0~1 좌표, 배럴 왜곡 뒤 좌표; 0이면 중앙). 심박수로 변하지 않고 CrtZoom만 쓴다.
-        _Zoom ("Zoom", Range(1, 4)) = 1.0
-        _ZoomShift ("Zoom Window Shift", Vector) = (0, 0, 0, 0)
-
         // UI 합성용. 별도 패스(UIComposite)로 CRT 앞에 체이닝했더니 같은 injectionPoint라도
         // 두 FullScreenPassRendererFeature를 연달아 돌리는 과정에서 두 번째(CRT) 패스의 좌표계가
         // 깨져 화면 전체가 배럴 클리핑으로 새까맣게 나오는 문제가 있었다 — 그래서 한 패스로 합쳤다.
@@ -72,8 +67,6 @@ Shader "BlueComplex/CRT/PostProcess"
                 float _TintR;
                 float _Pastel;
                 float _Brightness;
-                float _Zoom;
-                float4 _ZoomShift;
             CBUFFER_END
 
             float Rand(float2 c)
@@ -131,25 +124,20 @@ Shader "BlueComplex/CRT/PostProcess"
                 if (c.x < 0.0 || c.x > 1.0 || c.y < 0.0 || c.y > 1.0)
                     return float4(0, 0, 0, 1);
 
-                // 카메라 확대 — 스캔라인·비네트·노이즈는 화면 좌표(c)를 그대로 쓰고, 합성된 화면을 읽는 좌표(cs)만 확대 창 안으로 좁힌다.
-                // _Zoom이 1이면 cs == c 라 기존 결과와 같다.
-                float zoom = max(_Zoom, 1.0);
-                float2 cs = 0.5 + _ZoomShift.xy + (c - 0.5) / zoom;
-
                 // 색수차
-                float3 col = Sample3(cs, shakeDelta);
+                float3 col = Sample3(c, shakeDelta);
 
                 // 블룸
                 float3 acc = float3(0, 0, 0);
-                float px = 1.6 * _BlitTexture_TexelSize.x / zoom;
-                float py = 1.6 * _BlitTexture_TexelSize.y / zoom;
+                float px = 1.6 * _BlitTexture_TexelSize.x;
+                float py = 1.6 * _BlitTexture_TexelSize.y;
                 [unroll]
                 for (int i = -2; i <= 2; i++)
                 {
                     [unroll]
                     for (int j = -2; j <= 2; j++)
                     {
-                        float3 s = SampleComposited(cs + float2(i * px, j * py), shakeDelta);
+                        float3 s = SampleComposited(c + float2(i * px, j * py), shakeDelta);
                         acc += max(s - _BloomThreshold, 0.0);
                     }
                 }

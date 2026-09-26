@@ -16,5 +16,9 @@ namespace BlueComplex.UI.Presentation
 
         /// <summary>실패한 스테이지에서 완전한 암전 뒤 시작 화면으로 돌아간다. 화면은 완전히 어두운 상태에서 시작한다. 연결이 없으면(null) 결과 패널을 보여 준다.</summary>
         public static Func<IEnumerator> ReturnToStart { get; set; }
+
+        /// <summary>튜토리얼이 시작되기 전에 재생하는 시작 컷신(고래의 눈 → 뉴스 → 경찰서 → 나츠의 독백 → 청장과의 대화). 내용은 컷신 담당 영역이 채운다.
+        /// 튜토리얼 세션이 만들어진 뒤, 첫 턴이 시작되기 전에 불린다 — 끝나면 화면이 밝은 상태여야 한다. null이면 건너뛰고 바로 튜토리얼이 시작된다.</summary>
+        public static Func<IEnumerator> PlayTutorialIntro { get; set; }
     }
 }

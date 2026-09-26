@@ -14,13 +14,13 @@ namespace BlueComplex.UI.Presentation
         public const string ResourcePath = "UI/Portraits/Yuki/YukiBreathSet";
 
         [Tooltip("1번 프레임(정지점)을 보여주는 시간(초). 길수록 숨쉬기가 느려진다.")]
-        [Min(0.02f)] public float frame1Hold = 1.2f;
+        [Min(0.02f)] public float frame1Hold = 1.4f;
 
         [Tooltip("3번 프레임(정지점)을 보여주는 시간(초). 3번은 한 주기에 두 번(4번 전후) 나온다.")]
-        [Min(0.02f)] public float frame3Hold = 0.6f;
+        [Min(0.02f)] public float frame3Hold = 0.7f;
 
         [Tooltip("2번·4번 프레임(오가는 중)을 보여주는 시간(초).")]
-        [Min(0.02f)] public float stepSeconds = 0.15f;
+        [Min(0.02f)] public float stepSeconds = 0.25f;
 
         public Sprite[] normal;
         public Sprite[] sadness;

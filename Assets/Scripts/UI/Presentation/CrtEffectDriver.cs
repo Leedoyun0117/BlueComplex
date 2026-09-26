@@ -38,9 +38,6 @@ namespace BlueComplex.UI.Presentation
         private static readonly int PastelId = Shader.PropertyToID("_Pastel");
         private static readonly int BrightnessId = Shader.PropertyToID("_Brightness");
 
-        /// <summary>CRT 후처리 머티리얼. 카메라 확대 연출(<see cref="CrtZoom"/>)이 같은 머티리얼의 확대 속성을 쓴다.</summary>
-        public Material CrtMaterial => _crtMaterial;
-
         private Heartbeat _heartbeat;
         private CrtParams _current;
         private Tween _tween;
