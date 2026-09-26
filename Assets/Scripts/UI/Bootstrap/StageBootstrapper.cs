@@ -135,7 +135,7 @@ namespace BlueComplex.UI.Bootstrap
             var verdict = Session.CheckPlay(card);
             if (!verdict.Allowed)
             {
-                PlayGateFeedback.Show(FindCanvasRoot(), verdict);
+                PlayGateFeedback.Show(FindCanvasRoot(), verdict, Session.Runner.CurrentTurn);
                 return;
             }
 
@@ -230,6 +230,10 @@ namespace BlueComplex.UI.Bootstrap
 
             var canvasRoot = FindCanvasRoot();
             StageDialoguePlayer.GetOrCreate(canvasRoot)?.ResetNow();
+
+            // 튜토리얼 가이드(청장의 말풍선·강조·클릭 막)는 튜토리얼 세션에만 붙는다 — 첫 턴이 시작될 때(시작 대화 뒤) 안내가 시작된다. 다른 세션이면 남은 것을 치운다.
+            if (_isTutorial) TutorialGuide.GetOrCreate(canvasRoot)?.Begin(Session);
+            else TutorialGuide.Find(canvasRoot)?.ResetNow();
 
             // 상시 배경음은 스테이지(재시작 포함)가 시작될 때 처음부터 — 시작 대화 재생 중에도 이미 깔려 있다.
             var ambient = StageSounds.For(config).Ambient;
