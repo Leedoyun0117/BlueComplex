@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace BlueComplex.Core.Stage
 {
     /// <summary>
-    /// 게임 시작 컷신(나이프 낙하 → 눈 → 암전 → TV 뉴스 → 경찰서)의 글. 화면 구성과 시간은 UI(IntroCutsceneDirector)가 정하고,
+    /// 게임 시작 컷신(암전+엔진 소리 → 차 주행 → 암전 → 시계 → 암전 → TV 뉴스 → 경찰서)의 글. 화면 구성과 시간은 UI(IntroCutsceneDirector)가 정하고,
     /// 여기는 뉴스 자막 문구만 가진다 — PPT 애니마틱 기준 3줄.
     /// </summary>
     public static class IntroCutsceneContent

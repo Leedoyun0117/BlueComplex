@@ -78,6 +78,9 @@ namespace BlueComplex.UI.Motion
 
         /// <summary>TV 뉴스의 지직거리는 잡음(시작 컷신). 라이브러리에 클립이 없으면 코드로 만든 잡음(ProceduralSounds)이 난다 — 진짜 소리를 채우면 그게 우선한다.</summary>
         TvStatic,
+
+        /// <summary>자동차 엔진·배기음(시작 컷신) — 암전 속에서 먼저 들리다가 차가 화면을 가로지르며 지나가 멀어진다. 라이브러리에 클립이 없으면 코드로 만든 소리(ProceduralSounds)가 난다.</summary>
+        CarEngine,
     }
 
     /// <summary>
