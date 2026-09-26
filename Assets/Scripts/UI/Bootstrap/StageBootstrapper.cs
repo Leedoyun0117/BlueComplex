@@ -87,6 +87,8 @@ namespace BlueComplex.UI.Bootstrap
         private readonly Queue<TurnReport> _pendingQuarterDialogue = new();
         private bool _quarterDialoguePlaying;
 
+        private Coroutine _endingRoutine;
+
         /// <summary>이 세션(앱 실행)에서 이미 들어온 적 있는 스테이지 id — "처음" 시작 대사는 스테이지별로 딱 한 번만 나온다.
         /// 재시작(RestartWithSameSeed/NewSeed)은 여기서 지우지 않는다: 같은 스테이지를 다시 들어오는 것도 "재진입"이다.</summary>
         private readonly HashSet<string> _stagesEnteredBefore = new();
@@ -120,6 +122,7 @@ namespace BlueComplex.UI.Bootstrap
             else if (Keyboard.current.f2Key.wasPressedThisFrame) StartStage(2);
             else if (Keyboard.current.f3Key.wasPressedThisFrame) StartStage(3);
             else if (Keyboard.current.f4Key.wasPressedThisFrame) StartTutorial();
+            else if (Keyboard.current.f5Key.wasPressedThisFrame) PlayEnding();
 
             if (InputBlocked) return;
 
@@ -178,6 +181,28 @@ namespace BlueComplex.UI.Bootstrap
         [ContextMenu("Start Tutorial")]
         private void StartTutorialFromInspector() => StartTutorial();
 
+        /// <summary>엔딩(컷신 9 → 에필로그 → 크레딧)을 지금 화면 위에서 바로 재생한다. 정식 진행 흐름(스테이지 3 이후)에는 아직 안 이어져 있고 임시 디버그 재생은 F5.
+        /// 재생 중 다시 부르면 처음부터 다시, F1~F4로 세션을 바꾸면 끊긴다. 끝나면 게임 화면으로 돌아온다.</summary>
+        public void PlayEnding()
+        {
+            if (_endingRoutine != null) StopCoroutine(_endingRoutine);
+            _endingRoutine = StartCoroutine(RunEnding());
+        }
+
+        [ContextMenu("Play Ending")]
+        private void PlayEndingFromInspector() => PlayEnding();
+
+        private IEnumerator RunEnding()
+        {
+            var director = EndingCutsceneDirector.GetOrCreate(FindCanvasRoot());
+            if (director == null) yield break;
+
+            InputBlocked = true;
+            yield return director.Play();
+            InputBlocked = false;
+            _endingRoutine = null;
+        }
+
         /// <summary>다음 스테이지를 새 무작위 시드로 시작한다(스테이지 클리어 연출이 컷신 뒤에 부른다). 다음 스테이지가 없으면 아무 일도 안 한다.</summary>
         public void StartNextStage()
         {
@@ -217,6 +242,7 @@ namespace BlueComplex.UI.Bootstrap
 
             // 재시작이 대화 재생 도중이면 그 코루틴을 끊고 막을 치운다 — InputBlocked도 켜진 채로 남지 않게.
             StopAllCoroutines();
+            _endingRoutine = null;
             InputBlocked = false;
             _pendingQuarterDialogue.Clear();
             _quarterDialoguePlaying = false;
@@ -253,6 +279,7 @@ namespace BlueComplex.UI.Bootstrap
             else TutorialGuide.Find(canvasRoot)?.ResetNow();
             BranchSceneDirector.GetOrCreate(canvasRoot)?.ResetNow(); // 분기 대사 장면 도중이었으면 게임 UI를 되돌린다.
             IntroCutsceneDirector.Find(canvasRoot)?.ResetNow(); // 시작 컷신 도중이었으면 막을 치우고 나츠를 되돌린다.
+            EndingCutsceneDirector.Find(canvasRoot)?.ResetNow(); // 엔딩 도중이었으면 막을 치운다.
 
             // 상시 배경음은 스테이지(재시작 포함)가 시작될 때 처음부터 — 시작 대화 재생 중에도 이미 깔려 있다.
             var ambient = StageSounds.For(config).Ambient;
@@ -279,6 +306,8 @@ namespace BlueComplex.UI.Bootstrap
         private IEnumerator BeginStageAfterIntro(Transform canvasRoot, string stageId, bool isFirstEntry)
         {
             // 튜토리얼의 시작 컷신 훅(컷신 담당 영역이 채운다). 걸려 있지 않으면 건너뛴다.
+            // 컷신이 끝나도 경찰서 그림은 화면에 남는다(IntroCutsceneDirector.HoldsRoom) — 오프닝 대화가 그 위에서 이어지고, 대화가 끝난 뒤에 게임 화면으로 걷는다.
+            IntroCutsceneDirector intro = null;
             if (_isTutorial)
             {
                 var cutscene = StageFlowHooks.PlayTutorialIntro?.Invoke();
@@ -287,6 +316,7 @@ namespace BlueComplex.UI.Bootstrap
                     InputBlocked = true;
                     yield return cutscene;
                     InputBlocked = false;
+                    intro = IntroCutsceneDirector.Find(canvasRoot);
                 }
             }
 
@@ -294,7 +324,16 @@ namespace BlueComplex.UI.Bootstrap
             if (variant.HasValue && canvasRoot != null)
             {
                 InputBlocked = true;
-                yield return StageDialoguePlayer.GetOrCreate(canvasRoot).Play(variant.Value);
+                var player = StageDialoguePlayer.GetOrCreate(canvasRoot);
+                yield return intro != null && intro.HoldsRoom ? player.PlayOver(variant.Value, null) : player.Play(variant.Value);
+                InputBlocked = false;
+            }
+
+            // 대화가 끝난 이 지점에서 경찰서 그림이 게임(취조실) 화면으로 넘어간다 — 그래야 손패가 채워지는 StartStage()가 걷힌 화면에서 시작한다.
+            if (intro != null)
+            {
+                InputBlocked = true;
+                yield return intro.Dismiss();
                 InputBlocked = false;
             }
 

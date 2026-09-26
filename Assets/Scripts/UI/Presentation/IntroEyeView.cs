@@ -6,109 +6,158 @@ using UnityEngine.UI;
 namespace BlueComplex.UI.Presentation
 {
     /// <summary>
-    /// 시작 컷신 2막: 눈. 세 단계다 — (a) 감긴 눈: 가로선 하나가 서서히 나타난다 (b) 눈이 뜨인다: 눈꺼풀 사이로 홍채가 드러난다
-    /// (c) 동공 중심으로 화면이 빨려 들어가듯 확대되어 화면이 동공의 검정으로 가득 찬다.
+    /// 시작 컷신 2막: 고래의 눈. 전용 픽셀아트(<see cref="IntroCutsceneArt"/>) 320x180 한 장이 화면 전체(정수 배 확대)이고, 눈꺼풀 둘이 눈을 덮는다.
     ///
-    /// 눈 모양은 아몬드 모양 <see cref="Mask"/> 하나다 — 높이(sizeDelta.y)를 0에 가깝게 줄이면 흰자위가 가로선 하나가 되고(감긴 눈),
-    /// 높이를 키우면 마스크 안의 홍채·동공이 드러난다. 홍채·동공은 마스크 높이와 무관하게 크기가 고정이다.
+    /// 층 순서(뒤 → 앞): EyeEffect(불이 켜진 눈, 처음엔 투명) · BlackEye(검은 동공 + 흰 테두리) · 아래 눈꺼풀 · 위 눈꺼풀.
+    /// BlackEye가 EyeEffect 위에 있어야 눈이 밝아진 뒤에도 동공이 보인다 — EyeEffect는 회색 홍채 원이라 동공이 없고, 그 위에 BlackEye가 동공 자리를 채운다.
+    ///
+    ///  (a) 감긴 눈: 위·아래 눈꺼풀 1번이 대각선 이음매에서 맞닿아 화면을 덮는다(이음매가 눈 한가운데를 지난다).
+    ///  (b) 눈이 뜨인다: 깜빡임 두 번 → 활짝.
+    ///      깜빡임 A: 눈꺼풀 1이 살짝 벌어졌다가(느리게) 빠르게 닫힌다. 깜빡임 B: 눈꺼풀 2/3(S자)가 서로 겹쳐 덮은 상태에서 절반쯤 벌어졌다가 빠르게 닫힌다.
+    ///      그다음 S자 눈꺼풀이 활짝 벌어지고 EyeEffect가 밝아진 뒤, 위·아래로 더 물러난다.
+    ///      S자 눈꺼풀은 처음부터 3번 그림을 쓴다 — 3은 2와 모양이 같고 캔버스만 위/아래로 80px씩 넓어서, 두 눈꺼풀이 서로 겹쳐 덮도록 밀어도 화면 가장자리가 드러나지 않는다(2로는 드러난다).
+    ///      눈꺼풀은 "간격(gap)" 하나로 움직인다: 위는 위로 gap, 아래는 아래로 gap(프레임 픽셀, 정수 단위로 끊어서 도트 느낌). 음수면 서로 겹쳐 덮는다.
+    ///  (c) 동공 확대: 동공 중심이 화면 한가운데로 오면서 화면 전체가 확대되어 빨려 들어가고, 끝에서 검게 사라진다.
     /// </summary>
     internal sealed class IntroEyeView : MonoBehaviour
     {
-        /// <summary>감긴 눈 선의 두께(캔버스 픽셀).</summary>
-        private const float ClosedThickness = 4f;
+        private const float FrameWidth = 320f;
+        private const float FrameHeight = 180f;
 
-        private RectTransform _root;
-        private RectTransform _lid;
+        /// <summary>눈 중심(동공)의 프레임 좌표(픽셀, 왼쪽 위 기준) — BlackEye 그림의 중심이다(EyeEffect의 홍채도 같은 점).</summary>
+        private static readonly Vector2 EyeCenter = new(168.5f, 82.5f);
+
+        /// <summary>BlackEye의 검은 원(테두리 안쪽) 반지름(프레임 픽셀). 확대가 끝났을 때 화면이 이 검정으로 가득 차도록 배율을 정한다.</summary>
+        private const float PupilRadius = 36f;
+
+        // ── 눈꺼풀 간격(프레임 픽셀). 눈꺼풀 1은 0 = 닫힘, 눈꺼풀 2는 -55 = 서로 겹쳐 덮음(눈꺼풀 2의 모양이 중앙에서 맞닿는 값), 0 = 원래 벌어진 모양. ──
+        private const float BlinkASlit = 14f;
+        private const float Lids2Covered = -58f;
+        private const float BlinkBHalf = -22f;
+        private const float LidSlide = 50f;
+
+        // ── 깜빡임 시간(초, introEyeOpen = BaseOpenTotal일 때). 닫히는 건 빠르고 벌어지는 건 살짝 느리다. ──
+        private const float AOpen = 0.26f, AHoldOpen = 0.08f, AClose = 0.09f, AHoldClosed = 0.18f;
+        private const float BOpen = 0.30f, BHoldOpen = 0.10f, BClose = 0.10f, BHoldClosed = 0.16f;
+        private const float FinalOpen = 0.50f, FinalSlide = 0.45f;
+        private const float BaseOpenTotal = AOpen + AHoldOpen + AClose + AHoldClosed + BOpen + BHoldOpen + BClose + BHoldClosed + FinalOpen + FinalSlide;
+
+        private RectTransform _frame;
         private CanvasGroup _group;
-        private Image _highlight;
-        private Sprite _almond;
-        private Sprite _iris;
-        private Sprite _disc;
-        private float _width;
-        private float _openHeight;
-        private float _pupilRadius;
+        private RawImage _eyeEffect;
+        private RawImage _upper;
+        private RawImage _upperNext;
+        private RawImage _lower;
+        private RawImage _lowerNext;
+        private IntroCutsceneArt _art;
+        private float _scale;
         private Vector2 _canvasSize;
+        private Vector2 _framePosition;
+        private bool _pairB;
+        private float _gap;
 
-        public static IntroEyeView Create(Transform parent, Vector2 canvasSize)
+        /// <summary>그림이 없으면 null — 컷신은 눈 구간을 검은 화면으로 두고 시간만 흘린다.</summary>
+        public static IntroEyeView Create(Transform parent, Vector2 canvasSize, IntroCutsceneArt art)
         {
+            if (art == null || art.blackEye == null || art.eyeEffect == null || art.upperLid is not { Length: 3 } || art.lowerLid is not { Length: 3 })
+            {
+                Debug.LogWarning("[IntroEyeView] 눈 그림이 채워져 있지 않다 — 메뉴 BlueComplex/Cutscene/Rebuild Intro Art를 실행한다.");
+                return null;
+            }
+
             var go = new GameObject("Intro Eye", typeof(RectTransform), typeof(CanvasGroup)) { layer = parent.gameObject.layer };
             go.transform.SetParent(parent, false);
 
             var view = go.AddComponent<IntroEyeView>();
-            view.Build(canvasSize);
+            view.Build(canvasSize, art);
             return view;
         }
 
-        private void Build(Vector2 canvasSize)
+        private void Build(Vector2 canvasSize, IntroCutsceneArt art)
         {
+            _art = art;
             _canvasSize = canvasSize;
-            _width = canvasSize.x * 0.5f;
-            _openHeight = _width * 0.42f;
-
-            _root = (RectTransform)transform;
-            _root.anchorMin = _root.anchorMax = _root.pivot = new Vector2(0.5f, 0.5f);
-            _root.sizeDelta = new Vector2(_width, _openHeight);
+            _scale = Mathf.Max(canvasSize.x / FrameWidth, canvasSize.y / FrameHeight); // 16:9면 정확히 정수 배(1920x1080 → 6).
 
             _group = GetComponent<CanvasGroup>();
             _group.alpha = 0f;
             _group.blocksRaycasts = false;
 
-            _almond = IntroProceduralArt.Almond();
-            _iris = IntroProceduralArt.Iris();
-            _disc = IntroProceduralArt.Disc();
+            // 프레임: 처음엔 화면 한가운데에 놓되, 확대의 중심(pivot)이 눈 중심이 되게 한다(확대하면서 눈 중심이 화면 한가운데로 온다 — PlayZoom).
+            var pivot = new Vector2(EyeCenter.x / FrameWidth, 1f - EyeCenter.y / FrameHeight);
+            var size = new Vector2(FrameWidth, FrameHeight) * _scale;
+            _frame = (RectTransform)transform;
+            _frame.anchorMin = _frame.anchorMax = new Vector2(0.5f, 0.5f);
+            _frame.pivot = pivot;
+            _frame.sizeDelta = size;
+            _framePosition = new Vector2((0.5f - pivot.x) * size.x, (0.5f - pivot.y) * size.y);
+            _frame.anchoredPosition = _framePosition;
 
-            var lidImage = CreateImage("Eyelids", _root, _almond, Color.white);
-            lidImage.gameObject.AddComponent<Mask>().showMaskGraphic = true;
-            _lid = lidImage.rectTransform;
-            _lid.sizeDelta = new Vector2(_width, ClosedThickness);
-
-            var irisSize = _openHeight * 0.92f;
-            var irisRect = CreateImage("Iris", _lid, _iris, Color.white).rectTransform;
-            irisRect.sizeDelta = new Vector2(irisSize, irisSize);
-
-            var pupilSize = irisSize * 0.42f;
-            _pupilRadius = pupilSize * 0.5f;
-            var pupilRect = CreateImage("Pupil", irisRect, _disc, new Color(0.01f, 0.01f, 0.02f, 1f)).rectTransform;
-            pupilRect.sizeDelta = new Vector2(pupilSize, pupilSize);
-
-            _highlight = CreateImage("Highlight", pupilRect, _disc, new Color(1f, 1f, 1f, 0.85f));
-            _highlight.rectTransform.sizeDelta = new Vector2(pupilSize * 0.22f, pupilSize * 0.22f);
-            _highlight.rectTransform.anchoredPosition = new Vector2(-pupilSize * 0.2f, pupilSize * 0.22f);
+            _eyeEffect = CreateLayer("EyeEffect", art.eyeEffect, FrameHeight);
+            CreateLayer("BlackEye", art.blackEye, FrameHeight);
+            _lower = CreateLayer("Lower Lid", art.lowerLid[0], art.lowerLid[0].height);
+            _lowerNext = CreateLayer("Lower Lid Next", art.lowerLid[2], art.lowerLid[2].height);
+            _upper = CreateLayer("Upper Lid", art.upperLid[0], art.upperLid[0].height);
+            _upperNext = CreateLayer("Upper Lid Next", art.upperLid[2], art.upperLid[2].height);
+            ResetPose();
         }
 
-        /// <summary>(a) 감긴 눈: 가로선이 서서히 나타나(짧아졌다 늘어나며) 머문다. <paramref name="seconds"/>는 나타남 + 머묾의 합.</summary>
+        /// <summary>(a) 감긴 눈: 눈꺼풀 프레임이 검은 화면에서 서서히 나타나 머문다. <paramref name="seconds"/>는 나타남 + 머묾의 합.</summary>
         public IEnumerator PlayClosed(float seconds)
         {
-            SetOpen(0f);
-            _root.localScale = new Vector3(0.35f, 1f, 1f);
-            _group.alpha = 0f;
+            ResetPose();
 
-            var appear = Mathf.Min(seconds * 0.6f, 0.9f);
-            var sequence = DOTween.Sequence().SetUpdate(true).SetTarget(this);
-            sequence.Join(_group.DOFade(1f, appear).SetEase(Ease.OutSine));
-            sequence.Join(_root.DOScale(Vector3.one, appear).SetEase(Ease.OutCubic));
-            yield return sequence.WaitForCompletion(true);
-
+            var appear = Mathf.Min(seconds * 0.5f, 0.7f);
+            yield return _group.DOFade(1f, appear).SetEase(Ease.OutSine).SetUpdate(true).SetTarget(this).WaitForCompletion(true);
             yield return new WaitForSecondsRealtime(Mathf.Max(0f, seconds - appear));
         }
 
-        /// <summary>(b) 눈이 뜨인다: 눈꺼풀 높이가 열리며 홍채가 드러난다.</summary>
+        /// <summary>(b) 눈이 뜨인다: 깜빡임 A(눈꺼풀 1이 살짝) → 깜빡임 B(눈꺼풀 2가 절반) → 활짝 → EyeEffect 점등 → 눈꺼풀 3 걷어내기. 시간 배분은 <paramref name="seconds"/>에 비례한다.</summary>
         public IEnumerator PlayOpening(float seconds)
         {
-            yield return DOTween.To(() => 0f, SetOpen, 1f, Mathf.Max(0.01f, seconds))
-                .SetEase(Ease.InOutSine).SetUpdate(true).SetTarget(this).WaitForCompletion(true);
+            var k = Mathf.Max(0.01f, seconds) / BaseOpenTotal;
+            var sequence = DOTween.Sequence().SetUpdate(true).SetTarget(this);
+            var t = 0f;
+
+            // 깜빡임 A — 눈꺼풀 1이 살짝 벌어졌다가 빠르게 닫힌다.
+            t = Add(sequence, t, k * AOpen, Gap(BlinkASlit, k * AOpen, Ease.OutSine));
+            t += k * AHoldOpen;
+            t = Add(sequence, t, k * AClose, Gap(0f, k * AClose, Ease.InQuad));
+            t += k * AHoldClosed;
+
+            // 눈꺼풀 1 → S자 눈꺼풀로 바꿔 놓는다(둘 다 화면을 덮은 상태라 바뀌는 순간이 크게 보이지 않는다).
+            sequence.InsertCallback(t, () => SwitchToPairB(Lids2Covered));
+
+            // 깜빡임 B — 눈꺼풀 2가 절반쯤 벌어졌다가 빠르게 닫힌다.
+            t = Add(sequence, t, k * BOpen, Gap(BlinkBHalf, k * BOpen, Ease.OutSine));
+            t += k * BHoldOpen;
+            t = Add(sequence, t, k * BClose, Gap(Lids2Covered, k * BClose, Ease.InQuad));
+            t += k * BHoldClosed;
+
+            // 활짝: 눈꺼풀 2가 원래 모양으로 벌어지고(느리게), 거의 다 벌어질 즈음 EyeEffect가 밝아진다.
+            var open = k * FinalOpen;
+            sequence.Insert(t, Gap(0f, open, Ease.OutCubic));
+            sequence.Insert(t + open * 0.5f, _eyeEffect.DOFade(1f, open * 0.6f).SetEase(Ease.InOutSine));
+            t += open;
+
+            // 눈꺼풀을 위·아래로 걷어낸다.
+            sequence.Insert(t, Gap(LidSlide, k * FinalSlide, Ease.OutCubic));
+
+            yield return sequence.WaitForCompletion(true);
         }
 
-        /// <summary>(c) 동공 중심(눈의 정중앙)으로 확대: 처음엔 천천히, 끝으로 갈수록 빨려 들어가며 동공의 검정이 화면을 채운다. 다 끝나면 화면 전체가 검정이다.</summary>
+        /// <summary>(c) 동공 확대: 동공 중심이 화면 한가운데로 옮겨 오면서 화면 전체를 처음엔 천천히, 갈수록 빨려 들어가듯 확대하고 끝에서 검게 사라진다. 다 끝나면 눈은 완전히 투명하다.</summary>
         public IEnumerator PlayZoom(float seconds)
         {
-            // 동공 반지름이 화면 대각선의 절반을 넘겨 덮을 때까지 — 여유를 두어 가장자리에 홍채가 남지 않게 한다.
-            var halfDiagonal = _canvasSize.magnitude * 0.5f;
-            var target = halfDiagonal / _pupilRadius * 1.2f;
+            // BlackEye의 검은 원이 화면 대각선의 절반을 덮을 때까지 — 여유를 둔다.
+            var target = _canvasSize.magnitude * 0.5f / (PupilRadius * _scale) * 1.15f;
 
+            // 확대 기준점(pivot)이 눈 중심이라 그 점은 원래 자리(화면 한가운데에서 조금 비껴 있다)에 머문다 — 프레임을 옮겨 동공을 화면 정중앙으로 가져온다.
+            // 같은 곡선으로 옮기면(배율이 커지는 만큼만 움직이므로) 프레임 가장자리가 화면 안으로 들어오지 않는다.
             var sequence = DOTween.Sequence().SetUpdate(true).SetTarget(this);
-            sequence.Join(_root.DOScale(target, seconds).SetEase(Ease.InCubic));
-            sequence.Join(_highlight.DOFade(0f, seconds * 0.45f));
+            sequence.Join(_frame.DOScale(target, seconds).SetEase(Ease.InCubic));
+            sequence.Join(_frame.DOAnchorPos(Vector2.zero, seconds).SetEase(Ease.InCubic));
+            sequence.Insert(seconds * 0.65f, _group.DOFade(0f, seconds * 0.35f).SetEase(Ease.InSine));
             yield return sequence.WaitForCompletion(true);
         }
 
@@ -118,31 +167,75 @@ namespace BlueComplex.UI.Presentation
             _group.alpha = 0f;
         }
 
-        /// <summary>0 = 가로선 하나, 1 = 활짝.</summary>
-        private void SetOpen(float open) => _lid.sizeDelta = new Vector2(_width, Mathf.Lerp(ClosedThickness, _openHeight, open));
-
-        private void OnDestroy()
+        private void ResetPose()
         {
-            DOTween.Kill(this);
-            IntroProceduralArt.Release(_almond);
-            IntroProceduralArt.Release(_iris);
-            IntroProceduralArt.Release(_disc);
+            _frame.localScale = Vector3.one;
+            _frame.anchoredPosition = _framePosition;
+            _group.alpha = 0f;
+            _eyeEffect.color = new Color(1f, 1f, 1f, 0f);
+            _pairB = false;
+            SetLid(_upper, _art.upperLid[0], 1f);
+            SetLid(_lower, _art.lowerLid[0], 1f);
+            SetLid(_upperNext, _art.upperLid[2], 0f);
+            SetLid(_lowerNext, _art.lowerLid[2], 0f);
+            SetGap(0f);
         }
 
-        private static Image CreateImage(string name, RectTransform parent, Sprite sprite, Color color)
+        /// <summary>S자 눈꺼풀 쌍(2와 같은 모양의 3번 그림)으로 넘어간다. 눈꺼풀 1은 감춘다.</summary>
+        private void SwitchToPairB(float gap)
         {
-            var go = new GameObject(name, typeof(RectTransform), typeof(Image)) { layer = parent.gameObject.layer };
-            go.transform.SetParent(parent, false);
+            _pairB = true;
+            _upper.color = _lower.color = new Color(1f, 1f, 1f, 0f);
+            _upperNext.color = _lowerNext.color = Color.white;
+            SetGap(gap);
+        }
+
+        /// <summary>지금 보이는 눈꺼풀 쌍의 간격을 정수 프레임 픽셀로 옮긴다(위 = +, 아래 = −). 도트 그림이라 한 픽셀씩 끊어서 움직인다.</summary>
+        private void SetGap(float gap)
+        {
+            _gap = gap;
+            var y = Mathf.Round(gap) * _scale;
+            var up = _pairB ? _upperNext : _upper;
+            var down = _pairB ? _lowerNext : _lower;
+            up.rectTransform.anchoredPosition = new Vector2(0f, y);
+            down.rectTransform.anchoredPosition = new Vector2(0f, -y);
+        }
+
+        private Tween Gap(float target, float seconds, Ease ease) =>
+            DOTween.To(() => _gap, SetGap, target, Mathf.Max(0.01f, seconds)).SetEase(ease);
+
+        /// <summary>시퀀스의 <paramref name="t"/> 시각에 트윈을 넣고, 그 트윈이 끝나는 시각을 돌려준다.</summary>
+        private static float Add(Sequence sequence, float t, float duration, Tween tween)
+        {
+            sequence.Insert(t, tween);
+            return t + duration;
+        }
+
+        private static void SetLid(RawImage image, Texture2D texture, float alpha)
+        {
+            image.texture = texture;
+            image.color = new Color(1f, 1f, 1f, alpha);
+            image.rectTransform.anchoredPosition = Vector2.zero;
+        }
+
+        /// <summary>프레임 한가운데에 놓인 그림 한 층. 캔버스가 더 높은 그림(눈꺼풀 3)도 가운데 정렬이라 눈 위치가 어긋나지 않는다.</summary>
+        private RawImage CreateLayer(string name, Texture2D texture, float pixelHeight)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(RawImage)) { layer = gameObject.layer };
+            go.transform.SetParent(transform, false);
 
             var rect = (RectTransform)go.transform;
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(FrameWidth, pixelHeight) * _scale;
             rect.anchoredPosition = Vector2.zero;
 
-            var image = go.GetComponent<Image>();
-            image.sprite = sprite;
-            image.color = color;
-            image.raycastTarget = false;
-            return image;
+            var raw = go.GetComponent<RawImage>();
+            raw.texture = texture;
+            raw.raycastTarget = false;
+            return raw;
         }
+
+        private void OnDestroy() => DOTween.Kill(this);
     }
 }
