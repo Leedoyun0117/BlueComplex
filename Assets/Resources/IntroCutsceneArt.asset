@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e875bcfcf37001e438f4f2403310cbfe, type: 3}
+  m_Name: IntroCutsceneArt
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.IntroCutsceneArt
+  blackEye: {fileID: 2800000, guid: 983f0d90c0ed77b4bb8f47ff98d02d84, type: 3}
+  eyeEffect: {fileID: 2800000, guid: ce18c88394223044497bbfe08d9477d6, type: 3}
+  upperLid:
+  - {fileID: 2800000, guid: b82313048c3c71c44bfd3f17bbd17890, type: 3}
+  - {fileID: 2800000, guid: 8a44a780a7c614a418ddcaebc433c9c3, type: 3}
+  - {fileID: 2800000, guid: e24692660c4745345a425f42f58818fd, type: 3}
+  lowerLid:
+  - {fileID: 2800000, guid: 9ef345a3ee5a2d048be83c914fc71eeb, type: 3}
+  - {fileID: 2800000, guid: 40712ca91a50acc409dc5c500c46d8af, type: 3}
+  - {fileID: 2800000, guid: 2c146aa6362556a4db572ec244683064, type: 3}
+  room: {fileID: 2800000, guid: 4f9bcde1ecde58842b51c4cf236e4985, type: 3}

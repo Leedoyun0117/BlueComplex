@@ -10,17 +10,26 @@ namespace BlueComplex.Audio
     public static class ProceduralSounds
     {
         private const int SampleRate = 44100;
-        private static AudioClip _tvStatic;
+        /// <summary>뉴스가 줄마다 같은 잡음으로 들리지 않게 — 세 가지 잡음(시드가 다른 폭발 무늬)을 번갈아 쓰고, 볼륨 배율도 번갈아 달리한다(0.5 / 0.45 / 0.55).</summary>
+        private static readonly float[] TvStaticVolumeFactor = { 1f, 0.9f, 1.1f };
 
-        public static bool TryGet(UiSoundCue cue, out AudioClip clip, out float volume)
+        private static readonly Vector2 TvStaticPitch = new(0.95f, 1.05f);
+
+        private static AudioClip[] _tvStatic;
+        private static int _tvStaticNext;
+
+        public static bool TryGet(UiSoundCue cue, out AudioClip clip, out float volume, out Vector2 pitchRange)
         {
             volume = 1f;
+            pitchRange = Vector2.one;
             switch (cue)
             {
                 case UiSoundCue.TvStatic:
-                    if (_tvStatic == null) _tvStatic = BuildTvStatic();
-                    clip = _tvStatic;
-                    volume = UiMotion.Settings.introStaticVolume;
+                    _tvStatic ??= new[] { BuildTvStatic(0), BuildTvStatic(1), BuildTvStatic(2) };
+                    var variant = _tvStaticNext++ % _tvStatic.Length;
+                    clip = _tvStatic[variant];
+                    volume = UiMotion.Settings.introStaticVolume * TvStaticVolumeFactor[variant];
+                    pitchRange = TvStaticPitch; // 재생마다 피치도 무작위로 살짝.
                     return true;
                 default:
                     clip = null;
@@ -29,12 +38,12 @@ namespace BlueComplex.Audio
         }
 
         /// <summary>지직거리는 TV 잡음 2초: 처음에 센 잡음이 튀고 잦아들면서, 짧은 폭발(15~90ms)이 불규칙하게 끼어든다. 백색 잡음을 살짝 눌러 거친 고음을 덜어낸다.</summary>
-        private static AudioClip BuildTvStatic()
+        private static AudioClip BuildTvStatic(int variant)
         {
             const float seconds = 2f;
             var count = Mathf.RoundToInt(SampleRate * seconds);
             var samples = new float[count];
-            var random = new System.Random(20260926);
+            var random = new System.Random(20260926 + variant * 7919);
 
             var lowPass = 0f;
             var index = 0;
@@ -63,7 +72,7 @@ namespace BlueComplex.Audio
                 samples[count - 1 - i] *= k;
             }
 
-            var clip = AudioClip.Create("TvStatic (procedural)", count, 1, SampleRate, false);
+            var clip = AudioClip.Create($"TvStatic {variant} (procedural)", count, 1, SampleRate, false);
             clip.SetData(samples, 0);
             return clip;
         }

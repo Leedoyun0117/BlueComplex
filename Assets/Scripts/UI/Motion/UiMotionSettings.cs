@@ -131,7 +131,7 @@ namespace BlueComplex.UI.Motion
         [Tooltip("게임 UI가 사라지는 시간, 그리고 대사가 끝난 뒤 다시 나타나는 시간.")]
         public float branchSceneFade = 0.5f;
 
-        [Header("시작 컷신 (나이프 낙하 → 눈 → 암전 → TV 뉴스 → 경찰서). 전체 = 나이프 + 감긴 눈 + 뜨임 + 확대 + 암전 + 뉴스 줄 수×줄 시간 + 밝아짐")]
+        [Header("시작 컷신 (나이프 낙하 → 눈 → 암전 → TV 뉴스 → 경찰서). 전체 = 나이프 + 감긴 눈 + 뜨임 + 확대 + 암전 + 뉴스 줄 수×줄 시간 + 밝아짐 + 머묾 + 걷힘")]
         [Tooltip("컷신이 시작되며 화면이 검게 덮이는 시간(나이프 낙하와 겹쳐 흐른다 — 전체 길이에 더해지지 않는다).")]
         public float introFadeIn = 0.4f;
         [Tooltip("나이프가 우상단에서 좌하단으로 떨어지는 시간.")]
@@ -142,16 +142,20 @@ namespace BlueComplex.UI.Motion
         [Range(0.1f, 0.8f)] public float introKnifeSize = 0.45f;
         [Tooltip("감긴 눈(가로선 하나): 선이 서서히 나타나 머무는 시간.")]
         public float introEyeClosed = 1.2f;
-        [Tooltip("눈이 뜨이며 홍채가 드러나는 시간.")]
-        public float introEyeOpen = 1.3f;
+        [Tooltip("눈이 뜨이는 시간: 깜빡임 두 번(닫히는 건 빠르고 벌어지는 건 느리게) + 활짝 벌어짐 + 눈꺼풀 걷어내기. 비율은 유지한 채 이 시간에 맞춰 늘고 준다.")]
+        public float introEyeOpen = 2.4f;
         [Tooltip("동공 중심으로 화면이 빨려 들어가듯 확대되는 시간.")]
         public float introEyeZoom = 1.5f;
         [Tooltip("눈 연출과 뉴스 사이의 암전(호흡).")]
         public float introBlackout = 0.8f;
         [Tooltip("뉴스 자막 한 줄이 떠 있는 시간.")]
         public float introNewsLine = 2f;
-        [Tooltip("검은 화면이 걷히며 경찰서 배경(게임 화면)이 드러나는 시간. 나츠는 이 도중에 나타난다.")]
+        [Tooltip("뉴스가 끝난 뒤 검은 화면에서 경찰서(취조실 그림)가 밝아지며 드러나는 시간.")]
         public float introReveal = 1.4f;
+        [Tooltip("경찰서 그림이 완전히 밝아진 뒤 오프닝 대화가 시작되기까지 머무는 시간(그림 속 나츠, 창밖 시계탑의 두 눈을 볼 시간).")]
+        public float introRoomHold = 1.5f;
+        [Tooltip("오프닝 대화가 끝난 뒤 경찰서 그림이 걷히며 게임(취조실) 화면으로 넘어가는 시간.")]
+        public float introRoomOut = 0.8f;
         [Tooltip("지직거리는 잡음 효과음의 크기(0~1).")]
         [Range(0f, 1f)] public float introStaticVolume = 0.5f;
 

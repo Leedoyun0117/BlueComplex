@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 namespace BlueComplex.UI.Presentation
 {
-    /// <summary>시작 컷신 1막: 검은 화면 위로 나이프가 우상단에서 좌하단으로 대각선 낙하하며 돈다. 스프라이트는 단서 카탈로그의 피 묻은 나이프를 그대로 쓴다.</summary>
+    /// <summary>시작 컷신 1막: 검은 화면 위로 나이프가 화면 위에서 아래로 수직 낙하하며 돈다(이동은 세로 한 줄, 돌기만 더한다. 빛 효과 없음). 스프라이트는 단서 카탈로그의 피 묻은 나이프를 그대로 쓴다.</summary>
     internal sealed class IntroKnifeView : MonoBehaviour
     {
         /// <summary>스테이지 3 단서 "피 묻은 나이프"(Art/Clue/Room3/bloody_knife)의 <see cref="UiIconCatalog"/> id.</summary>
@@ -33,15 +33,15 @@ namespace BlueComplex.UI.Presentation
             var view = go.AddComponent<IntroKnifeView>();
             view._rect = rect;
 
-            // 화면 밖 우상단 모서리에서 좌하단 모서리로 — 나이프가 통째로 사라질 만큼 바깥에서 시작하고 끝난다.
-            var margin = size * 0.8f;
-            view._from = new Vector2(canvasSize.x * 0.5f + margin, canvasSize.y * 0.5f + margin);
-            view._to = new Vector2(-view._from.x, -view._from.y);
+            // 화면 위 바깥에서 아래 바깥으로 — 회전하는 나이프가 통째로 사라질 만큼 바깥에서 시작하고 끝난다(대각선 절반 여유).
+            var margin = size * 0.75f;
+            view._from = new Vector2(0f, canvasSize.y * 0.5f + margin);
+            view._to = new Vector2(0f, -view._from.y);
             rect.anchoredPosition = view._from;
             return view;
         }
 
-        /// <summary>낙하 + 회전. 중력처럼 조금씩 빨라지고, 도는 속도는 일정하다.</summary>
+        /// <summary>낙하 + 회전. 중력처럼 조금씩 빨라지고(수직 이동만), 도는 속도는 일정하다.</summary>
         public Tween Fall(float seconds, float spinDegrees)
         {
             _rect.anchoredPosition = _from;
