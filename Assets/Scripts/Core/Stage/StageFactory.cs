@@ -25,6 +25,12 @@ namespace BlueComplex.Core.Stage
         public KeyProgress Keys { get; init; }
         public ClueKnowledgeLedger Ledger { get; init; }
         public ActiveItemBoard ActiveItems { get; init; }
+
+        /// <summary>단서를 내기 전에 끼어드는 규칙(튜토리얼). null이면 언제나 허용한다. 게이트가 세션의 다른 부분(컴플렉스 보드, 특성)을 봐야 해서 세션이 만들어진 뒤에 붙인다.</summary>
+        public IPlayGate PlayGate { get; set; }
+
+        /// <summary>단서를 내도 되는지 — <see cref="TurnRunner.PlayClue"/> 전에 반드시 이걸 거친다(드롭 영역·디버그 입력 모두).</summary>
+        public PlayVerdict CheckPlay(ClueInstance card) => PlayGate?.Check(card) ?? PlayVerdict.Allow;
     }
 
     public static class StageFactory
@@ -34,7 +40,10 @@ namespace BlueComplex.Core.Stage
                                           ClueKnowledgeLedger ledger,
                                           IEmotionPolarityTable polarityTable = null,
                                           int heartbeatStartValue = Heartbeat.DefaultStartValue,
-                                          IKeyZonePlacer keyPlacer = null)
+                                          IKeyZonePlacer keyPlacer = null,
+                                          IComplexSpawner spawner = null,
+                                          IComplexSpawnPolicy spawnPolicy = null,
+                                          int tagMagnitude = EmotionEvaluator.DefaultTagMagnitude)
         {
             polarityTable ??= new DefaultEmotionPolarityTable();
 
@@ -51,7 +60,7 @@ namespace BlueComplex.Core.Stage
             var zone = config.ComplexSpawnChances == null
                 ? new HeartbeatZone()
                 : new HeartbeatZone(HeartbeatZone.WithSpawnChances(config.ComplexSpawnChances));
-            var evaluator = new TraitAwareEmotionEvaluator(polarityTable, traits);
+            var evaluator = new TraitAwareEmotionEvaluator(polarityTable, traits, tagMagnitude);
 
             var activeItems = new ActiveItemBoard();
             var items = new ItemInventory(config.ItemPool, random, config.ItemSlots);
@@ -63,8 +72,8 @@ namespace BlueComplex.Core.Stage
                 hand,
                 complexBoard,
                 new ComplexResolver(complexBoard),
-                new ComplexSpawner(config.ComplexPool, random),
-                new ZoneBasedSpawnPolicy(random, zone, config.ComplexSpawnChances == null ? config.ComplexWeight : 1.0),
+                spawner ?? new ComplexSpawner(config.ComplexPool, random),
+                spawnPolicy ?? new ZoneBasedSpawnPolicy(random, zone, config.ComplexSpawnChances == null ? config.ComplexWeight : 1.0),
                 heartbeat,
                 zone,
                 evaluator,

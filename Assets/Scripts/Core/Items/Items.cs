@@ -251,6 +251,16 @@ namespace BlueComplex.Core.Items
             return added;
         }
 
+        /// <summary>정해 준 아이템을 빈 칸에 바로 쥐여 준다(무작위 지급이 아니다 — 튜토리얼이 "이 턴에 이 아이템"을 정할 때 쓴다). 칸이 없으면 false.</summary>
+        public bool TryGrant(ItemDefinition item)
+        {
+            if (IsFull) return false;
+
+            _held.Add(item);
+            Gained?.Invoke(item);
+            return true;
+        }
+
         /// <summary>아이템을 쓴다: 보유에서 빼고 → 행동 실행(즉시 효과 + 지속 효과 등록) → 부여 특성을 붙인다. 대상·상태 검증은 호출자(TurnRunner)가 이미 했다.</summary>
         public void Use(ItemDefinition item, ItemActivationContext context)
         {
