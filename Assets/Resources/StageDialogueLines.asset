@@ -218,3 +218,33 @@ MonoBehaviour:
       - lines:
         - speaker: 1
           text: '…끝난 것 같네요. 맞죠. 이제 돌아가시겠어요?'
+  - stageId: tutorial
+    label: '튜토리얼 - 게임 시작 연출(청장과의 대화)'
+    stageStartFirst:
+      lines:
+      - speaker: 2
+        text: '유키는 무언가를 숨기고 있어. 그런데, 자신이 숨기고 있다는 사실 조차 모르는 느낌이랄까. 유키의 부모님은 바닷가에서 익사했고, 그 뒤에 ‘B’라는 남성이 입양해서 보호하던 것으로 파악되었네.'
+      - speaker: 0
+        text: 'B는 누군데 갑자기 유키를 입양한거죠?'
+        isChoice: 1
+      - speaker: 2
+        text: '유키의 부모님이 사망하기 몇 달 전 부터 가족에게 수표로 금전적 지원을 해주고 있었거든. B는 거기에 더해서 매 주말마다 유키를 데리고 놀러가는 등, 거의 가족처럼 지냈던 모양이야.'
+      - speaker: 0
+        text: 'B에 대한 더 자세한 정보가 필요합니다.'
+        isChoice: 1
+      - speaker: 2
+        text: '음, 우리가 개인적으로 조사한 결과와 유키와 나눈 대화를 바탕으로 재구성한 정보가 있어. 확인하고 싶나?'
+      - speaker: 0
+        text: '네.'
+        isChoice: 1
+      - speaker: 2
+        text: '좋아. 그럼 잠시만 기다리게. 자네의 전문 분야인 최면 기법을 활용한 장치가 있거든. 이걸 구매하느라 경찰서의 한 달 운용 자금이 동나버렸으니, 최선을 다해 주게.'
+    stageStartReplay: []
+    quarterEnd:
+      excited: []
+      stable: []
+      depressed: []
+    stageClear:
+      excited: []
+      stable: []
+      depressed: []

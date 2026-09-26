@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using BlueComplex.Core.Stage;
 using BlueComplex.UI.Layout;
 using BlueComplex.UI.Motion;
 using DG.Tweening;
@@ -19,6 +20,7 @@ namespace BlueComplex.UI.Presentation
     {
         private static readonly Color YukiInk = new Color32(146, 168, 204, 255);
         private static readonly Color PlayerInk = new Color32(214, 178, 128, 255);
+        private static readonly Color ChiefInk = new Color32(150, 190, 160, 255);
         private static readonly Color LineInk = new Color32(238, 240, 246, 255);
 
         private CanvasGroup _group;
@@ -30,6 +32,12 @@ namespace BlueComplex.UI.Presentation
         private Tween _blink;
         private Tween _typing;
         private bool _skip;
+
+        // 선택지 줄: 타이핑 없이 누를 수 있는 "/ …" 한 줄이 나오고, 그걸 눌러야만 넘어간다(배경 클릭은 무시).
+        private GameObject _choiceButton;
+        private TMP_Text _choiceLabel;
+        private bool _lineIsChoice;
+        private bool _choicePicked;
 
         public static StageDialogueOverlay Create(Transform canvasRoot, TMP_FontAsset font)
         {
@@ -113,10 +121,16 @@ namespace BlueComplex.UI.Presentation
         {
             var settings = UiMotion.Settings;
             _speaker.text = SpeakerName(line.speaker);
-            _speaker.color = line.speaker == DialogueSpeaker.Yuki ? YukiInk : PlayerInk;
+            _speaker.color = SpeakerInk(line.speaker);
             _line.text = string.Empty;
             ShowNextIndicator(false);
             _skip = false;
+
+            if (line.isChoice)
+            {
+                yield return PlayChoice(line);
+                yield break;
+            }
 
             var text = line.text ?? string.Empty;
             var count = text.Length;
@@ -149,9 +163,51 @@ namespace BlueComplex.UI.Presentation
             ShowNextIndicator(false);
         }
 
-        private static string SpeakerName(DialogueSpeaker speaker) => speaker == DialogueSpeaker.Yuki ? "유키" : "나";
+        /// <summary>선택지 한 줄: "/ …"가 떠 있고 플레이어가 그걸 누르면 다음 줄로 간다. 배경을 눌러서는 넘어가지 않는다(<see cref="DialogueAdvanceRule"/>).</summary>
+        private IEnumerator PlayChoice(DialogueLine line)
+        {
+            _lineIsChoice = true;
+            _choicePicked = false;
+            _choiceLabel.text = "/ " + (line.text ?? string.Empty);
+            _choiceButton.SetActive(true);
 
-        public void OnPointerClick(PointerEventData eventData) => _skip = true;
+            while (!_choicePicked) yield return null;
+
+            _choiceButton.SetActive(false);
+            _lineIsChoice = false;
+            _skip = false;
+        }
+
+        /// <summary>선택지 버튼의 onClick.</summary>
+        private void OnChoiceClicked()
+        {
+            if (!DialogueAdvanceRule.Accepts(_lineIsChoice, clickedTheChoice: true)) return;
+
+            UiSoundHooks.Play(UiSoundCue.ButtonClick);
+            _choicePicked = true;
+        }
+
+        private static string SpeakerName(DialogueSpeaker speaker) => speaker switch
+        {
+            DialogueSpeaker.Yuki => "유키",
+            DialogueSpeaker.Chief => TutorialGuideContent.GuideName,
+            _ => "나"
+        };
+
+        private static Color SpeakerInk(DialogueSpeaker speaker) => speaker switch
+        {
+            DialogueSpeaker.Yuki => YukiInk,
+            DialogueSpeaker.Chief => ChiefInk,
+            _ => PlayerInk
+        };
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            // 선택지 줄에서는 배경 클릭으로 넘어가지 않는다.
+            if (!DialogueAdvanceRule.Accepts(_lineIsChoice, clickedTheChoice: false)) return;
+            _skip = true;
+        }
+
 
         /// <summary>진행 중인 연출을 멈추고 막을 치운다(재시작).</summary>
         public void ResetNow()
@@ -163,6 +219,8 @@ namespace BlueComplex.UI.Presentation
             _textGroup.DOKill();
             _group.alpha = 0f;
             _group.blocksRaycasts = false;
+            if (_choiceButton != null) _choiceButton.SetActive(false);
+            _lineIsChoice = false;
             gameObject.SetActive(false);
         }
 
@@ -217,7 +275,45 @@ namespace BlueComplex.UI.Presentation
             _nextIndicator = indicatorGo.GetComponent<CanvasGroup>();
             _nextIndicator.alpha = 0f;
 
+            BuildChoiceButton(textRect, font);
+
             gameObject.SetActive(false);
+        }
+
+        /// <summary>선택지 줄에 쓰는 버튼(평소엔 꺼져 있다). 대사 줄 자리에 놓이고, 어두운 판 + 플레이어 색 테두리 + 그 색의 글자다.</summary>
+        private void BuildChoiceButton(Transform parent, TMP_FontAsset font)
+        {
+            _choiceButton = new GameObject("Choice", typeof(RectTransform), typeof(Image), typeof(Button)) { layer = gameObject.layer };
+            _choiceButton.transform.SetParent(parent, false);
+
+            var rect = (RectTransform)_choiceButton.transform;
+            rect.anchorMin = new Vector2(0.14f, 0.405f);
+            rect.anchorMax = new Vector2(0.86f, 0.5f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            var image = _choiceButton.GetComponent<Image>();
+            image.sprite = RuntimeUi.RoundedRect;
+            image.type = Image.Type.Sliced;
+            image.color = new Color(0.09f, 0.11f, 0.17f, 0.92f);
+
+            var outline = _choiceButton.AddComponent<Outline>();
+            outline.effectColor = PlayerInk;
+            outline.effectDistance = new Vector2(2f, -2f);
+
+            var button = _choiceButton.GetComponent<Button>();
+            button.targetGraphic = image;
+            var colors = button.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.25f, 1.25f, 1.35f, 1f);
+            colors.pressedColor = new Color(0.8f, 0.8f, 0.85f, 1f);
+            button.colors = colors;
+            button.onClick.AddListener(OnChoiceClicked);
+
+            _choiceLabel = CreateText(rect, "Label", font, 34f, PlayerInk, Vector2.zero, Vector2.one);
+            _choiceLabel.margin = new Vector4(24f, 6f, 24f, 6f);
+
+            _choiceButton.SetActive(false);
         }
 
         private static TMP_Text CreateText(Transform parent, string name, TMP_FontAsset font, float size, Color color, Vector2 min, Vector2 max)
