@@ -4,10 +4,13 @@ using UnityEngine;
 
 namespace BlueComplex.EditorTools
 {
-    /// <summary>Assets/Art의 시작 컷신 그림(BlackEyes 폴더 + InterrogationRoom)을 <see cref="IntroCutsceneArt"/>(Assets/Resources)에 파일 이름으로 채운다. 그림을 바꾼 뒤 한 번 돌리면 된다.</summary>
+    /// <summary>Assets/Art의 시작 컷신 그림(IntroCar · IntroClock+바늘 · InterrogationRoom)을 <see cref="IntroCutsceneArt"/>(Assets/Resources)에 파일 이름으로 채운다. 그림을 바꾼 뒤 한 번 돌리면 된다.</summary>
     public static class IntroCutsceneArtTool
     {
-        private const string EyeFolder = "Assets/Art/BlackEyes/";
+        private const string CarPath = "Assets/Art/IntroCar.png";
+        private const string ClockPath = "Assets/Art/IntroClock.png";
+        private const string ClockHourPath = "Assets/Art/IntroClockHour.png";
+        private const string ClockMinutePath = "Assets/Art/IntroClockMinute.png";
         private const string RoomPath = "Assets/Art/InterrogationRoom.png";
         private const string AssetPath = "Assets/Resources/IntroCutsceneArt.asset";
 
@@ -21,10 +24,10 @@ namespace BlueComplex.EditorTools
                 AssetDatabase.CreateAsset(art, AssetPath);
             }
 
-            art.blackEye = Load(EyeFolder + "BlackEye.png");
-            art.eyeEffect = Load(EyeFolder + "EyeEffect.png");
-            art.upperLid = new[] { Load(EyeFolder + "WrinkleUp.png"), Load(EyeFolder + "WrinkleUp2.png"), Load(EyeFolder + "WrinkleUp3.png") };
-            art.lowerLid = new[] { Load(EyeFolder + "WrinkleDown.png"), Load(EyeFolder + "WrinkleDown2.png"), Load(EyeFolder + "WrinkleDown3.png") };
+            art.car = Load(CarPath);
+            art.clock = Load(ClockPath);
+            art.clockHour = Load(ClockHourPath);
+            art.clockMinute = Load(ClockMinutePath);
             art.room = Load(RoomPath);
 
             EditorUtility.SetDirty(art);
