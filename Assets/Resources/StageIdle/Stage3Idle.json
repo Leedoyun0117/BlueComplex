@@ -1,0 +1,13 @@
+{
+    "frameWidth": 320,
+    "frameHeight": 180,
+    "frameCount": 6,
+    "durationsMs": [
+        200,
+        75,
+        100,
+        100,
+        100,
+        300
+    ]
+}

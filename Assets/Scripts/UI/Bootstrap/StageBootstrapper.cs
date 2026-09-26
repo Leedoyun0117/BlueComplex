@@ -38,6 +38,10 @@ namespace BlueComplex.UI.Bootstrap
         [Header("시드")]
         [SerializeField] private int _seed = 20260916;
 
+        [Header("오프닝")]
+        [Tooltip("켜면 Play가 시작될 때 오프닝 시퀀스(PPT 19단계, IntroSequencePlayer)를 먼저 재생하고, 메인 화면의 '취조시작'을 눌러야 세션이 열린다. 끄면 예전처럼 바로 세션을 연다(프로브·디버그용).")]
+        [SerializeField] private bool _playOpening = true;
+
         /// <summary>진행 흐름상 마지막 스테이지 번호 — 클리어 뒤 이어질 다음 스테이지가 있는지 가리는 기준이다.
         /// 스테이지 3은 데이터(<see cref="Stage3Content"/>)만 있고 시작·클리어 대사와 연출이 아직 없어 진행 흐름에는 잇지 않았다(디버그 시작으로만 들어간다).</summary>
         public const int LastStageNumber = 2;
@@ -98,11 +102,35 @@ namespace BlueComplex.UI.Bootstrap
             _polarityTable = new DefaultEmotionPolarityTable();
             _ledger = new ClueKnowledgeLedger();
 
-            // 튜토리얼 시작 컷신(엔진 소리 → 차 → 시계 → 뉴스 → 경찰서)을 흐름의 훅에 연결한다. 정적 값이라 OnDestroy에서 되돌린다.
+            // 튜토리얼 시작 컷신(암흑 → 뉴스 → 경찰서)을 흐름의 훅에 연결한다. 정적 값이라 OnDestroy에서 되돌린다.
             StageFlowHooks.PlayTutorialIntro = PlayTutorialIntro;
+
+            // 오프닝이 켜져 있으면 세션은 메인 화면의 "취조시작"이 연다 — 그때까지 화면은 오프닝이 덮고 있다(뷰들은 SessionStarted를 기다린다).
+            if (_playOpening)
+            {
+                var openingRoot = FindOpeningCanvasRoot();
+                var opening = openingRoot != null ? IntroSequencePlayer.GetOrCreate(openingRoot) : IntroSequencePlayer.CreateStandalone();
+                if (opening != null && opening.isActiveAndEnabled)
+                {
+                    opening.Begin(StartGameFromOpening);
+                    return;
+                }
+
+                Debug.LogWarning("[StageBootstrapper] 오프닝을 재생할 수 없다(켜진 캔버스를 못 찾았다) — 오프닝 없이 바로 시작한다.");
+            }
 
             BeginNewSession(_seed);
         }
+
+        /// <summary>오프닝 메인 화면의 "취조시작": 예전 Start()가 하던 그대로 첫 세션을 연다. 오프닝 막은 이 호출을 부른 쪽이 스스로 걷는다.</summary>
+        private void StartGameFromOpening()
+        {
+            _startingFromOpening = true;
+            try { BeginNewSession(_seed); }
+            finally { _startingFromOpening = false; }
+        }
+
+        private bool _startingFromOpening;
 
         private IEnumerator PlayTutorialIntro() => IntroCutsceneDirector.GetOrCreate(FindCanvasRoot())?.Play();
 
@@ -115,14 +143,20 @@ namespace BlueComplex.UI.Bootstrap
 
         private void Update()
         {
-            if (!_enableKeyboardInput || Session == null || Keyboard.current == null) return;
+            if (!_enableKeyboardInput || Keyboard.current == null) return;
 
-            // 스테이지 선택은 대화 재생 중(InputBlocked)에도 통한다 — BeginNewSession이 재생 중인 대화를 끊는다.
+            // 스테이지 선택은 대화 재생 중(InputBlocked)에도, 오프닝이 재생 중(아직 세션 없음)이어도 통한다 — BeginNewSession이 재생 중인 대화·오프닝을 끊는다.
             if (Keyboard.current.f1Key.wasPressedThisFrame) StartStage(1);
             else if (Keyboard.current.f2Key.wasPressedThisFrame) StartStage(2);
             else if (Keyboard.current.f3Key.wasPressedThisFrame) StartStage(3);
             else if (Keyboard.current.f4Key.wasPressedThisFrame) StartTutorial();
             else if (Keyboard.current.f5Key.wasPressedThisFrame) PlayEnding();
+
+            if (Session == null) return;
+
+            // 심박수 효과 테스트 — 대화·오버레이와 무관하게 항상 통한다.
+            if (Keyboard.current.qKey.wasPressedThisFrame) NudgeHeartbeat(-DebugHeartbeatStep);
+            else if (Keyboard.current.eKey.wasPressedThisFrame) NudgeHeartbeat(DebugHeartbeatStep);
 
             if (InputBlocked) return;
 
@@ -130,6 +164,20 @@ namespace BlueComplex.UI.Bootstrap
             else if (Keyboard.current.digit2Key.wasPressedThisFrame) PlayCardAtIndex(1);
             else if (Keyboard.current.digit3Key.wasPressedThisFrame) PlayCardAtIndex(2);
             else if (Keyboard.current.digit4Key.wasPressedThisFrame) PlayCardAtIndex(3);
+        }
+
+        private const int DebugHeartbeatStep = 10;
+
+        private HeartRateController _debugHeartRate;
+
+        /// <summary>디버그(Q/E): TurnRunner를 거치지 않고 심박수만 직접 바꾼다. Heartbeat.Changed가 CRT·램프를 움직이고,
+        /// 턴 결과 연출이 쥔 모니터·배경음·나츠 반응은 HeartRateController에 직접 알린다. 0~200 범위 제한은 코어(Heartbeat.Change)의 것을 그대로 쓴다.
+        /// 즉사 구간 진입은 턴 종료 때만 판정되므로 여기서는 표시만 바뀐다.</summary>
+        private void NudgeHeartbeat(int delta)
+        {
+            Session.Heartbeat.Change(delta);
+            if (_debugHeartRate == null) _debugHeartRate = FindFirstObjectByType<HeartRateController>();
+            _debugHeartRate?.PresentCurrentHeartbeat();
         }
 
         [ContextMenu("Play Selected Card")]
@@ -279,6 +327,7 @@ namespace BlueComplex.UI.Bootstrap
             else TutorialGuide.Find(canvasRoot)?.ResetNow();
             BranchSceneDirector.GetOrCreate(canvasRoot)?.ResetNow(); // 분기 대사 장면 도중이었으면 게임 UI를 되돌린다.
             IntroCutsceneDirector.Find(canvasRoot)?.ResetNow(); // 시작 컷신 도중이었으면 막을 치우고 나츠를 되돌린다.
+            if (!_startingFromOpening) IntroSequencePlayer.Current?.ResetNow(); // 오프닝 도중에 디버그로 스테이지를 시작했으면 오프닝을 끊는다(오프닝이 직접 연 세션이면 오프닝이 스스로 걷는다).
             EndingCutsceneDirector.Find(canvasRoot)?.ResetNow(); // 엔딩 도중이었으면 막을 치운다.
 
             // 상시 배경음은 스테이지(재시작 포함)가 시작될 때 처음부터 — 시작 대화 재생 중에도 이미 깔려 있다.
@@ -393,6 +442,25 @@ namespace BlueComplex.UI.Bootstrap
             }
 
             return null;
+        }
+
+        /// <summary>오프닝을 얹을 캔버스: 켜져 있는 최상위 캔버스 중 게임 HUD("MainHud")를 우선한다. <see cref="FindCanvasRoot"/>는 꺼져 있는 캔버스도 집어서(인스턴스 순서에 따라 다르다)
+        /// 그 밑에 만든 오프닝은 코루틴이 못 돌고 아무것도 안 그려진다. 켜진 캔버스가 없으면 null(전용 캔버스를 쓴다).</summary>
+        private static Transform FindOpeningCanvasRoot()
+        {
+            Transform firstActive = null;
+            foreach (var canvas in FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.InstanceID))
+            {
+                if (!canvas.enabled) continue;
+
+                var parent = canvas.transform.parent;
+                if (parent != null && parent.GetComponentInParent<Canvas>() != null) continue;
+
+                if (canvas.name == "MainHud") return canvas.transform;
+                if (firstActive == null) firstActive = canvas.transform;
+            }
+
+            return firstActive;
         }
 
         /// <summary>구독자마다 따로 부른다 — 뷰 하나의 초기화가 예외로 죽어도(참조가 끊긴 프리팹 등) 뒤의 뷰들이 초기화를 못 받아 화면이 통째로 비는 일이 없게 한다.
