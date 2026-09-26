@@ -961,6 +961,7 @@ MonoBehaviour:
   _selectedCardIndex: 0
   _stageNumber: 1
   _seed: 20260916
+  _playOpening: 1
 --- !u!4 &650770982
 Transform:
   m_ObjectHideFlags: 0
