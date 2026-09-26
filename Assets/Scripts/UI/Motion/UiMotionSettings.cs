@@ -131,22 +131,28 @@ namespace BlueComplex.UI.Motion
         [Tooltip("게임 UI가 사라지는 시간, 그리고 대사가 끝난 뒤 다시 나타나는 시간.")]
         public float branchSceneFade = 0.5f;
 
-        [Header("시작 컷신 (나이프 낙하 → 눈 → 암전 → TV 뉴스 → 경찰서). 전체 = 나이프 + 감긴 눈 + 뜨임 + 확대 + 암전 + 뉴스 줄 수×줄 시간 + 밝아짐 + 머묾 + 걷힘")]
-        [Tooltip("컷신이 시작되며 화면이 검게 덮이는 시간(나이프 낙하와 겹쳐 흐른다 — 전체 길이에 더해지지 않는다).")]
+        [Header("시작 컷신 (암전+엔진 소리 → 차 주행 → 암전 → 시계 → 암전 → TV 뉴스 → 경찰서). 전체 = 엔진 + 주행 + 암전 + 시계 + 암전 + 뉴스 줄 수×줄 시간 + 밝아짐 + 머묾 + 걷힘")]
+        [Tooltip("컷신이 시작되며 화면이 검게 덮이는 시간(엔진 소리와 겹쳐 흐른다 — 전체 길이에 더해지지 않는다).")]
         public float introFadeIn = 0.4f;
-        [Tooltip("나이프가 우상단에서 좌하단으로 떨어지는 시간.")]
-        public float introKnifeFall = 3f;
-        [Tooltip("낙하하는 동안 나이프가 도는 각도(도). 음수면 시계 방향.")]
-        public float introKnifeSpin = -900f;
-        [Tooltip("나이프 한 변의 길이(캔버스 높이에 대한 비율). 스프라이트는 64x64 도트라 정수 배로 확대해도 깨끗하다.")]
-        [Range(0.1f, 0.8f)] public float introKnifeSize = 0.45f;
-        [Tooltip("감긴 눈(가로선 하나): 선이 서서히 나타나 머무는 시간.")]
-        public float introEyeClosed = 1.2f;
-        [Tooltip("눈이 뜨이는 시간: 깜빡임 두 번(닫히는 건 빠르고 벌어지는 건 느리게) + 활짝 벌어짐 + 눈꺼풀 걷어내기. 비율은 유지한 채 이 시간에 맞춰 늘고 준다.")]
-        public float introEyeOpen = 2.4f;
-        [Tooltip("동공 중심으로 화면이 빨려 들어가듯 확대되는 시간.")]
-        public float introEyeZoom = 1.5f;
-        [Tooltip("눈 연출과 뉴스 사이의 암전(호흡).")]
+        [Tooltip("암전 + 소리만: 엔진 소리가 먼저 들리는 시간. 끝나면 차가 나타난다.")]
+        public float introCarLead = 0.8f;
+        [Tooltip("차가 달리는 시간(차는 화면에 멈춰 있고 배경이 일정한 속도로 흘러간다).")]
+        public float introCarDrive = 2f;
+        [Tooltip("차가 달리는 동안 배경(건물)이 오른쪽에서 왼쪽으로 흘러가는 거리(화면 너비의 몇 배). 차는 제자리에 있고 배경만 흐른다.")]
+        [Range(0.2f, 6f)] public float introCarScroll = 1.5f;
+        [Tooltip("차 구간과 시계 사이의 암전(하드 컷).")]
+        public float introCarCut = 0.4f;
+        [Tooltip("시계가 화면 중앙에 작게 떠 있는 시간(시계 구간의 전반부).")]
+        public float introClockAppear = 2f;
+        [Tooltip("시계가 크기만 변하며 클로즈업되는 시간(시계 구간의 후반부).")]
+        public float introClockZoom = 2f;
+        [Tooltip("작은 시계의 높이(캔버스 높이에 대한 비율). PPT 4번 장표 기준.")]
+        [Range(0.1f, 1f)] public float introClockSmall = 0.537f;
+        [Tooltip("클로즈업된 시계의 높이(캔버스 높이에 대한 비율). PPT 5번 장표 기준.")]
+        [Range(0.1f, 1.5f)] public float introClockLarge = 0.815f;
+        [Tooltip("시계가 떠 있는 동안(작게 + 확대) 분침이 시계 방향으로 도는 바퀴 수. 시침은 실제 시계처럼 그 1/12만큼 함께 돈다.")]
+        [Range(0.5f, 12f)] public float introClockMinuteTurns = 4f;
+        [Tooltip("시계 구간과 뉴스 사이의 암전(호흡).")]
         public float introBlackout = 0.8f;
         [Tooltip("뉴스 자막 한 줄이 떠 있는 시간.")]
         public float introNewsLine = 2f;
@@ -158,6 +164,8 @@ namespace BlueComplex.UI.Motion
         public float introRoomOut = 0.8f;
         [Tooltip("지직거리는 잡음 효과음의 크기(0~1).")]
         [Range(0f, 1f)] public float introStaticVolume = 0.5f;
+        [Tooltip("자동차 엔진 소리의 크기(0~1). 소리는 엔진 시간 + 주행 시간에 맞춰 코드로 만든다.")]
+        [Range(0f, 1f)] public float introEngineVolume = 0.6f;
 
         [Header("스테이지 클리어 연출 (자물쇠 → 대사 → 컷신 → 다음 스테이지)")]
         [Tooltip("자물쇠 화면으로 넘어가며 화면이 어두워지는 시간.")]

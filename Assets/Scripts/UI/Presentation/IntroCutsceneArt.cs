@@ -10,17 +10,17 @@ namespace BlueComplex.UI.Presentation
     {
         public const string ResourcePath = "IntroCutsceneArt";
 
-        [Tooltip("BlackEye.png — 눈꺼풀 사이로 처음 보이는 어두운 눈(검은 동공 + 흰 테두리).")]
-        public Texture2D blackEye;
+        [Tooltip("IntroCar.png — 포드 모델 T 도트 그림(64x64, 오른쪽을 본다). 노을 진 도시를 가로질러 달린다.")]
+        public Texture2D car;
 
-        [Tooltip("EyeEffect.png — 완전히 뜬(불이 켜진) 눈. 동공 확대에 쓴다.")]
-        public Texture2D eyeEffect;
+        [Tooltip("IntroClock.png — PPT의 로마 숫자 아날로그 시계 문자판(바늘을 뺀 것, 테두리 원 바깥은 투명). 작게 나타났다가 확대된다.")]
+        public Texture2D clock;
 
-        [Tooltip("WrinkleUp, WrinkleUp2, WrinkleUp3 — 위 눈꺼풀. 1 = 닫힘(대각선 이음매), 2 = 열림, 3 = 2와 같은 모양에 캔버스만 위아래로 80px 넓힌 것(밀어 걷어낼 때 쓴다).")]
-        public Texture2D[] upperLid = new Texture2D[3];
+        [Tooltip("IntroClockHour.png — 시침만 떼어 낸 그림. 문자판과 같은 크기이고 회전 중심(허브)이 문자판 한가운데라 문자판 위에 그대로 겹쳐 돌린다.")]
+        public Texture2D clockHour;
 
-        [Tooltip("WrinkleDown, WrinkleDown2, WrinkleDown3 — 아래 눈꺼풀. 위와 같은 순서.")]
-        public Texture2D[] lowerLid = new Texture2D[3];
+        [Tooltip("IntroClockMinute.png — 분침만 떼어 낸 그림(시침과 같은 규칙).")]
+        public Texture2D clockMinute;
 
         [Tooltip("InterrogationRoom.png — 뉴스 뒤에 드러나는 경찰서(취조실). 창밖 시계탑 실루엣에 두 눈이 빛난다.")]
         public Texture2D room;

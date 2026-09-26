@@ -98,7 +98,7 @@ namespace BlueComplex.UI.Bootstrap
             _polarityTable = new DefaultEmotionPolarityTable();
             _ledger = new ClueKnowledgeLedger();
 
-            // 튜토리얼 시작 컷신(나이프 → 눈 → 뉴스 → 경찰서)을 흐름의 훅에 연결한다. 정적 값이라 OnDestroy에서 되돌린다.
+            // 튜토리얼 시작 컷신(엔진 소리 → 차 → 시계 → 뉴스 → 경찰서)을 흐름의 훅에 연결한다. 정적 값이라 OnDestroy에서 되돌린다.
             StageFlowHooks.PlayTutorialIntro = PlayTutorialIntro;
 
             BeginNewSession(_seed);

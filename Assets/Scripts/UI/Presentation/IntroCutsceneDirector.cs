@@ -9,12 +9,12 @@ using UnityEngine.UI;
 namespace BlueComplex.UI.Presentation
 {
     /// <summary>
-    /// 게임 시작 컷신(PPT 애니마틱): 전부 검은 화면 위에서 ① 나이프 낙하 → ② 눈(감김 → 뜨임 → 동공으로 확대) → ③ 짧은 암전 → ④ TV 뉴스 자막 3줄 →
-    /// ⑤ 화면이 밝아지며 경찰서(InterrogationRoom.png — 그림 속에 나츠가 앉아 있다)가 드러난다.
+    /// 게임 시작 컷신(PPT 애니마틱): 전부 검은 화면 위에서 ① 암전 + 엔진 소리만 → ② 차 주행(노을 진 도시) → ③ 암전(하드 컷) → ④ 시계(작게 → 클로즈업) →
+    /// ⑤ 암전 → ⑥ TV 뉴스 자막 3줄 → ⑦ 화면이 밝아지며 경찰서(InterrogationRoom.png — 그림 속에 나츠가 앉아 있다)가 드러난다.
     /// <see cref="Play"/>는 여기까지이고 경찰서 그림은 <b>화면에 남는다</b> — 튜토리얼 오프닝 대화가 그 그림 위에서 이어지고(<see cref="HoldsRoom"/>),
     /// 대화가 끝나면 부른 쪽이 <see cref="Dismiss"/>로 게임 화면으로 걷는다.
     ///
-    /// 이 클래스는 순서와 시간만 정한다. 화면 조각은 <see cref="IntroKnifeView"/>·<see cref="IntroEyeView"/>·<see cref="IntroNewsView"/>가 그리고(그림은 <see cref="IntroCutsceneArt"/>),
+    /// 이 클래스는 순서와 시간만 정한다. 화면 조각은 <see cref="IntroCarView"/>·<see cref="IntroClockView"/>·<see cref="IntroNewsView"/>가 그리고(그림은 <see cref="IntroCutsceneArt"/>),
     /// 시간 값은 <see cref="UiMotionSettings"/>의 "시작 컷신" 항목(인스펙터에서 조정), 뉴스 문구는 <see cref="IntroCutsceneContent"/>에 있다.
     /// <see cref="StageFlowHooks.PlayTutorialIntro"/>에 연결되어 튜토리얼 세션이 만들어진 뒤 첫 턴 전에 한 번 재생된다.
     /// </summary>
@@ -53,33 +53,46 @@ namespace BlueComplex.UI.Presentation
             var canvasSize = ((RectTransform)_canvasRoot).rect.size;
 
             ResetNow();
-            var backdrop = BuildOverlay(canvasSize, out var knife, out var eye, out var news, out var room);
+            var backdrop = BuildOverlay(canvasSize, out var car, out var clock, out var news, out var room);
 
-            // ① 나이프: 검게 덮이는 것과 낙하가 겹쳐 흐른다.
+            // ① 암전 + 엔진 소리만: 검게 덮이는 동안 소리가 먼저 들린다(텍스트 없음).
             backdrop.DOFade(1f, settings.introFadeIn).SetUpdate(true).SetTarget(backdrop);
-            yield return knife.Fall(settings.introKnifeFall, settings.introKnifeSpin).WaitForCompletion(true);
+            UiSoundHooks.Play(UiSoundCue.CarEngine);
+            yield return new WaitForSecondsRealtime(settings.introCarLead);
 
-            // ② 눈: 감긴 눈 → 뜨임 → 동공 확대. 눈 그림이 없으면 같은 시간만 검은 화면으로 흘린다.
-            if (eye != null)
+            // ② 차 주행: 차는 멈춰 있고 배경이 흐른다. 소리는 그대로 이어져 이 구간에서 커졌다 잦아든다. 그림이 없으면 같은 시간만 검은 화면으로 흘린다.
+            if (car != null)
             {
-                yield return eye.PlayClosed(settings.introEyeClosed);
-                yield return eye.PlayOpening(settings.introEyeOpen);
-                yield return eye.PlayZoom(settings.introEyeZoom);
-                eye.Hide();
+                yield return car.Drive(settings.introCarDrive, settings.introCarScroll).WaitForCompletion(true);
+                car.Hide();
             }
             else
             {
-                yield return new WaitForSecondsRealtime(settings.introEyeClosed + settings.introEyeOpen + settings.introEyeZoom);
+                yield return new WaitForSecondsRealtime(settings.introCarDrive);
             }
 
-            // ③ 암전.
+            // ③ 암전(하드 컷).
+            yield return new WaitForSecondsRealtime(settings.introCarCut);
+
+            // ④ 시계: 작게 나타났다가 크기만 변해 클로즈업.
+            if (clock != null)
+            {
+                yield return clock.Play(settings.introClockAppear, settings.introClockZoom, settings.introClockSmall, settings.introClockLarge, settings.introClockMinuteTurns);
+                clock.Hide();
+            }
+            else
+            {
+                yield return new WaitForSecondsRealtime(settings.introClockAppear + settings.introClockZoom);
+            }
+
+            // ⑤ 암전.
             yield return new WaitForSecondsRealtime(settings.introBlackout);
 
-            // ④ 뉴스.
+            // ⑥ 뉴스.
             yield return news.Play(IntroCutsceneContent.NewsLines, settings.introNewsLine);
             news.Hide();
 
-            // ⑤ 밝아지며 경찰서 → 잠시 머묾. 게임 화면으로 걷는 것은 Dismiss(부른 쪽이 대화가 끝난 뒤 부른다).
+            // ⑦ 밝아지며 경찰서 → 잠시 머묾. 게임 화면으로 걷는 것은 Dismiss(부른 쪽이 대화가 끝난 뒤 부른다).
             if (room != null)
             {
                 yield return room.DOFade(1f, Mathf.Max(0.01f, settings.introReveal)).SetEase(Ease.InOutSine).SetUpdate(true).SetTarget(this).WaitForCompletion(true);
@@ -121,8 +134,8 @@ namespace BlueComplex.UI.Presentation
 
         private void OnDestroy() => DOTween.Kill(this);
 
-        /// <summary>게임 화면 전체를 덮는 막(클릭도 막는다)과 그 위의 세 조각을 짓는다. 돌려주는 것은 검은 바탕 — 알파 0에서 시작한다.</summary>
-        private Image BuildOverlay(Vector2 canvasSize, out IntroKnifeView knife, out IntroEyeView eye, out IntroNewsView news, out CanvasGroup room)
+        /// <summary>게임 화면 전체를 덮는 막(클릭도 막는다)과 그 위의 세 조각(차·시계·뉴스)을 짓는다. 돌려주는 것은 검은 바탕 — 알파 0에서 시작한다.</summary>
+        private Image BuildOverlay(Vector2 canvasSize, out IntroCarView car, out IntroClockView clock, out IntroNewsView news, out CanvasGroup room)
         {
             var root = new GameObject("Intro Cutscene", typeof(RectTransform), typeof(Image)) { layer = _canvasRoot.gameObject.layer };
             root.transform.SetParent(_canvasRoot, false);
@@ -144,13 +157,13 @@ namespace BlueComplex.UI.Presentation
             var art = IntroCutsceneArt.Load();
             var font = _canvasRoot.GetComponentInChildren<TMP_Text>(true)?.font;
             room = BuildRoom(root.transform, art);
-            knife = IntroKnifeView.Create(root.transform, canvasSize, UiMotion.Settings.introKnifeSize);
-            eye = IntroEyeView.Create(root.transform, canvasSize, art);
+            car = IntroCarView.Create(root.transform, canvasSize, art);
+            clock = IntroClockView.Create(root.transform, canvasSize, art);
             news = IntroNewsView.Create(root.transform, canvasSize, font);
             return backdrop;
         }
 
-        /// <summary>경찰서(취조실) 그림 — 검은 바탕 위, 나이프·눈·뉴스 아래 층. 알파 0에서 시작한다. 그림이 없으면 null(밝아지며 게임 화면이 바로 드러난다).</summary>
+        /// <summary>경찰서(취조실) 그림 — 검은 바탕 위, 차·시계·뉴스 아래 층. 알파 0에서 시작한다. 그림이 없으면 null(밝아지며 게임 화면이 바로 드러난다).</summary>
         private static CanvasGroup BuildRoom(Transform parent, IntroCutsceneArt art)
         {
             if (art == null || art.room == null) return null;
