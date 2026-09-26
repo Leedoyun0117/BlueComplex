@@ -359,7 +359,6 @@ namespace BlueComplex.UI.Effects.DLJ
         {
             if (_rooms == null || index < 0 || index >= _rooms.Count) return;
             _activeRoomIndex = index;
-            if (_runtimeMaterial == null) return;
             CaptureLights();
             ApplyVisuals();
         }
@@ -401,8 +400,8 @@ namespace BlueComplex.UI.Effects.DLJ
         {
             if (_crtFeature == null || _crtFeature.passMaterial == null || _effectShader == null)
             {
-                Debug.LogError("[DLJ Mood] CRT Feature와 Effect Shader를 연결해 줘. Tools/BlueComplex/DLJ 메뉴로 설정 가능해.", this);
-                return false;
+                Debug.LogWarning("[DLJ Mood] CRT Feature, 머티리얼 또는 Effect Shader가 없어 화면 셰이더 연출은 건너뛰고 방 광원 연출만 적용해.", this);
+                return true;
             }
             if (_crtFeature.passMaterial.shader == _effectShader)
             {
@@ -488,7 +487,6 @@ namespace BlueComplex.UI.Effects.DLJ
 
         private void LateUpdate()
         {
-            if (_runtimeMaterial == null) return;
             if (_boundUsesRooms != UsesRooms || _boundRoom != CurrentRoom || _boundRoomEnabled != RoomEnabled(CurrentRoom))
                 CaptureLights();
             ConfigureState(GetSettings());
@@ -500,65 +498,66 @@ namespace BlueComplex.UI.Effects.DLJ
 
         private void ApplyVisuals()
         {
-            if (_runtimeMaterial == null) return;
             var settings = GetSettings();
             ConfigureState(settings);
-            // 기존 클릭 보정기가 원본 머티리얼에서 읽는 곡률을 그대로 따라간다.
-            if (_originalMaterial != null)
-                _runtimeMaterial.SetFloat("_Curvature", _originalMaterial.GetFloat("_Curvature"));
-            _runtimeMaterial.SetFloat("_MoodTime", _clock);
-            _runtimeMaterial.SetFloat("_DepressedAmount", _state.Depressed);
-            _runtimeMaterial.SetColor("_DepressedTint", settings.DepressedTint);
-            _runtimeMaterial.SetFloat("_BlueTintStrength", settings.BlueTintStrength);
-            _runtimeMaterial.SetFloat("_DepressedContrast", settings.DepressedContrast);
-            _runtimeMaterial.SetFloat("_DepressedSharpness", settings.DepressedSharpness);
-            _runtimeMaterial.SetFloat("_WaterLightStrength", settings.WaterLightStrength);
-            _runtimeMaterial.SetFloat("_WaterLightSpread", settings.WaterLightSpread);
-            _runtimeMaterial.SetFloat("_WaterLightSharpness", settings.WaterLightSharpness);
-            _runtimeMaterial.SetInt("_WaterBeamCount", Mathf.Clamp(settings.WaterBeamCount, 8, 48));
-            _runtimeMaterial.SetFloat("_WaterBeamWidth", Mathf.Clamp(settings.WaterBeamWidth, 0.1f, 5f));
-            _runtimeMaterial.SetFloat("_WaterWidthVariation", settings.WaterWidthVariation);
-            _runtimeMaterial.SetFloat("_WaterWaveStrength", settings.WaterWaveStrength);
-            _runtimeMaterial.SetFloat("_WaterWaveSpeed", settings.WaterWaveSpeed);
-            _runtimeMaterial.SetFloat("_WaterScatterStrength", settings.WaterScatterStrength);
-            _runtimeMaterial.SetFloat("_WaterAfterglowStrength", Mathf.Clamp(settings.WaterAfterglowStrength, 0f, 2f));
-            _runtimeMaterial.SetFloat("_WaterAfterglowAngle", Mathf.Clamp(settings.WaterAfterglowAngle, 0f, 140f));
-            _runtimeMaterial.SetFloat("_WaterAfterglowLength", Mathf.Clamp(settings.WaterAfterglowLength, 0.5f, 2f));
-            _runtimeMaterial.SetFloat("_WaterFadeStart", Mathf.Clamp(settings.WaterFadeStart, 0f, 0.95f));
-            _runtimeMaterial.SetFloat("_WaterDistanceFade", Mathf.Clamp(settings.WaterDistanceFade, 0f, 4f));
-            _runtimeMaterial.SetFloat("_WaterScatterAngle", settings.WaterScatterAngle);
-            _runtimeMaterial.SetFloat("_WaterLightDirection", settings.WaterLightDirection);
-            // 광선 스타일은 현재 방의 창문 모드에만 적용해. 다른 방으로 이동하면 매번 해제해.
-            var windowStyle = CurrentRoom != null && CurrentRoom.Mode == ScatterMode.WindowEdges
-                ? settings.WindowStyle : WindowLightStyle.FineRays;
-            _runtimeMaterial.SetInt("_WindowLightStyle", (int)windowStyle);
-            _runtimeMaterial.SetFloat("_WindowBandWidth", Mathf.Clamp(settings.WindowBandWidth, 0.003f, 0.05f));
-            _runtimeMaterial.SetFloat("_WindowBandSoftness", Mathf.Clamp01(settings.WindowBandSoftness));
-            _runtimeMaterial.SetFloat("_WindowBandOpacity", Mathf.Clamp01(settings.WindowBandOpacity));
-            _runtimeMaterial.SetFloat("_WindowBandCoreBrightness", Mathf.Clamp(settings.WindowBandCoreBrightness, 1f, 5f));
-            _runtimeMaterial.SetVector("_WindowBandTint", settings.WindowBandTint);
-            _runtimeMaterial.SetFloat("_WindowShaftGrouping", Mathf.Clamp01(settings.WindowShaftGrouping));
-            _runtimeMaterial.SetFloat("_WindowShaftVerticalBias", Mathf.Clamp(settings.WindowShaftVerticalBias, 0f, 0.6f));
-            _runtimeMaterial.SetFloat("_WindowShaftTopLength", Mathf.Clamp(settings.WindowShaftTopLength, 0.05f, 1.5f));
-            _runtimeMaterial.SetFloat("_WindowShaftBottomLength", Mathf.Clamp(settings.WindowShaftBottomLength, 0.05f, 1.5f));
-            _runtimeMaterial.SetFloat("_WindowShaftAmbientStrength", Mathf.Clamp(settings.WindowShaftAmbientStrength, 0f, 0.5f));
-            UpdateWaterSources();
-            _runtimeMaterial.SetFloat("_ExcitedAmount", _state.Excited);
-            _runtimeMaterial.SetFloat("_ExcitedBlend", Mathf.Clamp01(_state.Excited / Mathf.Max(0.001f, settings.NormalStateStrength)));
-            _runtimeMaterial.SetFloat("_ChromaticBurst", _state.ChromaticBurst);
-            _runtimeMaterial.SetFloat("_PastelSeparation", settings.PastelSeparation);
-            _runtimeMaterial.SetFloat("_PastelStrength", settings.PastelStrength);
-            // sRGB 팔레트 그대로 전달. 셰이더의 디스플레이 색 공간에서 혼합 후 선형으로 복원한다.
-            _runtimeMaterial.SetVector("_PastelPink", settings.PastelPink);
-            _runtimeMaterial.SetVector("_PastelMint", settings.PastelMint);
-            _runtimeMaterial.SetVector("_PastelLavender", settings.PastelLavender);
-            _runtimeMaterial.SetFloat("_PastelSaturation", settings.PastelSaturation);
-            _runtimeMaterial.SetFloat("_PastelContrast", settings.PastelContrast);
-            _runtimeMaterial.SetFloat("_PastelGradeStrength", settings.PastelGradeStrength);
-            // 마지막 0.35초만 감쇠. 2초를 넘기면 정확히 0이 된다.
-            var glitch = Mathf.Clamp01(_state.GlitchRemaining / 0.35f);
-            _runtimeMaterial.SetFloat("_GlitchAmount", glitch);
-            _runtimeMaterial.SetFloat("_GlitchDisplacement", settings.GlitchDisplacement);
+            if (_runtimeMaterial != null)
+            {
+                // 기존 클릭 보정기가 원본 머티리얼에서 읽는 곡률을 그대로 따라간다.
+                if (_originalMaterial != null)
+                    _runtimeMaterial.SetFloat("_Curvature", _originalMaterial.GetFloat("_Curvature"));
+                _runtimeMaterial.SetFloat("_MoodTime", _clock);
+                _runtimeMaterial.SetFloat("_DepressedAmount", _state.Depressed);
+                _runtimeMaterial.SetColor("_DepressedTint", settings.DepressedTint);
+                _runtimeMaterial.SetFloat("_BlueTintStrength", settings.BlueTintStrength);
+                _runtimeMaterial.SetFloat("_DepressedContrast", settings.DepressedContrast);
+                _runtimeMaterial.SetFloat("_DepressedSharpness", settings.DepressedSharpness);
+                _runtimeMaterial.SetFloat("_WaterLightStrength", settings.WaterLightStrength);
+                _runtimeMaterial.SetFloat("_WaterLightSpread", settings.WaterLightSpread);
+                _runtimeMaterial.SetFloat("_WaterLightSharpness", settings.WaterLightSharpness);
+                _runtimeMaterial.SetInt("_WaterBeamCount", Mathf.Clamp(settings.WaterBeamCount, 8, 48));
+                _runtimeMaterial.SetFloat("_WaterBeamWidth", Mathf.Clamp(settings.WaterBeamWidth, 0.1f, 5f));
+                _runtimeMaterial.SetFloat("_WaterWidthVariation", settings.WaterWidthVariation);
+                _runtimeMaterial.SetFloat("_WaterWaveStrength", settings.WaterWaveStrength);
+                _runtimeMaterial.SetFloat("_WaterWaveSpeed", settings.WaterWaveSpeed);
+                _runtimeMaterial.SetFloat("_WaterScatterStrength", settings.WaterScatterStrength);
+                _runtimeMaterial.SetFloat("_WaterAfterglowStrength", Mathf.Clamp(settings.WaterAfterglowStrength, 0f, 2f));
+                _runtimeMaterial.SetFloat("_WaterAfterglowAngle", Mathf.Clamp(settings.WaterAfterglowAngle, 0f, 140f));
+                _runtimeMaterial.SetFloat("_WaterAfterglowLength", Mathf.Clamp(settings.WaterAfterglowLength, 0.5f, 2f));
+                _runtimeMaterial.SetFloat("_WaterFadeStart", Mathf.Clamp(settings.WaterFadeStart, 0f, 0.95f));
+                _runtimeMaterial.SetFloat("_WaterDistanceFade", Mathf.Clamp(settings.WaterDistanceFade, 0f, 4f));
+                _runtimeMaterial.SetFloat("_WaterScatterAngle", settings.WaterScatterAngle);
+                _runtimeMaterial.SetFloat("_WaterLightDirection", settings.WaterLightDirection);
+                // 광선 스타일은 현재 방의 창문 모드에만 적용해. 다른 방으로 이동하면 매번 해제해.
+                var windowStyle = CurrentRoom != null && CurrentRoom.Mode == ScatterMode.WindowEdges
+                    ? settings.WindowStyle : WindowLightStyle.FineRays;
+                _runtimeMaterial.SetInt("_WindowLightStyle", (int)windowStyle);
+                _runtimeMaterial.SetFloat("_WindowBandWidth", Mathf.Clamp(settings.WindowBandWidth, 0.003f, 0.05f));
+                _runtimeMaterial.SetFloat("_WindowBandSoftness", Mathf.Clamp01(settings.WindowBandSoftness));
+                _runtimeMaterial.SetFloat("_WindowBandOpacity", Mathf.Clamp01(settings.WindowBandOpacity));
+                _runtimeMaterial.SetFloat("_WindowBandCoreBrightness", Mathf.Clamp(settings.WindowBandCoreBrightness, 1f, 5f));
+                _runtimeMaterial.SetVector("_WindowBandTint", settings.WindowBandTint);
+                _runtimeMaterial.SetFloat("_WindowShaftGrouping", Mathf.Clamp01(settings.WindowShaftGrouping));
+                _runtimeMaterial.SetFloat("_WindowShaftVerticalBias", Mathf.Clamp(settings.WindowShaftVerticalBias, 0f, 0.6f));
+                _runtimeMaterial.SetFloat("_WindowShaftTopLength", Mathf.Clamp(settings.WindowShaftTopLength, 0.05f, 1.5f));
+                _runtimeMaterial.SetFloat("_WindowShaftBottomLength", Mathf.Clamp(settings.WindowShaftBottomLength, 0.05f, 1.5f));
+                _runtimeMaterial.SetFloat("_WindowShaftAmbientStrength", Mathf.Clamp(settings.WindowShaftAmbientStrength, 0f, 0.5f));
+                UpdateWaterSources();
+                _runtimeMaterial.SetFloat("_ExcitedAmount", _state.Excited);
+                _runtimeMaterial.SetFloat("_ExcitedBlend", Mathf.Clamp01(_state.Excited / Mathf.Max(0.001f, settings.NormalStateStrength)));
+                _runtimeMaterial.SetFloat("_ChromaticBurst", _state.ChromaticBurst);
+                _runtimeMaterial.SetFloat("_PastelSeparation", settings.PastelSeparation);
+                _runtimeMaterial.SetFloat("_PastelStrength", settings.PastelStrength);
+                // sRGB 팔레트를 셰이더에 그대로 전달한다.
+                _runtimeMaterial.SetVector("_PastelPink", settings.PastelPink);
+                _runtimeMaterial.SetVector("_PastelMint", settings.PastelMint);
+                _runtimeMaterial.SetVector("_PastelLavender", settings.PastelLavender);
+                _runtimeMaterial.SetFloat("_PastelSaturation", settings.PastelSaturation);
+                _runtimeMaterial.SetFloat("_PastelContrast", settings.PastelContrast);
+                _runtimeMaterial.SetFloat("_PastelGradeStrength", settings.PastelGradeStrength);
+                var glitch = Mathf.Clamp01(_state.GlitchRemaining / 0.35f);
+                _runtimeMaterial.SetFloat("_GlitchAmount", glitch);
+                _runtimeMaterial.SetFloat("_GlitchDisplacement", settings.GlitchDisplacement);
+            }
             foreach (var saved in _lightStates)
             {
                 if (saved.Light == null) continue;
@@ -694,7 +693,7 @@ namespace BlueComplex.UI.Effects.DLJ
         /// <summary>플레이 중 표시만 테스트한다. 카드/심박수/게임 결과는 바꾸지 않는다.</summary>
         public void PreviewHeartbeat(int value)
         {
-            if (!Application.isPlaying || _runtimeMaterial == null) return;
+            if (!Application.isPlaying) return;
             _preview = true;
             ApplyHeartbeat(value, false);
         }

@@ -320,6 +320,8 @@ namespace BlueComplex.UI.Presentation
             var traitNames = report.TraitsManifested.Select(t => t.DisplayName).ToList();
             var appearedAt = Time.unscaledTime;
             var show = _memoryBubble.ShowResultTags(tags, traitNames);
+            // DLJ: 대사를 기다리는 동안 자동 해제될 수 있으므로 재생 직후 길이를 저장한다.
+            var showDuration = show.Duration();
 
             yield return PlayDialogue(TurnSummaryFormatter.Build(report));
 
@@ -329,7 +331,7 @@ namespace BlueComplex.UI.Presentation
 
             if (tags.Count == 0 && traitNames.Count == 0) yield break;
 
-            var readyAt = appearedAt + show.Duration() + UiMotion.Settings.tagHold;
+            var readyAt = appearedAt + showDuration + UiMotion.Settings.tagHold;
             yield return new WaitUntil(() => Time.unscaledTime >= readyAt);
         }
 
