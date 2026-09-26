@@ -14,7 +14,7 @@ using BlueComplex.Core.Turn;
 namespace BlueComplex.Core.Tests
 {
     /// <summary>
-    /// 튜토리얼 3단계: 가이드 진행(어떤 단계가 무엇을 가리키고 무엇이 일어나면 넘어가는지), 게이트 안내 문구, 선택지 진행 규칙, 시작 대화 에셋(청장 화자·선택지 3곳).
+    /// 튜토리얼 3단계: 가이드 진행(어떤 단계가 무엇을 가리키고 무엇이 일어나면 넘어가는지), 게이트 안내 문구, 선택지 진행 규칙, 시작 대화 에셋(청장 화자·선택지 4곳).
     /// 화면(말풍선·강조·클릭 막)은 UI 어셈블리라 여기서 못 다룬다 — 그 논리는 코어에 두고 테스트하고, 화면은 Play 모드 프로브로 확인한다.
     /// 이 테스트 어셈블리는 UI 어셈블리를 참조하지 못해 시작 대화는 에셋 YAML을 직접 읽는다(StageDialogueLinesTests와 같은 방식).
     /// </summary>
@@ -43,7 +43,7 @@ namespace BlueComplex.Core.Tests
             {
                 "intro_device", "intro_connect", "intro_key", "intro_key_count",
                 "click_clue", "open_manual", "read_manual", "close_book",
-                "find_excited", "drag_clue",
+                "find_excited", "emotion_ten", "drag_clue",
                 "clear_1", "new_branch", "complex_intro", "read_xray",
                 "find_depressed", "clear_3",
                 "stack_intro", "use_item", "branch_reminder"
@@ -102,7 +102,10 @@ namespace BlueComplex.Core.Tests
             StringAssert.Contains("열쇠 2개가 필요하네", steps["intro_key_count"].Line);
 
             // 원문의 오탈자("상태방")도 그대로 옮겼다 — 기획 확인 대상.
-            StringAssert.Contains("상태방을 흥분시킬 수 있는 단서", steps["find_excited"].Line);
+            Assert.AreEqual("지금은 목표 심박수가 높으니까, 상태방을 흥분시킬 수 있는 단서를 사용해야 해. 흥분 감정과 관련된 단서를 찾아보게. 단서의 설명은 단서의 정보 말고도, 대상 인물이 이 단서에 대해 어떻게 생각하는지 엿볼 수 있는 좋은 수단이지.", steps["find_excited"].Line);
+            Assert.AreEqual("감정 하나는 심박수를 10 변화시킬 수 있으니 참고하게.", steps["emotion_ten"].Line);
+            Assert.AreEqual("지금 보다 더 깊은 기억으로 들어가려면, 장치 작동을 위한 ‘열쇠’가 필요해. 열쇠를 얻기 위해선 최면 대상을 장치가 원하는 심리 상태로 만들어야 한다네.", steps["intro_key"].Line);
+            Assert.AreEqual(GuideEffect.HypnosisConnect, steps["intro_key"].Effect, "원문 \"(효과음)\" — 최면 접속 준비 뒤");
             Assert.AreEqual("내가 전문 최면 수사관을 너무 무시했나 보군. 완벽해. 당장 수사에 투입될 수 있도록 절차를 밟겠네.", TutorialGuideContent.ClearLine);
             Assert.AreEqual("청장", TutorialGuideContent.GuideName);
         }
@@ -392,7 +395,7 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void OpeningDialogue_IsTheNotionConversation_WithThreeChoices()
+        public void OpeningDialogue_IsTheNotionConversation_WithFourChoices()
         {
             var (lines, _) = ParseTutorialEntry();
 
@@ -401,6 +404,9 @@ namespace BlueComplex.Core.Tests
                 (Chief, false, "유키는 무언가를 숨기고 있어. 그런데, 자신이 숨기고 있다는 사실 조차 모르는 느낌이랄까. 유키의 부모님은 바닷가에서 익사했고, 그 뒤에 ‘B’라는 남성이 입양해서 보호하던 것으로 파악되었네."),
                 (Player, true, "B는 누군데 갑자기 유키를 입양한거죠?"),
                 (Chief, false, "유키의 부모님이 사망하기 몇 달 전 부터 가족에게 수표로 금전적 지원을 해주고 있었거든. B는 거기에 더해서 매 주말마다 유키를 데리고 놀러가는 등, 거의 가족처럼 지냈던 모양이야."),
+                (Chief, false, "우리는 B가 주요 용의자라고 추정하고 있어. 그는 심리학에 해박했는데, 유키의 ‘기억 민감’ 특성을 악용해 범죄를 저지르게 유도했을 확률이 있거든."),
+                (Player, true, "기억 민감자를 실제로 만나는 건 처음이네요."),
+                (Chief, false, "맞아. 그 특성이 특성인 만큼 부모들은 아이가 상처 받지 않게 하려고 집 안에서만 돌보는 게 대다수니까. 일반인보다 배로 예민한 감정을 가지고 있으니까. 유키의 경우는 어떤 이유인지는 몰라도 밖에 자주 나갔던 모양이야."),
                 (Player, true, "B에 대한 더 자세한 정보가 필요합니다."),
                 (Chief, false, "음, 우리가 개인적으로 조사한 결과와 유키와 나눈 대화를 바탕으로 재구성한 정보가 있어. 확인하고 싶나?"),
                 (Player, true, "네."),
@@ -415,7 +421,7 @@ namespace BlueComplex.Core.Tests
                 Assert.AreEqual(expected[i].Text, lines[i].Text, $"줄 {i} 본문");
             }
 
-            Assert.AreEqual(3, lines.Count(l => l.IsChoice), "선택지 3곳");
+            Assert.AreEqual(4, lines.Count(l => l.IsChoice), "선택지 4곳");
             Assert.IsTrue(lines.Where(l => l.IsChoice).All(l => l.Speaker == Player), "선택지는 플레이어의 대답");
             Assert.IsTrue(lines.Where(l => !l.IsChoice).All(l => l.Speaker == Chief), "나머지는 전부 청장 — 유키나 임시 화자가 아니다");
             Assert.IsFalse(lines.Any(l => l.Text.StartsWith("/")), "원문의 '/'는 표식이라 본문에 넣지 않는다(화면이 붙인다)");

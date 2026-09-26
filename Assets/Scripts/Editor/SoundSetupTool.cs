@@ -54,6 +54,26 @@ namespace BlueComplex.EditorTools
 
             // 스테이지 3의 기본 배경음.
             ("FadedScribbles.mp3", UiSoundCue.HeartbeatBaseStage3, BedPitchRange, BedVolume),
+
+            // 오프닝·대화 사운드. 타자음은 글자마다 울리므로 피치를 0.9~1.1로 흔들어 매번 다르게 들리게 한다(전용 보이스·촘촘한 간격은 CueExtras).
+            ("TypeSound.mp3", UiSoundCue.Type, new Vector2(0.9f, 1.1f), 0.7f),
+            ("freesound_community-radio-static-6382.mp3", UiSoundCue.TvStatic, DefaultPitchRange, 1f),
+            ("dragon-studio-light-switch-382712.mp3", UiSoundCue.LightGlow, new Vector2(1f, 1f), 1f),
+
+            // 포스트잇이 붙는 소리 — 기존 포스트잇 클립(떼는 소리와 같은 파일)을 피치를 달리해 쓴다. 새로 받은 파일이 생기면 이 줄만 바꾼다.
+            ("포스트 잇 사운드_[cut_1sec] (mp3cut.net).mp3", UiSoundCue.PostitStick, new Vector2(0.85f, 1.25f), 1f),
+        };
+
+        /// <summary>큐별 재생 방식(SoundEntry.dedicatedVoices / minInterval). 여기 없는 큐는 공용 보이스·기본 간격(0 / 0)이다.
+        /// 타자음: 글자마다(최대 초당 ~33번) 울려야 하므로 기본 간격(0.09초)보다 촘촘하게, 공용 보이스를 다 차지하지 않게 전용 보이스 5개.
+        /// 뉴스 잡음: 6~7초짜리 긴 클립이라 전용 보이스 1개 — 다른 소리에 끊기지 않고, 다시 부르면 이전 소리를 끊고 처음부터 울린다.
+        /// 빛 번짐(LightSwitch 클립): 짧은 클립이라 끝까지 울린다(maxSeconds 0), 전용 보이스 1개. 포스트잇 붙는 소리: 폭풍 구간에서 겹쳐 울리므로 전용 보이스 3개.</summary>
+        private static readonly System.Collections.Generic.Dictionary<UiSoundCue, (int dedicatedVoices, float minInterval, float maxSeconds)> CueExtras = new()
+        {
+            [UiSoundCue.Type] = (5, 0.02f, 0f),
+            [UiSoundCue.TvStatic] = (1, 0f, 0f),
+            [UiSoundCue.LightGlow] = (1, 0f, 0f),
+            [UiSoundCue.PostitStick] = (3, 0f, 0f),
         };
 
         [MenuItem("BlueComplex/Audio/Ensure Sound Library")]
@@ -107,6 +127,11 @@ namespace BlueComplex.EditorTools
                 if (clip != null) clips.GetArrayElementAtIndex(0).objectReferenceValue = clip;
                 entry.FindPropertyRelative("volume").floatValue = volume;
                 entry.FindPropertyRelative("pitchRange").vector2Value = pitchRange;
+
+                var (dedicatedVoices, minInterval, maxSeconds) = CueExtras.TryGetValue(cue, out var extras) ? extras : (0, 0f, 0f);
+                entry.FindPropertyRelative("dedicatedVoices").intValue = dedicatedVoices;
+                entry.FindPropertyRelative("minInterval").floatValue = minInterval;
+                entry.FindPropertyRelative("maxSeconds").floatValue = maxSeconds;
             }
 
             serialized.ApplyModifiedProperties();

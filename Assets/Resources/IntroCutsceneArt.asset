@@ -12,8 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e875bcfcf37001e438f4f2403310cbfe, type: 3}
   m_Name: IntroCutsceneArt
   m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.IntroCutsceneArt
-  car: {fileID: 2800000, guid: 08cc617048a54ff8ac97db76ae8f8172, type: 3}
+  yukiRoom: {fileID: 2800000, guid: 1664560c9f324da285f08c5ba9a0dc62, type: 3}
   clock: {fileID: 2800000, guid: e03baff8b6934f02a00b177e70836511, type: 3}
   clockHour: {fileID: 2800000, guid: e8c24fe78a47472e8a8a6db84eaefb43, type: 3}
   clockMinute: {fileID: 2800000, guid: 422790bbdaae463a80ba93b67bc18c3c, type: 3}
+  mainRoom: {fileID: 2800000, guid: 041226bce08045d4b69c6bed22a1dd56, type: 3}
+  mainChair: {fileID: 2800000, guid: 1fb89e3a842e40219c19edaffeaef832, type: 3}
+  mainTable: {fileID: 2800000, guid: 18f624fb19a7478ea852acdfbbb46713, type: 3}
+  mainCoffee: {fileID: 2800000, guid: 09fd676b7cdf4bb8971ba69d3c1a4266, type: 3}
+  mainTower: {fileID: 2800000, guid: 13f0e5aee0554a1ca1936f5df723e22a, type: 3}
   room: {fileID: 2800000, guid: 4f9bcde1ecde58842b51c4cf236e4985, type: 3}
+  girlSilhouette: {fileID: 2800000, guid: 82bfe9a913bef364d8b124f70d159334, type: 3}
+  girlWalk: {fileID: 2800000, guid: cb8b2b8ab971f1747bba533a9ce3a002, type: 3}

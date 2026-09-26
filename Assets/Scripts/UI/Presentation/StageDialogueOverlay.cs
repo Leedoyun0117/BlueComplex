@@ -24,6 +24,22 @@ namespace BlueComplex.UI.Presentation
         private static readonly Color ChiefInk = new Color32(150, 190, 160, 255);
         private static readonly Color LineInk = new Color32(238, 240, 246, 255);
 
+        // 대사는 화면 하단 띠에 놓는다(게임 화면의 유키 대사창 자리와 같은 하단부). 이름표가 그 위, 대사 줄이 아래, "다음" 표시가 맨 아래.
+        private static readonly Vector2 SpeakerMin = new Vector2(0.2f, 0.215f);
+        private static readonly Vector2 SpeakerMax = new Vector2(0.8f, 0.265f);
+        private static readonly Vector2 LineMin = new Vector2(0.1f, 0.075f);
+        private static readonly Vector2 LineMax = new Vector2(0.9f, 0.215f);
+        private static readonly Vector2 ChoiceMin = new Vector2(0.14f, 0.09f);
+        private static readonly Vector2 ChoiceMax = new Vector2(0.86f, 0.19f);
+        private const float IndicatorY = 0.05f;
+
+        // 하단 띠 — 글자가 뒤 화면(게임 UI의 밝은 종이 패널, 분기 장면의 배경 그림)과 겹쳐도 읽히게 한다. 대사와 함께 페이드된다.
+        private const float ScrimTop = 0.3f;
+        private static readonly Color ScrimColor = new Color(0.016f, 0.024f, 0.05f, 0.82f);
+
+        /// <summary>대사가 드러난 직후 이 시간(초) 동안은 클릭을 무시한다 — 앞 장면(컷신·뉴스 자막)을 넘기려던 습관적 클릭이 첫 줄을 건너뛰지 않게.</summary>
+        private const float FirstClickGuardSeconds = 0.35f;
+
         private CanvasGroup _group;
         private CanvasGroup _textGroup;
         private Image _dim;
@@ -33,6 +49,7 @@ namespace BlueComplex.UI.Presentation
         private Tween _blink;
         private Tween _typing;
         private bool _skip;
+        private float _ignoreClicksUntil;
 
         // 선택지 줄: 타이핑 없이 누를 수 있는 "/ …" 한 줄이 나오고, 그걸 눌러야만 넘어간다(배경 클릭은 무시).
         private GameObject _choiceButton;
@@ -66,12 +83,14 @@ namespace BlueComplex.UI.Presentation
             _dim.color = new Color(0.016f, 0.024f, 0.05f, settings.keyTurnDim);
             _group.blocksRaycasts = true;
             _textGroup.alpha = 0f;
+            ClearLine();
 
             _group.DOKill();
             yield return _group.DOFade(1f, settings.keyTurnFade).SetEase(Ease.InOutSine).SetUpdate(true).SetTarget(_group).WaitForCompletion(true);
 
             _textGroup.DOKill();
             yield return _textGroup.DOFade(1f, 0.2f).SetUpdate(true).SetTarget(_textGroup).WaitForCompletion(true);
+            GuardFirstClicks();
 
             foreach (var line in variant.lines)
                 yield return PlayLine(line);
@@ -100,9 +119,11 @@ namespace BlueComplex.UI.Presentation
             _group.alpha = 1f;
             _group.blocksRaycasts = true;
             _textGroup.alpha = 0f;
+            ClearLine();
 
             _textGroup.DOKill();
             yield return _textGroup.DOFade(1f, 0.2f).SetUpdate(true).SetTarget(_textGroup).WaitForCompletion(true);
+            GuardFirstClicks();
 
             for (var i = 0; i < variant.lines.Length; i++)
             {
@@ -207,8 +228,32 @@ namespace BlueComplex.UI.Presentation
             _ => PlayerInk
         };
 
+        /// <summary>앞 재생이 남긴 글자·이름표·"다음" 표시를 지운다. 오버레이는 재사용되므로 안 지우면 페이드인 동안 앞 대사의 마지막 줄이 ▼와 함께 잠깐 떴다가
+        /// 첫 줄이 시작되는 순간 사라진다 — 첫 줄이 저절로 넘어간 것처럼 보인다.</summary>
+        private void ClearLine()
+        {
+            _typing?.Kill();
+            _typing = null;
+            _speaker.text = string.Empty;
+            _line.text = string.Empty;
+            ShowNextIndicator(false);
+            _choiceButton.SetActive(false);
+            _textGroup.blocksRaycasts = false;
+            _lineIsChoice = false;
+            _skip = false;
+        }
+
+        /// <summary>대사가 드러난 시점에서 잠깐 클릭을 받지 않는다(<see cref="FirstClickGuardSeconds"/>). 이 사이의 클릭은 첫 줄의 타이핑 건너뛰기로도 세지 않는다.</summary>
+        private void GuardFirstClicks()
+        {
+            _ignoreClicksUntil = Time.unscaledTime + FirstClickGuardSeconds;
+            _skip = false;
+        }
+
         public void OnPointerClick(PointerEventData eventData)
         {
+            if (Time.unscaledTime < _ignoreClicksUntil) return;
+
             // 선택지 줄에서는 배경 클릭으로 넘어가지 않는다.
             if (!DialogueAdvanceRule.Accepts(_lineIsChoice, clickedTheChoice: false)) return;
             _skip = true;
@@ -227,6 +272,7 @@ namespace BlueComplex.UI.Presentation
             if (_choiceButton != null) _choiceButton.SetActive(false);
             _textGroup.blocksRaycasts = false;
             _lineIsChoice = false;
+            _ignoreClicksUntil = 0f;
             gameObject.SetActive(false);
         }
 
@@ -271,13 +317,25 @@ namespace BlueComplex.UI.Presentation
             _textGroup.alpha = 0f;
             _textGroup.blocksRaycasts = false;
 
-            _speaker = CreateText(textRect, "Speaker", font, 26f, YukiInk, new Vector2(0.2f, 0.53f), new Vector2(0.8f, 0.6f));
-            _line = CreateText(textRect, "Line", font, 38f, LineInk, new Vector2(0.1f, 0.4f), new Vector2(0.9f, 0.53f));
+            var scrim = new GameObject("Scrim", typeof(RectTransform), typeof(Image)) { layer = gameObject.layer };
+            scrim.transform.SetParent(textRect, false);
+            var scrimRect = (RectTransform)scrim.transform;
+            scrimRect.anchorMin = Vector2.zero;
+            scrimRect.anchorMax = new Vector2(1f, ScrimTop);
+            scrimRect.offsetMin = Vector2.zero;
+            scrimRect.offsetMax = Vector2.zero;
+            var scrimImage = scrim.GetComponent<Image>();
+            scrimImage.color = ScrimColor;
+            scrimImage.raycastTarget = false;
+
+            _speaker = CreateText(textRect, "Speaker", font, 26f, YukiInk, SpeakerMin, SpeakerMax);
+            _line = CreateText(textRect, "Line", font, 38f, LineInk, LineMin, LineMax);
+            _line.alignment = TextAlignmentOptions.Top; // 줄이 늘어나도 첫 줄이 제자리에 있게(가운데 정렬이면 타이핑 중 위아래로 밀린다).
 
             var indicatorGo = new GameObject("Next Indicator", typeof(RectTransform), typeof(CanvasGroup), typeof(Image)) { layer = gameObject.layer };
             indicatorGo.transform.SetParent(textRect, false);
             var indicatorRect = (RectTransform)indicatorGo.transform;
-            indicatorRect.anchorMin = indicatorRect.anchorMax = indicatorRect.pivot = new Vector2(0.5f, 0.4f);
+            indicatorRect.anchorMin = indicatorRect.anchorMax = indicatorRect.pivot = new Vector2(0.5f, IndicatorY);
             indicatorRect.sizeDelta = new Vector2(28f, 22f);
             indicatorRect.anchoredPosition = Vector2.zero;
 
@@ -301,8 +359,8 @@ namespace BlueComplex.UI.Presentation
             _choiceButton.transform.SetParent(parent, false);
 
             var rect = (RectTransform)_choiceButton.transform;
-            rect.anchorMin = new Vector2(0.14f, 0.405f);
-            rect.anchorMax = new Vector2(0.86f, 0.5f);
+            rect.anchorMin = ChoiceMin;
+            rect.anchorMax = ChoiceMax;
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
 
