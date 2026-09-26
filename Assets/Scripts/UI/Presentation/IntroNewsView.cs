@@ -9,8 +9,10 @@ using UnityEngine.UI;
 namespace BlueComplex.UI.Presentation
 {
     /// <summary>
-    /// 시작 컷신 4막: TV 뉴스 자막. 검은 화면에 지직거리는 잡음·주사선·번쩍이는 줄이 깔리고, 화면 아래쪽 자막 띠에 한 줄씩 나온다.
-    /// 줄이 바뀔 때마다 잡음 효과음(<see cref="UiSoundCue.TvStatic"/>)이 울린다.
+    /// 시작 컷신 2막: TV 뉴스 자막. 암흑 속으로 뉴스가 흘러들어오고(페이드인), 검은 화면에 지직거리는 잡음·주사선·번쩍이는 줄이 깔리고, 화면 아래쪽 자막 띠에 한 줄씩 나온다.
+    /// 켜질 때·줄이 바뀔 때마다·자막이 다 끝난 뒤 잡음만 남을 때 잡음 효과음(<see cref="UiSoundCue.TvStatic"/>, RadioStatic 클립)이 울린다 —
+    /// 긴 클립이라 그때마다 처음부터 다시 울려 이어지는 하나의 잡음처럼 들리고, 뉴스가 끝나면(<see cref="Hide"/>) 꺼진다.
+    /// <b>내용은 임시</b> — 뉴스 화면 그림·영상은 아직 없어 잡음/주사선/자막 띠로 만든 자리표시이고, 문구는 <see cref="BlueComplex.Core.Stage.IntroCutsceneContent"/>에 있다.
     /// </summary>
     internal sealed class IntroNewsView : MonoBehaviour
     {
@@ -39,13 +41,17 @@ namespace BlueComplex.UI.Presentation
             return view;
         }
 
-        /// <summary>TV가 켜진다 → 줄마다 <paramref name="lineSeconds"/>씩 자막을 보여 준다 → 끝. 줄마다 잡음 효과음이 울린다.</summary>
-        public IEnumerator Play(IReadOnlyList<string> lines, float lineSeconds)
+        /// <summary>TV가 흘러들어온다(<paramref name="fadeIn"/>) → 줄마다 <paramref name="lineSeconds"/>씩 자막 → 자막이 사라지고 잡음만 <paramref name="staticSeconds"/>. 줄마다·마지막에 잡음 효과음이 울린다.</summary>
+        public IEnumerator Play(IReadOnlyList<string> lines, float fadeIn, float lineSeconds, float staticSeconds)
         {
             enabled = true;
-            _group.alpha = 1f;
+            _group.alpha = 0f;
+            _captionGroup.alpha = 0f;
+            _group.DOFade(1f, Mathf.Max(0.01f, fadeIn)).SetEase(Ease.InSine).SetUpdate(true).SetTarget(this);
             _noiseBoost = 1f; // 켜지는 순간 잡음이 세게 튀었다 가라앉는다.
             DOTween.To(() => _noiseBoost, v => _noiseBoost = v, 0f, 0.5f).SetUpdate(true).SetTarget(this);
+            UiSoundHooks.Play(UiSoundCue.TvStatic);
+            yield return new WaitForSecondsRealtime(fadeIn);
 
             foreach (var line in lines)
             {
@@ -58,10 +64,18 @@ namespace BlueComplex.UI.Presentation
                 UiSoundHooks.Play(UiSoundCue.TvStatic);
                 yield return new WaitForSecondsRealtime(lineSeconds);
             }
+
+            // 끝: 자막이 꺼지고 지직거리는 잡음만 크게 남는다.
+            _captionGroup.DOKill();
+            _captionGroup.alpha = 0f;
+            _noiseBoost = 1f;
+            UiSoundHooks.Play(UiSoundCue.TvStatic);
+            yield return new WaitForSecondsRealtime(staticSeconds);
         }
 
         public void Hide()
         {
+            UiSoundHooks.Stop(UiSoundCue.TvStatic); // 긴 잡음 클립이 뉴스가 끝난 뒤까지 새어 나가지 않게.
             DOTween.Kill(this);
             _captionGroup.DOKill();
             _group.alpha = 0f;
@@ -211,6 +225,7 @@ namespace BlueComplex.UI.Presentation
 
         private void OnDestroy()
         {
+            UiSoundHooks.Stop(UiSoundCue.TvStatic); // 뉴스 도중에 건너뛰어 통째로 지워져도 잡음이 남지 않게.
             DOTween.Kill(this);
             if (_noiseTexture != null) Destroy(_noiseTexture);
             if (_scanTexture != null) Destroy(_scanTexture);
