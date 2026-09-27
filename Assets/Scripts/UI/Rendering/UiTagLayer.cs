@@ -1,3 +1,5 @@
+using BlueComplex.UI.Layout;
+using BlueComplex.UI.Presentation;
 using UnityEngine;
 
 namespace BlueComplex.UI.Rendering
@@ -25,6 +27,11 @@ namespace BlueComplex.UI.Rendering
 
         private Camera _uiCamera;
         private RenderTexture _texture;
+        private ClueBookPanel _book;
+        private KeyTurnOverlay _keyTurn;
+        private StageDialogueOverlay _dialogue;
+        private StageOverviewOverlay _overview;
+        private float _nextLookup;
 
         /// <summary>태그만 그린 텍스처. 무드 셰이더의 <c>_TagTex</c>에 물린다.</summary>
         public RenderTexture Texture => _texture;
@@ -67,13 +74,34 @@ namespace BlueComplex.UI.Rendering
             }
 
             // 같은 카메라로 태그 레이어만 한 번 더. 끝나면 원래 마스크/타깃으로 되돌려 이어지는 자동 렌더(RT_UI)가 그대로 돌게 한다.
+            // 덮는 오버레이가 떠 있으면 마스크 0으로 그려 텍스처를 비운다(태그 레이어는 항상 다른 UI 위에 얹히므로, 예전에 태그를 가리던 것들이 열리면 같이 숨긴다).
             var mask = _uiCamera.cullingMask;
-            _uiCamera.cullingMask = Mask;
+            _uiCamera.cullingMask = IsCovered() ? 0 : Mask;
             _uiCamera.targetTexture = _texture;
             _uiCamera.Render();
             _uiCamera.targetTexture = source;
             _uiCamera.cullingMask = mask;
         }
+
+        /// <summary>
+        /// 태그 레이어(감정 칩·열쇠)를 가려야 하는 오버레이가 떠 있는지. 분리 전에는 이것들이 태그를 덮었다: 단서 책, 키 턴 암전 막, 스테이지 시작 대사창, 전체 개요.
+        /// 지연 생성되는 것(책, 키 턴 막)은 처음 뜰 때 곧바로 잡히도록 못 찾은 동안 0.1초마다 다시 찾는다. 이 목록에 없는 새 오버레이는 태그를 못 가린다.
+        /// </summary>
+        private bool IsCovered()
+        {
+            if (Time.unscaledTime >= _nextLookup)
+            {
+                _nextLookup = Time.unscaledTime + 0.1f;
+                if (_book == null) _book = FindFirstObjectByType<ClueBookPanel>(FindObjectsInactive.Include);
+                if (_keyTurn == null) _keyTurn = FindFirstObjectByType<KeyTurnOverlay>(FindObjectsInactive.Include);
+                if (_dialogue == null) _dialogue = FindFirstObjectByType<StageDialogueOverlay>(FindObjectsInactive.Include);
+                if (_overview == null) _overview = FindFirstObjectByType<StageOverviewOverlay>(FindObjectsInactive.Include);
+            }
+
+            return Active(_book) || Active(_keyTurn) || Active(_dialogue) || Active(_overview);
+        }
+
+        private static bool Active(Component overlay) => overlay != null && overlay.gameObject.activeInHierarchy;
 
         /// <summary>UI 레이어를 안 그리는 카메라(주 카메라)는 이 레이어도 그리면 안 된다 — 안 그러면 캔버스가 3D 씬 안에 떠 보일 수 있다.</summary>
         private void HideTagLayerFromOtherCameras()

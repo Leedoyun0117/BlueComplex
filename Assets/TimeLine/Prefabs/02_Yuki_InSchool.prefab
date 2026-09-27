@@ -458,6 +458,7 @@ GameObject:
   - component: {fileID: 4486108490164447108}
   - component: {fileID: 2015220991701710473}
   - component: {fileID: 1869038388952483866}
+  - component: {fileID: 3502000000000000777}
   m_Layer: 0
   m_Name: Signal
   m_TagString: Untagged
@@ -599,6 +600,10 @@ MonoBehaviour:
   - "\uC544\uD504\uC9C4 \uC54A\uC558\uB2E4."
   charInterval: 0.05
   clearOnEnable: 1
+  typingSfx: {fileID: 8300000, guid: babdb331464db794aa4a7a31388a951c, type: 3}
+  typingSfxVolume: 0.35
+  typingSfxMinInterval: 0.06
+  typingSfxPitch: {x: 0.95, y: 1.05}
 --- !u!82 &2015220991701710473
 AudioSource:
   m_ObjectHideFlags: 0
@@ -709,8 +714,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineAudioSignal
   clip: {fileID: 8300000, guid: d92ba8d4a8894c24a91248cb2a43a4be, type: 3}
-  volume: 1
+  volume: 0.43
   fadeInDuration: 3
   fadeOutDuration: 3
   channel: 2
+  mixer: {fileID: 0}
+--- !u!114 &3502000000000000777
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7480297320145754196}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fbac7c361c34b6e87f7d5016557a4a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineSfxReceiver
+  volume: 1
+  channel: 1
   mixer: {fileID: 0}

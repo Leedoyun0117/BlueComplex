@@ -87,6 +87,9 @@ namespace BlueComplex.UI.Motion
 
         /// <summary>포스트잇이 자리에 붙는 소리(Postit.Stick이 닿는 순간). Paper와 따로 둔 이유: Paper는 카드·엑스레이 등 다른 종이 연출도 쓴다. 떼는 소리는 <see cref="PostitPeel"/>.</summary>
         PostitStick,
+
+        /// <summary>오프닝 컷신(유키 방 → 타이틀) 전용 배경곡(FinalDetection). <see cref="UiSoundHooks.StartTheme"/>/<see cref="UiSoundHooks.StopTheme"/>로만 켜고 끈다 — 심박수 배경음·상시 배경음과 별개 채널.</summary>
+        IntroTheme,
     }
 
     /// <summary>
@@ -135,6 +138,32 @@ namespace BlueComplex.UI.Motion
 
             CurrentAmbient = null;
             AmbientStopped?.Invoke();
+        }
+
+        // ── 오프닝 컷신 전용 배경곡. 컷신 동안만 깔리고 끝나면 페이드아웃 — 그 뒤 게임 배경음(SetBed)이 스테이지 시작과 함께 올라온다. ──
+
+        /// <summary>오프닝 배경곡 시작 요청(처음부터, 두 번째 값은 페이드인 시간). 이미 재생 중이면 처음부터 다시 시작한다.</summary>
+        public static event Action<UiSoundCue, float> ThemeStarted;
+
+        /// <summary>오프닝 배경곡 종료 요청(값은 페이드아웃 시간).</summary>
+        public static event Action<float> ThemeStopped;
+
+        /// <summary>지금 켜져 있어야 하는 오프닝 배경곡. SoundManager가 요청 뒤에 켜져도 이 값으로 따라잡는다. 꺼져 있으면 null.</summary>
+        public static UiSoundCue? CurrentTheme { get; private set; }
+
+        public static void StartTheme(UiSoundCue cue, float fadeIn)
+        {
+            CurrentTheme = cue;
+            ThemeStarted?.Invoke(cue, fadeIn);
+        }
+
+        /// <summary>오프닝 배경곡을 페이드아웃으로 끈다. 안 울리고 있으면 아무 일도 없다.</summary>
+        public static void StopTheme(float fadeOut)
+        {
+            if (CurrentTheme == null) return;
+
+            CurrentTheme = null;
+            ThemeStopped?.Invoke(fadeOut);
         }
 
         /// <summary>배경음을 이 큐로 바꾼다. 이미 그 큐면 아무 일도 없다.</summary>

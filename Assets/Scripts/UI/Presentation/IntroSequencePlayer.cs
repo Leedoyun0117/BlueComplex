@@ -15,7 +15,7 @@ namespace BlueComplex.UI.Presentation
     /// 게임을 켰을 때의 오프닝 전체(PPT 목업 BlueComplex_UI v6)를 한 번에 재생하는 컴포넌트. 노션 "게임 시작 연출"의 고래의 눈 버전은 폐기되었다.
     /// 튜토리얼 시작 컷신(<see cref="IntroCutsceneDirector"/>)과는 별개다.
     ///
-    ///  1 유키 방(창문·벽시계·화분·노을빛) → 2 그 위에 "Yuki?" 포스트잇 → 3 암전 → 4 흰 포스트잇 4장(Car. Ntsu. B. ?.)이 흩어진 자리에 하나씩 붙고 곧바로 2×2 창문 모양으로 미끄러져 정렬 →
+    ///  1 유키 방(창문·벽시계·화분·노을빛) → 2 그 위에 "Yuki?" 포스트잇 → 3 암전 → 4 흰 포스트잇 4장(Car. Natsu. B. ?.)이 흩어진 자리에 하나씩 붙고 곧바로 2×2 창문 모양으로 미끄러져 정렬 →
     ///  5 4장이 주황으로 바뀌며 글씨가 Death. By. Complex. ?.로(배경은 어두운 채) → 6 창문 안에 소녀 실루엣 → 7 화면이 주황빛으로 → 8 소녀가 왼쪽에서 걸어 들어와 오른쪽으로 걷다 C에서 사라짐 →
     ///  9 종이색으로 바뀌며 포스트잇 바탕이 사라지고 글씨만 남음 → 10 그 종이색 화면 오른쪽 위에 거꾸로 선 소녀가 정지 이미지로 잠깐 → 11 글씨가 한 줄 "Death. By. Complex. ?."로 모여 타이핑되듯 나타남 →
     ///  12 암전 → 13 뉴스 → 14 타이틀 → 15 메인 화면. (시계 장면은 뺐다.)
@@ -45,7 +45,7 @@ namespace BlueComplex.UI.Presentation
         private static readonly (string text, float x, float y, float sx, float sy, float sw, float sh, int slot)[] ScatterNotes =
         {
             ("Car.", 0.105f, 0.219f, 0.548f, 0.122f, 0.172f, 0.355f, 1),
-            ("Ntsu.", 0.474f, 0.147f, 0.356f, 0.119f, 0.168f, 0.355f, 0),
+            ("Natsu.", 0.474f, 0.147f, 0.356f, 0.119f, 0.168f, 0.355f, 0),
             ("B.", 0.334f, 0.445f, 0.351f, 0.516f, 0.174f, 0.355f, 2),
             ("?.", 0.657f, 0.515f, 0.548f, 0.518f, 0.172f, 0.355f, 3)
         };
@@ -131,6 +131,10 @@ namespace BlueComplex.UI.Presentation
             _art = IntroCutsceneArt.Load();
             _font = RuntimeUi.FindFont(_canvasRoot) ?? FindFirstObjectByType<TMP_Text>(FindObjectsInactive.Include)?.font; // 전용 캔버스엔 글자가 없어 씬의 것을 빌린다.
             BuildOverlay();
+
+            // 오프닝은 자기 배경곡(FinalDetection)만 깐다 — 상시 배경음(Fragile Notes)과 심박수 배경음이 켜져 있었다면 끈다.
+            UiSoundHooks.StopAmbient();
+            UiSoundHooks.SetBed(null);
             _routine = StartCoroutine(Run());
         }
 
@@ -144,6 +148,7 @@ namespace BlueComplex.UI.Presentation
             _menu = null;
             if (Current == this) Current = null;
             UiSoundHooks.Stop(UiSoundCue.LightGlow);
+            UiSoundHooks.StopTheme(UiMotion.Settings.seqThemeFadeOut); // 디버그로 스테이지를 바로 시작하면 곡이 페이드아웃되며 새 게임 배경음과 겹친다. 이미 꺼졌으면(메인 화면 이후) 아무 일도 없다.
 
             if (_overlay != null)
             {
@@ -156,6 +161,7 @@ namespace BlueComplex.UI.Presentation
         {
             DOTween.Kill(this);
             if (Current == this) Current = null;
+            UiSoundHooks.StopTheme(0f); // 정적 상태(CurrentTheme)가 다음 재생으로 새지 않게.
         }
 
         private void Update()
@@ -181,6 +187,7 @@ namespace BlueComplex.UI.Presentation
             _slide = IntroSlide.Create(_layer, _canvasSize);
 
             _skippable = true;
+            UiSoundHooks.StartTheme(UiSoundCue.IntroTheme, UiMotion.Settings.seqThemeFadeIn);
             yield return Opening();
             yield return ShowMenu(fadeOutFirst: true);
         }
@@ -293,32 +300,32 @@ namespace BlueComplex.UI.Presentation
                 if (i < ScatterNotes.Length - 1) yield return Wait(s.seqWindowInterval);
             }
 
-            // 4→5: 다 붙은 직후 각자 자리에서 2×2 창문 모양으로 빠르게 미끄러져 정렬된다.
+            // 4→5: 다 붙은 직후 각자 자리에서 2×2 창문 모양(6번 장표의 자리)으로 0.3초 동안 미끄러져 정렬된다. 이 뒤로 색이 바뀌는 동안은 자리가 움직이지 않는다.
             var snapTime = Mathf.Max(0.05f, s.seqNotesSnap);
             var snap = DOTween.Sequence().SetUpdate(true).SetTarget(this);
             for (var i = 0; i < ScatterNotes.Length; i++)
             {
-                var n = ScatterNotes[i];
-                var slot = _slide.Slot(n.sx, n.sy, n.sw, n.sh);
-                snap.Join(placed[i].Rect.DOAnchorPos(slot.position, snapTime).SetEase(Ease.OutCubic));
-                snap.Join(placed[i].Rect.DOSizeDelta(slot.size, snapTime).SetEase(Ease.OutCubic));
+                var final = WindowNotes[ScatterNotes[i].slot];
+                var slot = _slide.Slot(final.x, final.y, final.w, final.h);
+                snap.Join(placed[i].Rect.DOAnchorPos(slot.position, snapTime).SetEase(Ease.OutQuad));
+                snap.Join(placed[i].Rect.DOSizeDelta(slot.size, snapTime).SetEase(Ease.OutQuad));
             }
 
             yield return snap.WaitForCompletion(true);
             yield return Wait(0.4f);
 
-            // 5→6: 4장의 색만 흰색에서 주황으로 바뀌고 글씨가 바뀐다(배경은 그대로 어둡다). 자리는 6번 장표의 창문으로 살짝 맞춰진다.
+            // 5→6: 4장이 제자리에 선 채 색만 흰색에서 주황으로 바뀌고 글씨가 바뀐다(배경은 그대로 어둡다). 왼쪽 위·오른쪽 위·왼쪽 아래·오른쪽 아래 순서로 하나씩 시간차를 두고 바뀐다.
+            // 시작 시각은 Join이 아니라 Insert로 못 박는다 — InsertCallback이 Join의 기준 시각을 옮겨 버려서, Join으로 이어 붙이면 첫 장만 먼저 시작하고 나머지 셋이 같이 시작한다.
             var recolorTime = Mathf.Max(0.1f, s.seqNotesRecolor);
+            var recolorStagger = Mathf.Max(0f, s.seqNotesRecolorStagger);
             var recolor = DOTween.Sequence().SetUpdate(true).SetTarget(this);
-            for (var i = 0; i < ScatterNotes.Length; i++)
+            for (var slot = 0; slot < WindowNotes.Length; slot++)
             {
-                var view = placed[i];
-                var final = WindowNotes[ScatterNotes[i].slot];
-                var slot = _slide.Slot(final.x, final.y, final.w, final.h);
-                recolor.Join(DOTween.To(() => 0f, t => view.SetPaper(Color.Lerp(NoteWhite, Orange, t)), 1f, recolorTime).SetEase(Ease.InOutSine));
-                recolor.Join(view.Rect.DOAnchorPos(slot.position, recolorTime).SetEase(Ease.InOutSine));
-                recolor.Join(view.Rect.DOSizeDelta(slot.size, recolorTime).SetEase(Ease.InOutSine));
-                recolor.InsertCallback(recolorTime * 0.5f, () => view.Label.text = final.text);
+                var view = notes[slot];
+                var final = WindowNotes[slot];
+                var start = slot * recolorStagger;
+                recolor.Insert(start, DOTween.To(() => 0f, t => view.SetPaper(Color.Lerp(NoteWhite, Orange, t)), 1f, recolorTime).SetEase(Ease.InOutSine));
+                recolor.InsertCallback(start + recolorTime * 0.5f, () => view.Label.text = final.text);
             }
 
             yield return recolor.WaitForCompletion(true);
@@ -332,11 +339,10 @@ namespace BlueComplex.UI.Presentation
                 yield return Wait(s.seqWindowHold);
             }
 
-            // 8: 화면 전체가 주황빛으로 변하고(실루엣은 사라진다) 스위치 소리(LightGlow 큐)가 난다.
+            // 8: 화면 전체가 즉시(컷 전환) 주황빛으로 바뀌고(실루엣은 사라진다) 스위치 소리(LightGlow 큐)가 난다.
             UiSoundHooks.Play(UiSoundCue.LightGlow);
-            var fill = Mathf.Max(0.1f, s.seqOrangeFill);
-            girl?.FadeOutStill(Mathf.Min(fill, 0.6f)).SetUpdate(true).SetTarget(this);
-            yield return _backdrop.DOColor(Orange, fill).SetEase(Ease.InOutSine).SetUpdate(true).SetTarget(this).WaitForCompletion(true);
+            girl?.HideStill();
+            _backdrop.color = Orange;
 
             // 9: 소녀가 왼쪽에서 걸어 들어와 오른쪽으로 걷다가 C에서 사라진다.
             if (girl != null) yield return GirlWalk(s, girl);
@@ -350,12 +356,8 @@ namespace BlueComplex.UI.Presentation
             foreach (var note in notes) sequence.Join(note.FadeOutPaper(tint));
             yield return sequence.WaitForCompletion(true);
 
-            // 11: 종이색이 된 화면 위, 오른쪽 위에 거꾸로 선 소녀가 정지 이미지로 잠깐 나타났다 사라진다.
-            if (girl != null)
-            {
-                yield return GirlFlash(s, girl);
-                girl.Destroy();
-            }
+            // 11: 종이색이 된 화면 위, 오른쪽 위에 거꾸로 선 소녀가 나타나 남는다(글자 재배열 장면까지 그대로 — 암전 때 막이 치워지며 같이 사라진다).
+            if (girl != null) yield return GirlUpsideDown(s, girl);
 
             yield return Wait(0.5f);
 
@@ -364,11 +366,12 @@ namespace BlueComplex.UI.Presentation
             yield return Wait(s.seqTextHold);
         }
 
-        // PPT 8~11번 장표의 소녀 키프레임(그림 한 칸 왼쪽 위, 화면 비율): A 왼쪽 가장자리 → B 화면 아래를 따라 → C 오른쪽. D는 C에서 사라진 뒤 오른쪽 위에 거꾸로(상하·좌우 반전) 잠깐 나타나는 자리.
+        // PPT 8~11번 장표의 소녀 키프레임(그림 한 칸 왼쪽 위, 화면 비율): A 왼쪽 가장자리 → B 화면 아래를 따라 → C 오른쪽. D는 C에서 사라진 뒤 거꾸로(상하·좌우 반전) 화면 오른쪽 바깥에서 걸어 들어와 서는 자리.
         private static readonly Vector2 GirlA = new Vector2(0.031f, 0.477f);
         private static readonly Vector2 GirlB = new Vector2(0.182f, 0.465f);
         private static readonly Vector2 GirlC = new Vector2(0.805f, 0.478f);
         private static readonly Vector2 GirlD = new Vector2(0.785f, -0.077f);
+        private static readonly Vector2 GirlDStart = new Vector2(1.02f, -0.077f); // D와 같은 높이, 그림 한 칸이 통째로 화면 오른쪽 바깥에 있는 자리.
 
         /// <summary>
         /// 소녀가 A→B→C로 걷고(반전 없이 오른쪽을 본다), C에서 즉시 사라진다. 걷기 프레임은 시간이 아니라 움직인 거리로 넘겨 — 빠르게 가면 발도 빨리 구른다.
@@ -396,24 +399,42 @@ namespace BlueComplex.UI.Presentation
                 t += Time.unscaledDeltaTime;
             }
 
-            // C에서 즉시 사라진다(마지막 걷기 프레임을 <see cref="GirlFlash"/>가 이어 쓴다).
-            _girlLastFrame = (int)(cycles * 8f);
-            girl.SetWalkPose(GirlC, false, false, _girlLastFrame);
+            // C에서 즉시 사라진다.
+            girl.SetWalkPose(GirlC, false, false, (int)(cycles * 8f));
             girl.ShowWalker(false);
         }
 
-        private int _girlLastFrame;
-
         /// <summary>
-        /// 종이색이 된 화면에서, 잠깐 빈 뒤 오른쪽 위(D)에 위아래·좌우로 뒤집힌 소녀가 정지 이미지로 나타났다 사라진다(걷기·이동 없이 컷 전환).
+        /// 종이색이 된 화면에서, 잠깐 빈 뒤 위아래·좌우로 뒤집힌 소녀가 화면 오른쪽 바깥에서 걷기 사이클을 그대로 재생하며 걸어 들어와 D에 선다(왼쪽을 본다). 사라지게 하지 않는다 —
+        /// 소녀는 막(step)에 남아 있다가 다음 막으로 넘어가는 암전 뒤 <see cref="ClearLayer"/>에서 함께 치워진다. 걷기 프레임은 첫 걷기와 같이 움직인 거리로 넘긴다.
         /// </summary>
-        private IEnumerator GirlFlash(UiMotionSettings s, IntroGirlView girl)
+        private IEnumerator GirlUpsideDown(UiMotionSettings s, IntroGirlView girl)
         {
             yield return Wait(s.seqGirlGap);
-            girl.SetWalkPose(GirlD, true, true, _girlLastFrame);
+
+            var aspect = _slide.Size.y / _slide.Size.x;
+            var stride = Mathf.Max(0.01f, s.seqGirlStride);
+            var walkIn = Mathf.Max(0.3f, s.seqGirlWalkIn);
+            var cycles = 0f;
+            var last = GirlDStart;
+
+            girl.SetWalkPose(GirlDStart, true, true, 0);
             girl.ShowWalker(true);
-            yield return Wait(s.seqGirlFlash);
-            girl.ShowWalker(false);
+
+            var t = 0f;
+            while (t < walkIn)
+            {
+                var pos = Vector2.Lerp(GirlDStart, GirlD, t / walkIn);
+                cycles += Dist(last, pos, aspect) / stride;
+                last = pos;
+                girl.SetWalkPose(pos, true, true, (int)(cycles * 8f));
+                yield return null;
+                t += Time.unscaledDeltaTime;
+            }
+
+            cycles += Dist(last, GirlD, aspect) / stride;
+            girl.SetWalkPose(GirlD, true, true, (int)(cycles * 8f));
+            yield return Wait(Mathf.Max(0.5f, s.seqGirlFlash - walkIn)); // 걸어 들어온 뒤 머무는 시간(들어오는 시간까지 합쳐 seqGirlFlash).
         }
 
         private static float Dist(Vector2 a, Vector2 b, float aspect) => new Vector2(b.x - a.x, (b.y - a.y) * aspect).magnitude;
@@ -551,6 +572,9 @@ namespace BlueComplex.UI.Presentation
             var s = UiMotion.Settings;
             _skippable = false;
             HideHint();
+
+            // 타이틀이 끝났다 — 오프닝 배경곡이 메인 화면으로 넘어가는 동안 서서히 사라진다(건너뛰기로 온 경우도 같다). 게임 배경음은 "취조시작"으로 스테이지가 열릴 때 올라온다.
+            UiSoundHooks.StopTheme(s.seqThemeFadeOut);
 
             if (fadeOutFirst) yield return FadeVeil(1f, s.seqFade * 0.5f);
             ClearLayer();
