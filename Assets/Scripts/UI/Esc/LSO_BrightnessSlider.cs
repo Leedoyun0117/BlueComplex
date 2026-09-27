@@ -19,6 +19,7 @@ namespace UI.Esc
 
         private void Awake()
         {
+            if (slider == null) slider = GetComponent<Slider>();
             if (slider == null)
             {
                 Debug.LogWarning("[LSO_BrightnessSlider] slider가 비어 있다. 밝기를 조절할 수 없다.", this);
@@ -41,6 +42,7 @@ namespace UI.Esc
 
         private void OnEnable()
         {
+            if (slider == null) return;
             slider.onValueChanged.AddListener(OnSliderChanged);
             if (panel != null)
             {
@@ -53,6 +55,7 @@ namespace UI.Esc
 
         private void OnDisable()
         {
+            if (slider == null) return;
             slider.onValueChanged.RemoveListener(OnSliderChanged);
             if (panel != null)
             {

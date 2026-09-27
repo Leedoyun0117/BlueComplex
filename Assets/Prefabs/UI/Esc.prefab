@@ -619,7 +619,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 50, y: -27.5}
-  m_SizeDelta: {x: 195.82, y: 25}
+  m_SizeDelta: {x: 0, y: 25}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3921407951158450040
 CanvasRenderer:
@@ -1072,6 +1072,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5110268441380185639}
   - component: {fileID: 7379243659309551095}
+  - component: {fileID: 4636806456176421704}
   m_Layer: 5
   m_Name: Slider
   m_TagString: Untagged
@@ -1151,6 +1152,22 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &4636806456176421704
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2044960607643374515}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27275f881ab4b9640be6f29bb69264d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.Esc.LSO_VolumeSlider
+  channel: 0
+  slider: {fileID: 7379243659309551095}
+  controller: {fileID: 0}
+  valueLabel: {fileID: 0}
 --- !u!1 &2197556142179591725
 GameObject:
   m_ObjectHideFlags: 0
@@ -1461,6 +1478,8 @@ GameObject:
   m_Component:
   - component: {fileID: 7913555291567289774}
   - component: {fileID: 8763947124247234524}
+  - component: {fileID: 3359355448579262356}
+  - component: {fileID: -6460172846452500415}
   m_Layer: 5
   m_Name: Esc
   m_TagString: Untagged
@@ -1483,10 +1502,10 @@ RectTransform:
   - {fileID: 1902086576592125024}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 1902, y: 1080}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &8763947124247234524
 MonoBehaviour:
@@ -1502,13 +1521,42 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UI.Esc.LSO_EscPanel
   content: {fileID: 1902086576592125024}
   key: 60
-  stopTime: 1
+  stopTime: 0
   ignoreTimeScale: 1
   slide:
     ease: 9
     duration: 0.35
     delay: 0
     startPos: 0
+--- !u!114 &3359355448579262356
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3016879466529146576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3650234427b97144fa4e12cd4d44e455, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.Esc.LSO_EscBackdrop
+  color: {r: 0, g: 0, b: 0, a: 1}
+  objectName: Backdrop
+--- !u!114 &-6460172846452500415
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3016879466529146576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 476f67a7e9bb99348936c29c3bc85bc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.Esc.LSO_EscHideWhileOpen
+  hideStageIdle: 1
+  hideLegacyRig: 1
+  extraRenderers: []
 --- !u!1 &3211565934367452346
 GameObject:
   m_ObjectHideFlags: 0
@@ -1671,6 +1719,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8498327169871426137}
   - component: {fileID: 1667095668988075384}
+  - component: {fileID: 3686477782565547249}
   m_Layer: 5
   m_Name: Slider
   m_TagString: Untagged
@@ -1750,6 +1799,22 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &3686477782565547249
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3290277761586204905}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27275f881ab4b9640be6f29bb69264d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.Esc.LSO_VolumeSlider
+  channel: 2
+  slider: {fileID: 1667095668988075384}
+  controller: {fileID: 0}
+  valueLabel: {fileID: 0}
 --- !u!1 &3323706193390814060
 GameObject:
   m_ObjectHideFlags: 0
@@ -2398,7 +2463,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 50, y: -185}
-  m_SizeDelta: {x: 262.31, y: 50}
+  m_SizeDelta: {x: 0, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6235950114124447051
 CanvasRenderer:
@@ -2599,6 +2664,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6908004255526296469}
   - component: {fileID: 5478217847071992831}
+  - component: {fileID: 4439537459904566122}
   m_Layer: 5
   m_Name: Slider
   m_TagString: Untagged
@@ -2678,6 +2744,21 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &4439537459904566122
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5419338075667833920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba5b4797494bb954d9e3c9f18932aa77, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.Esc.LSO_BrightnessSlider
+  panel: {fileID: 8763947124247234524}
+  slider: {fileID: 5478217847071992831}
+  valueLabel: {fileID: 0}
 --- !u!1 &5693451479371799088
 GameObject:
   m_ObjectHideFlags: 0
@@ -2903,93 +2984,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!1 &6095813479542130347
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 8920999126773576773}
-  - component: {fileID: 2959257921271414321}
-  - component: {fileID: 1871008719278501219}
-  - component: {fileID: 727725418922520411}
-  m_Layer: 5
-  m_Name: RawImage
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &8920999126773576773
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6095813479542130347}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1902086576592125024}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 1920, y: 1080}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!222 &2959257921271414321
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6095813479542130347}
-  m_CullTransparentMesh: 1
---- !u!114 &1871008719278501219
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6095813479542130347}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1344c3c82d62a2a41a3576d8abb8e3ea, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Texture: {fileID: 0}
-  m_UVRect:
-    serializedVersion: 2
-    x: 0
-    y: 0
-    width: 1
-    height: 1
---- !u!114 &727725418922520411
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6095813479542130347}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cb233c0cf8d497c49899098e8766ce95, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UI.Esc.LSO_EscSilhouette
-  panel: {fileID: 8763947124247234524}
-  silhouetteColor: {r: 0.09433961, g: 0.09433961, b: 0.09433961, a: 0.18}
 --- !u!1 &6165358022903277222
 GameObject:
   m_ObjectHideFlags: 0
@@ -3406,6 +3400,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6676194011794520165}
   - component: {fileID: 2715256870245134884}
+  - component: {fileID: 7464674421724042759}
   m_Layer: 5
   m_Name: Slider
   m_TagString: Untagged
@@ -3485,6 +3480,22 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &7464674421724042759
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7369568038473342073}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27275f881ab4b9640be6f29bb69264d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.Esc.LSO_VolumeSlider
+  channel: 1
+  slider: {fileID: 2715256870245134884}
+  controller: {fileID: 0}
+  valueLabel: {fileID: 0}
 --- !u!1 &7418338054769666389
 GameObject:
   m_ObjectHideFlags: 0
@@ -3889,7 +3900,6 @@ RectTransform:
   m_Children:
   - {fileID: 2955410971105200550}
   - {fileID: 7091123133129998519}
-  - {fileID: 8920999126773576773}
   m_Father: {fileID: 7913555291567289774}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
