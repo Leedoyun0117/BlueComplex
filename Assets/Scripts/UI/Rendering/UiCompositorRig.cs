@@ -59,8 +59,6 @@ namespace BlueComplex.UI.Rendering
 
             _lastWidth = width;
             _lastHeight = height;
-            Debug.Log($"[UiCompositorRig] RT_UI를 {width}x{height}로 (재)생성했습니다. " +
-                      $"format={rt.format}, graphicsFormat={rt.graphicsFormat}, sRGB={rt.sRGB}.", this);
         }
     }
 }
