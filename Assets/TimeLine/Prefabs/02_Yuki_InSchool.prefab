@@ -237,6 +237,7 @@ GameObject:
   - component: {fileID: 4681106712667392382}
   - component: {fileID: 1254849760203842369}
   - component: {fileID: 3378387246655568534}
+  - component: {fileID: 6377286045522097152}
   m_Layer: 0
   m_Name: TimeLine
   m_TagString: Untagged
@@ -458,6 +459,7 @@ GameObject:
   - component: {fileID: 4486108490164447108}
   - component: {fileID: 2015220991701710473}
   - component: {fileID: 1869038388952483866}
+  - component: {fileID: 3502000000000000777}
   m_Layer: 0
   m_Name: Signal
   m_TagString: Untagged
@@ -560,10 +562,10 @@ MonoBehaviour:
   - "\uB0B4 \uC790\uB9AC\uB85C \uBAA8\uC5EC\uB4E0 \uB3D9\uAE09\uC0DD\uB4E4\uC774\n\uC77C\uAE30\uC7A5\uC744
     \uB4E4\uCDB0\uBCF4\uBA70 \uB9D0\uD588\uB2E4."
   - "\uADF8\uB4E4\uC758 \uBAA9\uC18C\uB9AC\uC5D0\uB294 \uD610\uC624\uC640 \uB0C9\uC18C\uAC00
-    \uBCA0\uC5B4\uC788\uC5C8\uB2E4."
+    \uBC30\uC5B4 \uC788\uC5C8\uB2E4."
   - "\uD3C9\uC18C\uC5D0 \uAD00\uC2EC\uC870\uCC28 \uC8FC\uC9C0 \uC54A\uB358 \uC774\uB4E4\uC774\n\uC65C
-    \uAC11\uC790\uAE30 \uB098\uB97C \uB4E4\uBCF6\uB294\uC9C0 \uADF8 \uB54C\uB294
-    \uC774\uD574\uD558\uC9C0 \uBABB\uD588\uB2E4."
+    \uAC11\uC790\uAE30 \uB098\uB97C \uB4E4\uBCF6\uB294\uC9C0 \uADF8\uB54C\uB294 \uC774\uD574\uD558\uC9C0
+    \uBABB\uD588\uB2E4."
   - "\u201D\uC57C, \uC720\uD0A4.\u201D"
   - "\u201D\uB108 \uC0DD\uAC01\uBCF4\uB2E4 \uB354 \uC74C\uCE68\uD55C \uC560\uC600\uAD6C\uB098.\u201D"
   - "\u201D\uC544\uC624, \uC18C\uB984\uB07C\uCCD0!\u201D"
@@ -593,12 +595,16 @@ MonoBehaviour:
     \uC6C3\uC5C8\uB2E4."
   - "\uC21C\uAC04 \uC218\uC5C5\uC885\uC774 \uAD50\uC2E4\uC5D0 \uC6B8\uB824 \uD37C\uC84C\uB2E4."
   - "\u201D\uC74C\uCE68\uD55C \uC0C8\uB07C.\u201D"
-  - "\u201D\uC65C \uACC4\uC18D \uB098\uC624\uB294\uAC70\uC57C?\u201D"
+  - "\u201D\uC65C \uACC4\uC18D \uB098\uC624\uB294 \uAC70\uC57C?\u201D"
   - "\uCD09\uC774 \uBD80\uB7EC\uC9C4 \uD39C\uC774 \uB0B4 \uAC00\uC2B4\uD30D\uC73C\uB85C
     \uB0A0\uC544\uB4E4\uC5C8\uB2E4."
   - "\uC544\uD504\uC9C4 \uC54A\uC558\uB2E4."
   charInterval: 0.05
   clearOnEnable: 1
+  typingSfx: {fileID: 8300000, guid: babdb331464db794aa4a7a31388a951c, type: 3}
+  typingSfxVolume: 0.35
+  typingSfxMinInterval: 0.06
+  typingSfxPitch: {x: 0.95, y: 1.05}
 --- !u!82 &2015220991701710473
 AudioSource:
   m_ObjectHideFlags: 0
@@ -709,8 +715,34 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineAudioSignal
   clip: {fileID: 8300000, guid: d92ba8d4a8894c24a91248cb2a43a4be, type: 3}
-  volume: 1
+  volume: 0.43
   fadeInDuration: 3
   fadeOutDuration: 3
   channel: 2
   mixer: {fileID: 0}
+--- !u!114 &3502000000000000777
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7480297320145754196}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fbac7c361c34b6e87f7d5016557a4a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineSfxReceiver
+  volume: 1
+--- !u!114 &6377286045522097152
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5443185865236244086}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2b1a0f011a62024081f077c1599c78f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineSkip
+  skipKey: 1

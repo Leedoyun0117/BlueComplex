@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using BlueComplex.UI.Motion;
+using BlueComplex.UI.Rendering;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -49,6 +50,7 @@ namespace BlueComplex.UI.Layout
         private Tween _slide;
         private Tween _autoClose;
         private int _hovering;
+        private bool _moodExempt;
 
         /// <summary>카드를 자르는 서랍(마스크). 형제 순서를 옮기거나 지울 땐 카드 대신 이걸 쓴다.</summary>
         public RectTransform Drawer { get; private set; }
@@ -248,6 +250,33 @@ namespace BlueComplex.UI.Layout
             var rect = tape.rectTransform;
             rect.sizeDelta = new Vector2(78f, 26f);
             rect.localRotation = Quaternion.Euler(0f, 0f, degrees);
+        }
+
+        /// <summary>
+        /// 열쇠 아이콘(못 얻음 회색 / 얻음 파랑)은 색으로 상태를 구분하므로 무드 화면 효과(핑크·블루 톤)를 받지 않게 한다 — 무드 컨트롤러가 태그 레이어(<see cref="UiTagLayer"/>)를 잡고 있는 동안
+        /// 열쇠 아이콘만 그 레이어로 뺀다. 칸 종이·카드·테이프는 그대로 톤을 받는다. 아이콘은 제자리(칸 자식)에 두고 중첩 캔버스만 얹어 카드 기울기·서랍 이동·찍히는 연출 트윈을 그대로 따른다.
+        /// 태그 레이어는 항상 다른 UI 위에 그려지므로, 열쇠를 덮어야 하는 오버레이(단서 책 등)는 <see cref="UiTagLayer"/>가 태그 레이어째 숨긴다.
+        /// </summary>
+        private void LateUpdate()
+        {
+            if (_glyphs == null) return;
+
+            var want = UiTagLayer.Current != null;
+            if (want == _moodExempt) return;
+
+            _moodExempt = want;
+            foreach (var glyph in _glyphs)
+            {
+                if (glyph == null) continue;
+                if (want && glyph.Root.GetComponent<Canvas>() == null) glyph.Root.gameObject.AddComponent<Canvas>();
+                SetLayerRecursively(glyph.Root.gameObject, want ? UiTagLayer.Layer : gameObject.layer);
+            }
+        }
+
+        private static void SetLayerRecursively(GameObject go, int layer)
+        {
+            go.layer = layer;
+            foreach (Transform child in go.transform) SetLayerRecursively(child.gameObject, layer);
         }
 
         private void OnDisable()

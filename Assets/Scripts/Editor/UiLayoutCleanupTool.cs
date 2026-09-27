@@ -341,12 +341,18 @@ namespace BlueComplex.EditorTools
         /// <summary>특성 뱃지 바탕 — 목업의 "혼란" 칩처럼 어두운 올리브 갈색(글자는 흰색).</summary>
         private static readonly Color TraitBadgeFill = new Color32(78, 66, 38, 240);
 
-        /// <summary>도트 뇌 영역(0 위쪽 띠, 1 아래 왼쪽, 2 오른쪽 큰 엽)의 글자 중심(뇌 이미지 대비 0~1, 원점 왼쪽 아래). 아트에서 영역 마스크의 중심을 잰 값이다.
+        /// <summary>도트 뇌 영역(0 왼쪽, 1 가운데, 2 오른쪽)의 글자 중심(뇌 그림이 칠해진 사각형 대비 0~1, 원점 왼쪽 아래). 오버레이(Brain_*_Lit) 픽셀의 무게중심을 잰 값이다.
         /// 영역 수는 컴플렉스 최대 중첩(<see cref="ComplexBoard.DefaultMaxSlots"/>)과 같다 — 뇌의 세 부분과 슬롯은 1:1이다.</summary>
         private static readonly Vector2[] BrainLabelCenters =
         {
-            new Vector2(0.31f, 0.73f), new Vector2(0.29f, 0.38f), new Vector2(0.72f, 0.51f),
+            new Vector2(0.263f, 0.668f), new Vector2(0.601f, 0.324f), new Vector2(0.696f, 0.682f),
         };
+
+        /// <summary>뇌 아트(640×640)에서 그림이 실제로 칠해진 사각형(x 30~619, 위에서부터 y 90~609 → 590×520). 나머지는 투명 여백이라,
+        /// 레이아웃은 이 사각형을 기준으로 잡고(<see cref="BrainInkAspect"/>) 이미지는 여백만큼 밖으로 삐져나오게 놓는다.</summary>
+        private const float BrainCanvas = 640f, BrainInkLeft = 30f, BrainInkWidth = 590f, BrainInkBottom = 30f, BrainInkHeight = 520f;
+
+        private const float BrainInkAspect = BrainInkWidth / BrainInkHeight;
 
         /// <summary>초상화 원본(yuki_neutral.png/yuki_reactive.png) 크기 163×201의 가로세로 비 — 둘이 같은 크기로 잘라 둬서 표정이 바뀌어도 틀 안에서 안 흔들린다.</summary>
         private const float PortraitAspect = 163f / 201f;
@@ -446,22 +452,27 @@ namespace BlueComplex.EditorTools
 
             // 뇌 크기·자리: 초상화(Anchors.YukiDrop)의 머리 중심이 곧 이 판(Tablet)의 중심이므로, 뇌를 머리와 같은 비율로 줄여서 판 한가운데
             // 놓으면 머리에 그대로 겹친다. 88%→65%→50%→72%로 옮겨 다니다가, "상자 안 여백을 줄이라"는 지시로 78%까지 키웠다
-            // (판의 0.780×0.749, 63:54 대비 원래 비율 그대로 유지).
-            // 뇌 아트 비율(63:54)이 머리보다 납작해서 AspectRatioFitter가 폭을 채우고 위아래로 조금 남긴다 — 머리카락 끝이
+            // (판의 0.780×0.749).
+            // 뇌 아트 비율(590:520)이 머리보다 납작해서 AspectRatioFitter가 폭을 채우고 위아래로 조금 남긴다 — 머리카락 끝이
             // 뇌 위아래로 살짝 보이는 게 자연스럽다.
-            // 아트(Brain)는 좌우 반전해 뇌가 오른쪽을 보게 한다(사용자 지시) — 글자(Labels)는 반전하면 거울상이 되어 못 읽으므로
-            // 별도 형제로 빼서 안 뒤집힌 채로 두고, 위치 fraction만 좌우로 뒤집어(1-x) 뒤집힌 아트와 자리를 맞춘다.
+            // 새 뇌 아트(평상시 + 좌/중/우 발현)는 기획서에서 받은 방향 그대로 쓴다 — "Left"가 화면 왼쪽이다. 예전 아트를 좌우 반전해서 쓰던 건 걷어냈다.
+            // 글자(Labels)는 아트와 별도 형제라 글자가 뇌 오버레이와 따로 놀지 않게 같은 사각형(그림이 칠해진 부분)을 따로 고정한다.
             var area = Ensure(content, "BrainArea");
             SetRect(area, new Vector2(0.0806f, 0.1015f), new Vector2(0.9194f, 0.8985f), Vector2.zero, Vector2.zero);
             var brainRect = Ensure(area, "Brain");
             SetRect(brainRect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var fitter = GetOrAdd<AspectRatioFitter>(brainRect.gameObject);
             fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-            fitter.aspectRatio = 63f / 54f;
-            brainRect.localScale = new Vector3(-1f, 1f, 1f);
+            fitter.aspectRatio = BrainInkAspect;
+            brainRect.localScale = Vector3.one;
 
-            var baseImage = EnsureImage(brainRect, "Base", Color.white, Vector2.zero, Vector2.one);
-            baseImage.sprite = LoadBrainSprite("brain_base.png");
+            // Brain 사각형은 그림이 칠해진 부분(590×520)에 맞고, 이미지는 640×640 전체가 여백만큼 밖으로 삐져나오도록 앵커를 잡는다.
+            BrainOverlayBuilder.Rebuild();
+            var fullMin = new Vector2(-BrainInkLeft / BrainInkWidth, -BrainInkBottom / BrainInkHeight);
+            var fullMax = new Vector2((BrainCanvas - BrainInkLeft) / BrainInkWidth, (BrainCanvas - BrainInkBottom) / BrainInkHeight);
+
+            var baseImage = EnsureImage(brainRect, "Base", Color.white, fullMin, fullMax);
+            baseImage.sprite = LoadBrainArt(BrainOverlayBuilder.BaseFile);
 
             var regions = new BrainRegionView[BrainLabelCenters.Length];
             var labelsRoot = Ensure(area, "Labels");
@@ -473,22 +484,21 @@ namespace BlueComplex.EditorTools
                 Remove(labelsRoot, $"Label {stale}");
             }
 
-            // Labels는 Brain의 형제라 Brain과 똑같은 비율 고정(63:54, FitInParent)을 따로 걸어야 같은 크기·자리에 온다.
+            // Labels는 Brain의 형제라 Brain과 똑같은 비율 고정(FitInParent)을 따로 걸어야 같은 크기·자리에 온다.
             SetRect(labelsRoot, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var labelsFitter = GetOrAdd<AspectRatioFitter>(labelsRoot.gameObject);
             labelsFitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-            labelsFitter.aspectRatio = 63f / 54f;
+            labelsFitter.aspectRatio = BrainInkAspect;
 
             for (var i = 0; i < regions.Length; i++)
             {
-                var lit = EnsureImage(brainRect, $"Lobe {i}", Color.white, Vector2.zero, Vector2.one);
-                lit.sprite = LoadBrainSprite($"brain_lobe_{i}.png");
+                var lit = EnsureImage(brainRect, $"Lobe {i}", Color.white, fullMin, fullMax);
+                lit.sprite = LoadBrainArt(BrainOverlayBuilder.OverlayFiles[i]);
                 lit.transform.SetSiblingIndex(1 + i); // 기본 아트 위, 글자 밑.
 
                 var center = BrainLabelCenters[i];
-                var mirroredCenter = new Vector2(1f - center.x, center.y);
                 var label = EnsureText(labelsRoot, $"Label {i}", string.Empty, font, 19f, BrainLabelInk,
-                    TextAlignmentOptions.Center, mirroredCenter - new Vector2(0.21f, 0.09f), mirroredCenter + new Vector2(0.21f, 0.09f),
+                    TextAlignmentOptions.Center, center - new Vector2(0.21f, 0.09f), center + new Vector2(0.21f, 0.09f),
                     Vector2.zero, Vector2.zero, FontStyles.Bold);
                 label.textWrappingMode = TextWrappingModes.Normal;
                 label.lineSpacing = -14f;
@@ -557,7 +567,7 @@ namespace BlueComplex.EditorTools
         private const string XrayFrameFolder = "Assets/Art/UI/";
         private const string XrayFrameFile = "xray_frame.png";
 
-        private static Sprite LoadBrainSprite(string fileName) => LoadArtSprite(BrainArtImporter.Folder, fileName);
+        private static Sprite LoadBrainArt(string fileName) => LoadArtSprite(BrainArtImporter.ArtFolder, fileName);
 
         private static Sprite LoadPortraitSprite(string fileName) => LoadArtSprite(PortraitArtImporter.Folder, fileName);
 

@@ -54,6 +54,18 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
+        public void FinalStage_ClearGoesToTheEnding_FailRetriesTheStage()
+        {
+            var clear = StageEndPlan.Create(StageOutcome.Cleared, 3, 3, hasNextStage: false, isFinalStage: true);
+            Assert.AreEqual(StageEndRoute.ClearToEnding, clear.Route);
+            Assert.IsTrue(clear.AllOpened);
+
+            var fail = StageEndPlan.Create(StageOutcome.Failed, 3, 1, hasNextStage: false, isFinalStage: true);
+            Assert.AreEqual(StageEndRoute.FailRetry, fail.Route);
+            Assert.IsFalse(fail.AllOpened);
+        }
+
+        [Test]
         public void InProgress_HasNoEndSequence() =>
             Assert.Throws<ArgumentException>(() => StageEndPlan.Create(StageOutcome.InProgress, 2, 0, false));
 
