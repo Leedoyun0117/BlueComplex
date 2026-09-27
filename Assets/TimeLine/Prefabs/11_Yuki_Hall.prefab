@@ -342,6 +342,7 @@ GameObject:
   - component: {fileID: 3366262809460791440}
   - component: {fileID: 4958505755917984770}
   - component: {fileID: 2515869708799850174}
+  - component: {fileID: 4240210601706156032}
   m_Layer: 0
   m_Name: TimeLine
   m_TagString: Untagged
@@ -934,3 +935,16 @@ Transform:
   - {fileID: 4596485609441851790}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4240210601706156032
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6118835180147665994}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2b1a0f011a62024081f077c1599c78f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineSkip
+  skipKey: 1

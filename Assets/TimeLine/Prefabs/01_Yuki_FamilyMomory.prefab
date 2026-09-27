@@ -351,6 +351,7 @@ GameObject:
   - component: {fileID: 2169355542813916751}
   - component: {fileID: 3696000955876253109}
   - component: {fileID: 5086038542696117056}
+  - component: {fileID: 1180472403848763744}
   m_Layer: 0
   m_Name: TimeLine
   m_TagString: Untagged
@@ -876,3 +877,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineSfxReceiver
   volume: 1
+--- !u!114 &1180472403848763744
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4943714120792919000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2b1a0f011a62024081f077c1599c78f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineSkip
+  skipKey: 1
