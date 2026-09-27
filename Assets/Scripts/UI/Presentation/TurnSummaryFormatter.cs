@@ -7,7 +7,7 @@ namespace BlueComplex.UI.Presentation
 {
     /// <summary>턴 결과를 대사창에 낼 순수 감정 반응 대사로 바꾼다(심박수·키 획득 등은 심박수 모니터·자물쇠 연출 등 별도 시각 요소가
     /// 전달하므로 여기서는 다루지 않는다). 컴플렉스 발현만은 예외 — 노션 "UI 연출" 표: "컴플렉스 발현 이펙트 — 나츠의 독백으로 전달된다."(<see cref="BuildComplexSpawnLine"/>).
-    /// Immediate/Cinematic 두 Presenter가 같이 쓴다.</summary>
+    /// CinematicTurnResultPresenter가 쓴다.</summary>
     public static class TurnSummaryFormatter
     {
         /// <summary>컴플렉스가 발동하는 순간 대사창에 뜨는 짧은 이벤트 대사 — 컴플렉스 id로 <see cref="ComplexReactionLines"/> 표에서 뽑는다
