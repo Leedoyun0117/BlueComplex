@@ -69,9 +69,26 @@ namespace BlueComplex.UI.Layout
 
             if (shadowEffect == null) shadowEffect = go.AddComponent<Shadow>();
             shadowEffect.effectColor = Shadow;
-            shadowEffect.effectDistance = ShadowOffset;
+            shadowEffect.effectDistance = ScreenSpaceShadowOffset(go);
             shadowEffect.useGraphicAlpha = false;
             return shadowEffect;
+        }
+
+        /// <summary>Shadow(IMeshModifier)는 정점을 그래픽 자신의 회전되지 않은 로컬 공간에서 밀어낸다 — go가 기울어진 포스트잇처럼
+        /// z 회전을 갖고 있으면 그 회전만큼 그림자도 같이 돌아 실제 종이 위치와 어긋나 보인다(쪽지마다 기울기가 달라 그림자 방향이
+        /// 제각각이 되는 원인). <see cref="ShadowOffset"/>이 화면 기준으로 항상 같은 방향(아래·오른쪽)을 향하도록 회전의 역방향으로
+        /// 미리 돌려 둔다.</summary>
+        private static Vector2 ScreenSpaceShadowOffset(GameObject go)
+        {
+            var angle = go.transform.localEulerAngles.z;
+            if (Mathf.Approximately(angle, 0f)) return ShadowOffset;
+
+            var rad = angle * Mathf.Deg2Rad;
+            var cos = Mathf.Cos(rad);
+            var sin = Mathf.Sin(rad);
+            return new Vector2(
+                cos * ShadowOffset.x + sin * ShadowOffset.y,
+                -sin * ShadowOffset.x + cos * ShadowOffset.y);
         }
     }
 }
