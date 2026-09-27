@@ -424,7 +424,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &6412243248723254082
 Transform:
   m_ObjectHideFlags: 0
@@ -553,15 +553,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TypingTextSignal
   text: {fileID: 4002425255090151010}
   lines:
-  - "나는 B씨와 부모님의 묘비 앞에 섰다."
-  - "차가운 빗방울이 코트를 뚫고 들어와\n목덜미를 적셨다."
-  - "죄어오는 올가미처럼,\n찬 기운도 내 숨통을 좁혀갔다."
-  - "”유키, 네 잘못이 아니야.”"
-  - "”폭풍은 네가 어찌할 수 있는 게 아니잖니.”"
-  - "B씨는 우산을 기울여 나를 덮어주며\n말을 이어갔다."
-  - "”책임지고 돌봐주마.”"
-  - "”부모님 보다는 못하겠지만, 최선을 다해볼게.”"
-  - "나는 아무 말도 할 수 없었다."
+  - "\uB098\uB294 B\uC528\uC640 \uBD80\uBAA8\uB2D8\uC758 \uBB18\uBE44 \uC55E\uC5D0
+    \uC130\uB2E4."
+  - "\uCC28\uAC00\uC6B4 \uBE57\uBC29\uC6B8\uC774 \uCF54\uD2B8\uB97C \uB6AB\uACE0
+    \uB4E4\uC5B4\uC640\n\uBAA9\uB35C\uBBF8\uB97C \uC801\uC168\uB2E4."
+  - "\uC8C4\uC5B4\uC624\uB294 \uC62C\uAC00\uBBF8\uCC98\uB7FC,\n\uCC2C \uAE30\uC6B4\uB3C4
+    \uB0B4 \uC228\uD1B5\uC744 \uC881\uD600\uAC14\uB2E4."
+  - "\u201D\uC720\uD0A4, \uB124 \uC798\uBABB\uC774 \uC544\uB2C8\uC57C.\u201D"
+  - "\u201D\uD3ED\uD48D\uC740 \uB124\uAC00 \uC5B4\uCC0C\uD560 \uC218 \uC788\uB294
+    \uAC8C \uC544\uB2C8\uC796\uB2C8.\u201D"
+  - "B\uC528\uB294 \uC6B0\uC0B0\uC744 \uAE30\uC6B8\uC5EC \uB098\uB97C \uB36E\uC5B4\uC8FC\uBA70\n\uB9D0\uC744
+    \uC774\uC5B4\uAC14\uB2E4."
+  - "\u201D\uCC45\uC784\uC9C0\uACE0 \uB3CC\uBD10\uC8FC\uB9C8.\u201D"
+  - "\u201D\uBD80\uBAA8\uB2D8\uBCF4\uB2E4\uB294 \uBABB\uD558\uACA0\uC9C0\uB9CC, \uCD5C\uC120\uC744
+    \uB2E4\uD574\uBCFC\uAC8C.\u201D"
+  - "\uB098\uB294 \uC544\uBB34 \uB9D0\uB3C4 \uD560 \uC218 \uC5C6\uC5C8\uB2E4."
   charInterval: 0.05
   clearOnEnable: 1
   typingSfx: {fileID: 8300000, guid: babdb331464db794aa4a7a31388a951c, type: 3}
@@ -681,6 +687,8 @@ MonoBehaviour:
   volume: 0.36
   fadeInDuration: 3
   fadeOutDuration: 3
+  channel: 2
+  mixer: {fileID: 0}
 --- !u!114 &3507000000000000777
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -694,5 +702,3 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineSfxReceiver
   volume: 1
-  channel: 1
-  mixer: {fileID: 0}

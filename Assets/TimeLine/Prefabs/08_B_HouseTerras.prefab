@@ -156,29 +156,43 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TypingTextSignal
   text: {fileID: 6206272494546572077}
   lines:
-  - "B씨는 시계탑의 분침 따위 신경 쓰지 않겠다는 듯,\n차가 식어버릴 때 까지 나의 맞은편에 앉아있었다."
-  - "”유키, 힘들어하고 있는 거 알고 있어.”"
-  - "”나도 아버지를 잃었으니까.”"
-  - "”…”"
-  - "”기운 차릴 때 까지 앉아있어도 좋아.”"
-  - "”하지만 저녁 식사는 거르지 말고.”"
-  - "”뭐 좀 먹어야 힘이 나지..”"
-  - "“..B씨.”"
-  - "“정말 제 잘못이 아닌거죠?”"
-  - "저 너머의 시계탑에서\n초침이 박동하는 소리가 들려왔다."
-  - "1초가 분보다 길게 느껴졌다."
-  - "어쩌면, 실제로 그랬는지도 모르겠다."
-  - "“이건, 누구의 잘못도 아니야.”"
-  - "B씨가 말했다."
-  - "“우연을 막을 수 있는 사람은 없어.”"
-  - "“이제 그만 자책하렴.”"
-  - "“아니요.”"
-  - "“제 잘못이 아니라고, 말해줘요.”"
-  - "B씨는 숨을 깊게 들이마신 뒤,\n한 글자 한 글자 또렷한 목소리로 말했다."
-  - "“유키, 부모님이 돌아가신 건 네 잘못이 아니야.”"
-  - "그의 목소리가 흐릿하게 나를 감쌌다."
-  - "안게 속에서 길을 잃었지만,\n길은 더 이상 중요하지 않았다."
-  - "나는 난간 뒤로 뛰어 내리려 던 생각을 그만두고\nB씨를 따라 집 안으로 들어갔다."
+  - "B\uC528\uB294 \uC2DC\uACC4\uD0D1\uC758 \uBD84\uCE68 \uB530\uC704 \uC2E0\uACBD
+    \uC4F0\uC9C0 \uC54A\uACA0\uB2E4\uB294 \uB4EF,\n\uCC28\uAC00 \uC2DD\uC5B4\uBC84\uB9B4
+    \uB54C\uAE4C\uC9C0 \uB098\uC758 \uB9DE\uC740\uD3B8\uC5D0 \uC549\uC544 \uC788\uC5C8\uB2E4."
+  - "\u201D\uC720\uD0A4, \uD798\uB4E4\uC5B4\uD558\uACE0 \uC788\uB294 \uAC70 \uC54C\uACE0
+    \uC788\uC5B4.\u201D"
+  - "\u201D\uB098\uB3C4 \uC544\uBC84\uC9C0\uB97C \uC783\uC5C8\uC73C\uB2C8\uAE4C.\u201D"
+  - "\u201D\u2026\u201D"
+  - "\u201D\uAE30\uC6B4 \uCC28\uB9B4 \uB54C\uAE4C\uC9C0 \uC549\uC544 \uC788\uC5B4\uB3C4
+    \uC88B\uC544.\u201D"
+  - "\u201D\uD558\uC9C0\uB9CC \uC800\uB141 \uC2DD\uC0AC\uB294 \uAC70\uB974\uC9C0
+    \uB9D0\uACE0.\u201D"
+  - "\u201D\uBB50 \uC880 \uBA39\uC5B4\uC57C \uD798\uC774 \uB098\uC9C0..\u201D"
+  - "\u201C..B\uC528.\u201D"
+  - "\u201C\uC815\uB9D0 \uC81C \uC798\uBABB\uC774 \uC544\uB2CC \uAC70\uC8E0?\u201D"
+  - "\uC800 \uB108\uBA38\uC758 \uC2DC\uACC4\uD0D1\uC5D0\uC11C\n\uCD08\uCE68\uC774
+    \uBC15\uB3D9\uD558\uB294 \uC18C\uB9AC\uAC00 \uB4E4\uB824\uC654\uB2E4."
+  - "1\uCD08\uAC00 \uBD84\uBCF4\uB2E4 \uAE38\uAC8C \uB290\uAEF4\uC84C\uB2E4."
+  - "\uC5B4\uCA4C\uBA74, \uC2E4\uC81C\uB85C \uADF8\uB7AC\uB294\uC9C0\uB3C4 \uBAA8\uB974\uACA0\uB2E4."
+  - "\u201C\uC774\uAC74, \uB204\uAD6C\uC758 \uC798\uBABB\uB3C4 \uC544\uB2C8\uC57C.\u201D"
+  - "B\uC528\uAC00 \uB9D0\uD588\uB2E4."
+  - "\u201C\uC6B0\uC5F0\uC744 \uB9C9\uC744 \uC218 \uC788\uB294 \uC0AC\uB78C\uC740
+    \uC5C6\uC5B4.\u201D"
+  - "\u201C\uC774\uC81C \uADF8\uB9CC \uC790\uCC45\uD558\uB834.\u201D"
+  - "\u201C\uC544\uB2C8\uC694.\u201D"
+  - "\u201C\uC81C \uC798\uBABB\uC774 \uC544\uB2C8\uB77C\uACE0, \uB9D0\uD574\uC918\uC694.\u201D"
+  - "B\uC528\uB294 \uC228\uC744 \uAE4A\uAC8C \uB4E4\uC774\uB9C8\uC2E0 \uB4A4,\n\uD55C
+    \uAE00\uC790 \uD55C \uAE00\uC790 \uB610\uB837\uD55C \uBAA9\uC18C\uB9AC\uB85C
+    \uB9D0\uD588\uB2E4."
+  - "\u201C\uC720\uD0A4, \uBD80\uBAA8\uB2D8\uC774 \uB3CC\uC544\uAC00\uC2E0 \uAC74
+    \uB124 \uC798\uBABB\uC774 \uC544\uB2C8\uC57C.\u201D"
+  - "\uADF8\uC758 \uBAA9\uC18C\uB9AC\uAC00 \uD750\uB9BF\uD558\uAC8C \uB098\uB97C
+    \uAC10\uC30C\uB2E4."
+  - "\uC548\uAC1C \uC18D\uC5D0\uC11C \uAE38\uC744 \uC783\uC5C8\uC9C0\uB9CC,\n\uAE38\uC740
+    \uB354 \uC774\uC0C1 \uC911\uC694\uD558\uC9C0 \uC54A\uC558\uB2E4."
+  - "\uB098\uB294 \uB09C\uAC04 \uB4A4\uB85C \uB6F0\uC5B4\uB0B4\uB9AC\uB824\uB358
+    \uC0DD\uAC01\uC744 \uADF8\uB9CC\uB450\uACE0\nB\uC528\uB97C \uB530\uB77C \uC9D1
+    \uC548\uC73C\uB85C \uB4E4\uC5B4\uAC14\uB2E4."
   charInterval: 0.06
   clearOnEnable: 1
   typingSfx: {fileID: 8300000, guid: babdb331464db794aa4a7a31388a951c, type: 3}
@@ -298,6 +312,21 @@ MonoBehaviour:
   volume: 0.37
   fadeInDuration: 3
   fadeOutDuration: 3
+  channel: 2
+  mixer: {fileID: 0}
+--- !u!114 &3508000000000000777
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 894599820982768921}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fbac7c361c34b6e87f7d5016557a4a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineSfxReceiver
+  volume: 1
 --- !u!1 &1678700031947422978
 GameObject:
   m_ObjectHideFlags: 0
@@ -892,7 +921,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &5301578330334224078
 Transform:
   m_ObjectHideFlags: 0
@@ -988,18 +1017,3 @@ MonoBehaviour:
       BarrelClipping: 0.25
       Anamorphism: 0
   BlendHint: 0
---- !u!114 &3508000000000000777
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 894599820982768921}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5fbac7c361c34b6e87f7d5016557a4a6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineSfxReceiver
-  volume: 1
-  channel: 1
-  mixer: {fileID: 0}
