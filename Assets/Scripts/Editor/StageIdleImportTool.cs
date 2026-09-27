@@ -31,11 +31,16 @@ namespace BlueComplex.EditorTools
         /// 스테이지별로 좌우를 뒤집어 합성할 레이어 이름. 캔버스 가운데(테이블·의자 대칭축)를 기준으로 뒤집으므로
         /// 인물 두 명의 자리가 서로 바뀌고 여전히 마주 본다. 스테이지 1 원본은 왼쪽 남자·오른쪽 여자인데,
         /// UI 초상화(왼쪽 유키·오른쪽 나츠)와 맞추려고 인물 레이어("Person")와 딸린 조각("Layer 1"/"Layer 2")을 맞바꾼다.
+        /// 스테이지 2(시계탑) 원본도 왼쪽 나츠·오른쪽 유키라, 두 사람과 의자를 의자 한 쌍의 가운데 축으로 뒤집는다.
+        /// AxisTimesTwo는 축 x좌표의 두 배(열 c → AxisTimesTwo - 1 - c) — 0이면 캔버스 가운데.
+        /// 스테이지 2: 왼쪽 의자 181~197열 ↔ 오른쪽 의자 249~265열이 정확히 겹치는 값 447.
         /// </summary>
-        private static readonly Dictionary<int, string[]> MirroredLayers = new Dictionary<int, string[]>
-        {
-            { 1, new[] { "Person", "Layer 1", "Layer 2" } },
-        };
+        private static readonly Dictionary<int, (string[] Layers, int AxisTimesTwo)> MirroredLayers =
+            new Dictionary<int, (string[] Layers, int AxisTimesTwo)>
+            {
+                { 1, (new[] { "Person", "Layer 1", "Layer 2" }, 0) },
+                { 2, (new[] { "People", "Chair", "Left People", "Left Chair" }, 447) },
+            };
 
         /// <summary>배치모드용 진입점 — 임포트 뒤 에디터를 종료한다.</summary>
         public static void RunAndExit()
@@ -54,7 +59,7 @@ namespace BlueComplex.EditorTools
             {
                 var ase = AsepriteFile.Read(source);
                 MirroredLayers.TryGetValue(stage, out var mirrored);
-                var frames = ase.ComposeFrames(mirrored);
+                var frames = ase.ComposeFrames(mirrored.Layers, mirrored.AxisTimesTwo);
 
                 var sheetPath = $"{OutputFolder}/{StageIdleBackground.SheetName(stage)}.png";
                 var jsonPath = $"{OutputFolder}/{StageIdleBackground.SheetName(stage)}.json";
@@ -283,7 +288,7 @@ namespace BlueComplex.EditorTools
             }
 
             /// <summary>프레임마다 보이는 이미지 레이어를 아래(인덱스 작은 쪽)부터 straight-alpha over로 합성한다. 행은 위→아래.</summary>
-            public List<Color32[]> ComposeFrames(string[] mirroredLayerNames = null)
+            public List<Color32[]> ComposeFrames(string[] mirroredLayerNames = null, int mirrorAxisTimesTwo = 0)
             {
                 var visible = new bool[_layers.Count];
                 for (var i = 0; i < visible.Length; i++) visible[i] = _layers[i].Type == 0 && IsVisible(i);
@@ -298,7 +303,7 @@ namespace BlueComplex.EditorTools
                         if (cel.Pixels == null || !visible[cel.LayerIndex]) continue;
                         var opacity = _layers[cel.LayerIndex].Opacity * cel.Opacity / (255f * 255f);
                         var toBlit = mirroredLayerNames != null && Array.IndexOf(mirroredLayerNames, _layers[cel.LayerIndex].Name) >= 0
-                            ? MirrorHorizontally(cel)
+                            ? MirrorHorizontally(cel, mirrorAxisTimesTwo > 0 ? mirrorAxisTimesTwo : Width)
                             : cel;
                         Blit(canvas, toBlit, opacity);
                     }
@@ -309,11 +314,11 @@ namespace BlueComplex.EditorTools
                 return result;
             }
 
-            /// <summary>셀을 캔버스 가운데 축 기준으로 좌우 반전한 사본(픽셀 열을 뒤집고 X를 거울 위치로).</summary>
-            private Cel MirrorHorizontally(Cel cel)
+            /// <summary>셀을 세로 축(x = axisTimesTwo / 2) 기준으로 좌우 반전한 사본(픽셀 열을 뒤집고 X를 거울 위치로).</summary>
+            private static Cel MirrorHorizontally(Cel cel, int axisTimesTwo)
             {
                 var mirrored = cel;
-                mirrored.X = Width - (cel.X + cel.Width);
+                mirrored.X = axisTimesTwo - (cel.X + cel.Width);
                 mirrored.Pixels = new Color32[cel.Pixels.Length];
                 for (var y = 0; y < cel.Height; y++)
                 for (var x = 0; x < cel.Width; x++)
