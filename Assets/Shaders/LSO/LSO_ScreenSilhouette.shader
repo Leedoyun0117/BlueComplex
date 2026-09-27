@@ -123,7 +123,7 @@ Shader "BlueComplex/LSO/ScreenSilhouette"
                 clip(color.a - 0.001);
                 #endif
 
-                // Blend One OneMinusSrcAlpha — 기본 UI 셰이더와 같은 프리멀티플라이드 합성.
+                // 프리멀티플라이드 합성으로 배경막의 불투명 알파를 유지한다.
                 color.rgb *= color.a;
                 return color;
             }
@@ -131,5 +131,5 @@ Shader "BlueComplex/LSO/ScreenSilhouette"
         }
     }
 
-    Fallback "UI/Default"
+    Fallback Off
 }
