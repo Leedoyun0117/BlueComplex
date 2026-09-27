@@ -158,7 +158,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb233c0cf8d497c49899098e8766ce95, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI.Esc.LSO_EscSilhouette
-  silhouetteColor: {r: 1, g: 1, b: 1, a: 0.18}
+  silhouetteColor: {r: 0.31132078, g: 0.16300286, b: 0.18474072, a: 0.18}
 --- !u!1 &496761853523218354
 GameObject:
   m_ObjectHideFlags: 0
