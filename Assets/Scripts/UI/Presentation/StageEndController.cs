@@ -1,8 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using BlueComplex.Core.Stage;
 using BlueComplex.Core.Turn;
+using BlueComplex.UI.Bootstrap;
 using BlueComplex.UI.Layout;
 using BlueComplex.UI.Motion;
 using DG.Tweening;
@@ -48,10 +48,18 @@ namespace BlueComplex.UI.Presentation
         protected override void Unsubscribe(StageSession session) => session.Runner.StageEnded -= OnStageEnded;
         protected override void Render()
         {
-            _panel.Hide();
-            if (_advancing) return; // 이 연출이 스스로 다음 스테이지를 시작한 것 — 계속 이어 간다.
+            if (_advancing) { _panel.Hide(); return; } // 이 연출이 스스로 다음 스테이지를 시작한 것 — 계속 이어 간다.
 
             // 재시작이 종료 연출 도중이면(디버그 경로로만 가능) 그 코루틴을 끊는다 — 옛 세션 결과로 패널이 뒤늦게 뜨지 않게. 막·자물쇠도 치운다.
+            CancelEnding();
+        }
+
+        /// <summary>지금 도는 종료 연출(자물쇠 애니메이션·컷신 대기 등)을 즉시 멈춘다. 새 세션이 시작될 때는 <see cref="Render"/>가 자동으로 부르고,
+        /// 새 세션 없이 그만두는 ESC "메인 메뉴로 나가기"(<see cref="StageBootstrapper.ExitToMainMenu"/>)는 세션이 안 바뀌어 Render가 안 불리므로 직접 부른다 —
+        /// 안 그러면 이 코루틴이 뒤에서 계속 돌다가 나중에 <see cref="StageFlowHooks.ReturnToStart"/>를 또 불러 메인 화면을 다시 열 수 있다.</summary>
+        public void CancelEnding()
+        {
+            _panel.Hide();
             StopAllCoroutines();
             transform.root.GetComponentInChildren<StageClearDirector>(true)?.ResetNow();
         }
@@ -118,6 +126,9 @@ namespace BlueComplex.UI.Presentation
             yield return PlayCutscenes(outcome, bingeRemaining: true);
             var covered = EndCutscenes(director); // 컷신이 재생됐다면 이 시점부터 화면은 (막 뒤로) 어둡다.
 
+            // 컷신까지 다 본 뒤 다음 단계로 넘어가는 이 시점에 진행도를 저장한다 — 실패·중도 이탈(재시작)은 이 지점에 닿지 않는다.
+            GameSave.MarkStageCleared(Bootstrapper.KnowledgeLedger, Bootstrapper.StageNumber);
+
             if (plan.Route == StageEndRoute.ClearToEnding)
             {
                 yield return Bootstrapper.PlayEndingSequence();
@@ -172,11 +183,9 @@ namespace BlueComplex.UI.Presentation
         {
             if (StageFlowHooks.PlayCutscene == null) return System.Array.Empty<int[]>();
 
-            var steps = bingeRemaining
+            return bingeRemaining
                 ? Bootstrapper.CutsceneProgress.TakeRemaining(Bootstrapper.StageNumber, outcome)
                 : Bootstrapper.CutsceneProgress.Take(Bootstrapper.StageNumber, outcome);
-            Debug.Log($"[Cutscene] 스테이지 {Bootstrapper.StageNumber} {outcome} — 컷신 {(steps.Count == 0 ? "없음" : string.Join(",", steps.Select(step => string.Join("+", step))))} (본 단계 {Bootstrapper.CutsceneProgress.Shown(Bootstrapper.StageNumber)}개)");
-            return steps;
         }
 
         private IEnumerator PlayCutscenes(StageOutcome outcome, bool bingeRemaining) => PlayCutscenes(TakeCutscenes(outcome, bingeRemaining));
@@ -237,6 +246,8 @@ namespace BlueComplex.UI.Presentation
         {
             if (outcome == StageOutcome.Cleared)
             {
+                GameSave.MarkStageCleared(Bootstrapper.KnowledgeLedger, Bootstrapper.StageNumber);
+
                 var mood = StageDialogueMoodClassifier.Classify(Session.Zone, Session.Heartbeat.Value);
                 var variant = StageDialogues.PickStageClear(Bootstrapper.Config.Id, mood);
                 if (variant.HasValue)
