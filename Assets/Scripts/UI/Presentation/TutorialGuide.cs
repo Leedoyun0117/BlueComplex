@@ -226,6 +226,8 @@ namespace BlueComplex.UI.Presentation
             _mask.gameObject.SetActive(true);
             _mask.Allowed = () => AllowedRects(step);
 
+            if (step.Effect == GuideEffect.HypnosisConnect) UiSoundHooks.Play(UiSoundCue.HypnosisConnect); // 원문 "(효과음)"
+
             ShowLine(step.Line, ResolveTargetRect(step.Target), step.Advance == GuideAdvance.Read);
 
             if (step.Advance == GuideAdvance.Read) _readRoutine = StartCoroutine(AutoAdvanceRead(step));

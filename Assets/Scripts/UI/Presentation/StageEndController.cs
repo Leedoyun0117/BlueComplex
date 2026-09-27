@@ -3,6 +3,7 @@ using BlueComplex.Core.Stage;
 using BlueComplex.Core.Turn;
 using BlueComplex.UI.Layout;
 using BlueComplex.UI.Motion;
+using DG.Tweening;
 using UnityEngine;
 
 namespace BlueComplex.UI.Presentation
@@ -14,6 +15,8 @@ namespace BlueComplex.UI.Presentation
     /// 순서("연출 목록 — 스테이지 클리어 연출"): 마지막 턴 연출이 끝나면 어두운 화면에 자물쇠가 나타나 키 수만큼 열린다(<see cref="StageClearDirector"/>) →
     /// 전부 열렸으면 클리어 대사가 나오며 화면이 밝아지고 → 컷신(<see cref="StageFlowHooks.PlayCutscene"/>, 내용은 이 클래스가 모른다) → 화면이 어두워지고 → 다음 스테이지가 시작되며 밝아진다.
     /// 다음 스테이지가 없으면 컷신 뒤 결과 패널. 못 열었으면 자물쇠도 어두워지며 완전한 암전 → 시작 화면 복귀(<see cref="StageFlowHooks.ReturnToStart"/>, 연결이 없으면 결과 패널).
+    /// 컷신은 번호 순서대로 시퀀서(<see cref="CutsceneSequencer"/>, 번호·순서는 <see cref="StageCutscenePlan"/>)가 훅을 부르며 재생한다 — 스테이지 1·2는 성공/실패와 무관하게 재생하고,
+    /// 마지막 스테이지(3)는 클리어하면 컷신 → 엔딩 시퀀스, 실패하면 컷신 없이 암전 → 같은 스테이지 재시도.
     /// 어느 경로로 갈지는 코어의 <see cref="StageEndPlan"/>이 정한다.
     /// </summary>
     public sealed class StageEndController : SessionBoundView
@@ -83,31 +86,37 @@ namespace BlueComplex.UI.Presentation
                 yield break;
             }
 
-            var plan = StageEndPlan.Create(outcome, Session.Keys.Required, Session.Keys.Collected, Bootstrapper.HasNextStage);
+            var plan = StageEndPlan.Create(outcome, Session.Keys.Required, Session.Keys.Collected, Bootstrapper.HasNextStage, Bootstrapper.IsFinalStage);
             var director = StageClearDirector.GetOrCreate(transform.root);
 
             Bootstrapper.InputBlocked = true;
             yield return director.PlayLocks(plan);
 
-            if (plan.Route == StageEndRoute.FailToStart)
-                yield return PlayFailure(director, outcome);
+            if (plan.Route == StageEndRoute.FailToStart || plan.Route == StageEndRoute.FailRetry)
+                yield return PlayFailure(director, plan, outcome);
             else
                 yield return PlayClear(director, plan, outcome);
 
-            // 다음 스테이지가 시작됐다면 입력 잠금은 그 세션(시작 대화)이 이미 새로 정했다 — 여기서 풀면 대화 도중 입력이 열린다.
-            if (plan.Route != StageEndRoute.ClearToNextStage) Bootstrapper.InputBlocked = false;
+            // 다음 스테이지·재시도가 시작됐다면 입력 잠금은 그 세션(시작 대화)이 이미 새로 정했다 — 여기서 풀면 대화 도중 입력이 열린다.
+            if (plan.Route != StageEndRoute.ClearToNextStage && plan.Route != StageEndRoute.FailRetry) Bootstrapper.InputBlocked = false;
         }
 
-        /// <summary>클리어: 대사(화면이 밝아짐) → 컷신 → (다음 스테이지가 있으면) 어두워짐 → 다음 스테이지 시작 + 밝아짐 / (없으면) 결과 패널.</summary>
+        /// <summary>클리어: 대사(화면이 밝아짐) → 컷신 → (다음 스테이지가 있으면) 어두워짐 → 다음 스테이지 시작 + 밝아짐 / (마지막 스테이지면) 엔딩 시퀀스 → 결과 패널 / (없으면) 결과 패널.</summary>
         private IEnumerator PlayClear(StageClearDirector director, StageEndPlan plan, StageOutcome outcome)
         {
             var stageId = Bootstrapper.Config.Id;
             var mood = StageDialogueMoodClassifier.Classify(Session.Zone, Session.Heartbeat.Value);
             yield return director.PlayClearDialogue(StageDialogues.PickStageClear(stageId, mood));
 
-            // 컷신은 이 클래스가 내용을 모른다 — 걸려 있으면 끝날 때까지 기다리기만 한다.
-            var cutscene = StageFlowHooks.PlayCutscene?.Invoke(stageId);
-            if (cutscene != null) yield return cutscene;
+            // 컷신은 이 클래스가 내용을 모른다 — 번호 순서대로 훅을 불러 끝날 때까지 기다리기만 한다(내용이 없는 번호는 건너뜀).
+            yield return PlayCutscenes(outcome);
+
+            if (plan.Route == StageEndRoute.ClearToEnding)
+            {
+                yield return Bootstrapper.PlayEndingSequence();
+                _panel.Show(KoreanLabels.Outcome(outcome));
+                yield break;
+            }
 
             if (plan.Route != StageEndRoute.ClearToNextStage)
             {
@@ -125,10 +134,30 @@ namespace BlueComplex.UI.Presentation
             director.FadeFromBlack();
         }
 
-        /// <summary>실패: 자물쇠도 어두워지며 완전한 암전 → 시작 화면 복귀(훅). 훅이 없으면 어둠 속에서 결과 패널을 띄우고 어둠을 걷는다.</summary>
-        private IEnumerator PlayFailure(StageClearDirector director, StageOutcome outcome)
+        /// <summary>실패: 자물쇠도 어두워지며 완전한 암전 → (컷신이 있으면 밝아져 재생 → 다시 암전) → 시작 화면 복귀(훅, 없으면 결과 패널) / 마지막 스테이지면 같은 스테이지를 새 시드로 재시도.</summary>
+        private IEnumerator PlayFailure(StageClearDirector director, StageEndPlan plan, StageOutcome outcome)
         {
             yield return director.PlayBlackout();
+
+            // 컷신 훅은 밝은 화면에서 시작해 밝은 화면으로 끝난다 — 암전 상태에서 걷어 올렸다가 끝나면 다시 어둡게 한다. 재생할 컷신이 없으면 화면은 그대로 어둡다.
+            var steps = StageCutscenePlan.For(Bootstrapper.StageNumber, outcome);
+            if (steps.Count > 0 && StageFlowHooks.PlayCutscene != null)
+            {
+                yield return director.FadeFromBlack().WaitForCompletion(true);
+                yield return PlayCutscenes(outcome);
+                yield return director.FadeToBlack();
+            }
+
+            if (plan.Route == StageEndRoute.FailRetry)
+            {
+                // 다음 스테이지 진입과 같은 방식: 새 세션이 막을 치우므로 같은 프레임에 어둠을 되살리고 밝아진다.
+                _advancing = true;
+                Bootstrapper.RestartWithNewSeed();
+                _advancing = false;
+                director.SnapBlack();
+                director.FadeFromBlack();
+                yield break;
+            }
 
             var returnToStart = StageFlowHooks.ReturnToStart?.Invoke();
             if (returnToStart != null)
@@ -140,6 +169,10 @@ namespace BlueComplex.UI.Presentation
             _panel.Show(KoreanLabels.Outcome(outcome));
             director.FadeFromBlack();
         }
+
+        /// <summary>지금 스테이지 종료에 정해진 컷신을 번호 순서대로 재생한다. 호출·건너뜀은 로그로 남는다.</summary>
+        private IEnumerator PlayCutscenes(StageOutcome outcome) =>
+            CutsceneSequencer.Play(StageCutscenePlan.For(Bootstrapper.StageNumber, outcome), number => StageFlowHooks.PlayCutscene?.Invoke(number), Debug.Log);
 
         /// <summary>튜토리얼 클리어 뒤 청장의 마지막 대사(노션 원문).</summary>
         private static readonly DialogueVariant TutorialClearMessage = new()
