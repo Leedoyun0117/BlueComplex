@@ -46,6 +46,10 @@ namespace BlueComplex.Audio
         [Tooltip("곡이 끝나기 이 시간(초) 전부터 처음과 겹쳐 크로스페이드해 루프 이음매를 가린다.")]
         [SerializeField] [Min(0.1f)] private float _ambientLoopSeam = 3f;
 
+        [Header("오프닝 배경곡(FinalDetection)")]
+        [Tooltip("곡이 끝나기 이 시간(초) 전부터 처음과 겹쳐 크로스페이드해 루프 이음매를 가린다. 곡(약 15초)이 오프닝(1분 이상)보다 짧아 이어 붙여 돌리므로 짧게 잡아 곡의 끝맺음을 덜 덮는다.")]
+        [SerializeField] [Min(0.1f)] private float _themeLoopSeam = 1.5f;
+
         private AudioSource[] _pool;
         private int _next;
 
@@ -55,6 +59,7 @@ namespace BlueComplex.Audio
         private float _bedTargetVolume;
         private readonly float[] _bedFade = new float[2];
         private AmbientLayer _ambient;
+        private AmbientLayer _theme;
         private readonly Dictionary<UiSoundCue, float> _lastPlayedAt = new();
 
         private const float StopFadeSeconds = UiSoundHooks.DefaultStopFade; // maxSeconds 자르기의 페이드아웃 시간도 이걸 쓴다.
@@ -99,6 +104,9 @@ namespace BlueComplex.Audio
 
             // 상시 배경음 레이어는 심박수 배경음 소스와 완전히 별개의 소스 둘을 쓴다.
             _ambient = new AmbientLayer(gameObject.AddComponent<AudioSource>(), gameObject.AddComponent<AudioSource>(), ambientGroup);
+
+            // 오프닝 배경곡은 BGM 그룹으로 나간다(BGM 볼륨 슬라이더를 따른다). 시임 루프 로직은 상시 배경음 레이어를 그대로 재사용한다.
+            _theme = new AmbientLayer(gameObject.AddComponent<AudioSource>(), gameObject.AddComponent<AudioSource>(), bgmGroup);
         }
 
         private static AudioMixerGroup FindGroup(AudioMixer mixer, string path)
@@ -125,6 +133,10 @@ namespace BlueComplex.Audio
             UiSoundHooks.AmbientStarted += StartAmbient;
             UiSoundHooks.AmbientStopped += StopAmbient;
             if (UiSoundHooks.CurrentAmbient.HasValue && !_ambient.IsActive) StartAmbient(UiSoundHooks.CurrentAmbient.Value);
+
+            UiSoundHooks.ThemeStarted += StartTheme;
+            UiSoundHooks.ThemeStopped += StopTheme;
+            if (UiSoundHooks.CurrentTheme.HasValue && !_theme.IsActive) StartTheme(UiSoundHooks.CurrentTheme.Value, 0.5f);
         }
 
         private void OnDisable()
@@ -134,6 +146,8 @@ namespace BlueComplex.Audio
             UiSoundHooks.BedChanged -= SetBed;
             UiSoundHooks.AmbientStarted -= StartAmbient;
             UiSoundHooks.AmbientStopped -= StopAmbient;
+            UiSoundHooks.ThemeStarted -= StartTheme;
+            UiSoundHooks.ThemeStopped -= StopTheme;
         }
 
         private void Update()
@@ -141,6 +155,7 @@ namespace BlueComplex.Audio
             if (_bedSources == null) return;
 
             _ambient.Tick(Time.unscaledDeltaTime);
+            _theme.Tick(Time.unscaledDeltaTime);
             TickScheduledStops();
             TickFadeOut(Time.unscaledDeltaTime);
 
@@ -193,6 +208,17 @@ namespace BlueComplex.Audio
         }
 
         public void StopAmbient() => _ambient.End(_ambientFadeOut);
+
+        /// <summary>오프닝 배경곡을 처음부터 시작한다(이미 재생 중이면 재시작). 라이브러리에 클립이 없으면 조용히 지나간다.</summary>
+        public void StartTheme(UiSoundCue cue, float fadeIn)
+        {
+            var library = Library;
+            if (library == null || !library.TryGet(cue, out var entry) || entry.clips.Length == 0 || entry.clips[0] == null) return;
+
+            _theme.Begin(entry.clips[0], entry.volume, fadeIn, _themeLoopSeam);
+        }
+
+        public void StopTheme(float fadeOut) => _theme.End(fadeOut);
 
         public void Play(UiSoundCue cue)
         {

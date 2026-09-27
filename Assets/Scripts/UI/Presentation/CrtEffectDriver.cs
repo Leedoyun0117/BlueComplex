@@ -41,6 +41,24 @@ namespace BlueComplex.UI.Presentation
         private Heartbeat _heartbeat;
         private CrtParams _current;
         private Tween _tween;
+        private bool _reactionSuppressed;
+
+        /// <summary>
+        /// true면 심박수에 따른 흥분/침체 반응(스캔라인·색수차·노이즈·플리커·틴트·파스텔·밝기·흔들림)을 끄고
+        /// 프리셋의 안정(Neutral) 값에 머문다. 흥분/침체 화면 톤을 DLJ 무드 컨트롤러가 맡는 동안 켠다.
+        /// 곡률 같은 안정 구간 기본값은 계속 이 드라이버가 유지한다.
+        /// </summary>
+        public bool ReactionSuppressed => _reactionSuppressed;
+
+        public void SetReactionSuppressed(bool suppressed)
+        {
+            if (_reactionSuppressed == suppressed) return;
+            _reactionSuppressed = suppressed;
+            if (_preset == null || _crtMaterial == null) return;
+
+            if (_heartbeat != null) OnHeartbeatChanged(_heartbeat.Value, _heartbeat.Value);
+            else if (suppressed) TweenTo(_preset.Neutral);
+        }
 
         private void Awake()
         {
@@ -70,7 +88,7 @@ namespace BlueComplex.UI.Presentation
         {
             if (_preset == null || _crtMaterial == null || _heartbeat == null) return;
 
-            var target = _preset.Evaluate(NormalizedT(to));
+            var target = _reactionSuppressed ? _preset.Neutral : _preset.Evaluate(NormalizedT(to));
             TweenTo(target);
         }
 
