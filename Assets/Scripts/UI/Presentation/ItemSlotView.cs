@@ -58,7 +58,7 @@ namespace BlueComplex.UI.Presentation
         }
 
         /// <param name="insert">true면 카드가 빈 칸에 눌려 끼워지는 움직임을 재생한다.</param>
-        public void Render(ItemDefinition item, bool insert = false)
+        public void Render(ItemDefinition item, bool insert = false, int insertOrder = 0)
         {
             Item = item;
             gameObject.SetActive(true);
@@ -75,7 +75,7 @@ namespace BlueComplex.UI.Presentation
                 _iconImage.enabled = icon != null;
             }
 
-            if (insert) PlayInsert();
+            if (insert) PlayInsert(insertOrder);
         }
 
         /// <summary>DLJ: ItemController의 레이아웃 리빌드 후 알림과 호환되는 진입점.
@@ -164,16 +164,14 @@ namespace BlueComplex.UI.Presentation
                 });
         }
 
-        /// <summary>빈 칸 옆에서 매우 작게 튀어나와 빠르게 커지고(1) → 커진 채로 빈 칸 쪽으로 움직이고(2) →
-        /// 빠르게 끼워지며 찰칵 소리가 난다(3).</summary>
-        private void PlayInsert()
+        /// <summary>DLJ: 왼쪽에서 함께 커진 뒤 위 슬롯부터 차례로 끼워진다. 등장 효과음은 재생하지 않는다.</summary>
+        private void PlayInsert(int order)
         {
             _motion?.Kill();
             HideTooltip();
             _inserting = true;
             _motion = DLJ_ItemArrivalMotion.Play((RectTransform)transform, _background, _nameText, _iconImage,
-                EmptyColor, () => _inserting = false)
-                .AppendCallback(() => UiSoundHooks.Play(UiSoundCue.Pin));
+                EmptyColor, () => _inserting = false, order);
         }
 
         private void ResetPose()

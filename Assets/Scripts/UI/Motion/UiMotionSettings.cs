@@ -112,7 +112,7 @@ namespace BlueComplex.UI.Motion
         [Range(0.3f, 0.9f)] public float postitPinPopAt = 0.6f;
         [Tooltip("새 포스트잇이 위에서 내려와 눌리고 압정이 꽂히기까지 걸리는 시간.")]
         public float postitStick = 0.55f;
-        [Tooltip("두 포스트잇(컴플렉스 → 대화)이 떼어지고 붙는 시작 시차.")]
+        [Tooltip("두 포스트잇(컴플렉스 → 분기)이 떼어지고 붙는 시작 시차.")]
         public float postitStagger = 0.1f;
         [Tooltip("떼어진 사이에 글자 쓰는 소리가 나며 내용이 새로 쓰이는 시간.")]
         public float postitWrite = 0.55f;
@@ -127,17 +127,83 @@ namespace BlueComplex.UI.Motion
         [Tooltip("독백이 다 나온 뒤 화면이 밝아지기 전까지 머무는 시간(클릭하면 건너뛴다).")]
         public float keyTurnHold = 1.1f;
 
-        [Header("심박수 변화 연출 (카메라 확대)")]
-        [Tooltip("포스트잇이 떼어진 뒤 카메라가 심박수 표시기 쪽으로 확대되는 시간.")]
-        public float heartFocusZoomIn = 0.7f;
-        [Tooltip("확대된 채 심박수 소리가 앞으로 나와 머무는 시간. 기획: 심박수 사운드 2초 출력.")]
-        public float heartFocusHold = 2f;
-        [Tooltip("소리가 잦아들며 원래 화면으로 돌아오는 시간.")]
-        public float heartFocusZoomOut = 1.0f;
-        [Tooltip("표시기가 화면(가로·세로 중 큰 쪽)의 이만큼을 채우도록 확대한다.")]
-        [Range(0.2f, 0.9f)] public float heartFocusFill = 0.75f;
-        [Tooltip("확대 배율의 하한/상한 — 표시기가 아주 작거나 커도 이 범위 안에서만 확대한다.")]
-        public Vector2 heartFocusZoomRange = new Vector2(1.6f, 3f);
+        [Header("분기 대사 장면 (쿼터가 끝날 때: 초상화가 이름 포스트잇에 덮여 벽으로 빠지고, 나머지 게임 UI가 사라지고, 배경과 대사만 남는다)")]
+        [Tooltip("초상화가 덮인 채 벽으로 빠져나가는 시간, 그리고 돌아오는 시간. 포스트잇 붙임·뗌 시간은 위의 포스트잇 값을 따른다.")]
+        public float branchPortraitExit = 0.55f;
+        [Tooltip("초상화가 빠져나간 뒤 나머지 게임 UI가 사라지는 시간, 그리고 대사가 끝난 뒤 다시 나타나는 시간.")]
+        public float branchSceneFade = 0.5f;
+
+        [Header("튜토리얼 시작 컷신 (암흑 → TV 뉴스 → 경찰서). 전체 = 암전 + 암전 + 뉴스 줄 수×줄 시간 + 잡음 + 밝아짐 + 머묾. 게임 첫 실행의 오프닝은 아래 '오프닝 시퀀스'")]
+        [Tooltip("컷신이 시작되며 화면이 검게 덮이는 시간.")]
+        public float introFadeIn = 0.6f;
+        [Tooltip("완전한 암흑만 있는 시간(뉴스가 흘러들어오기 전).")]
+        public float introDark = 0.8f;
+        [Tooltip("뉴스가 흘러들어오기 전의 잠잠해진 암흑.")]
+        public float introBlackout = 1f;
+        [Tooltip("뉴스가 암흑 속에서 흘러들어오며 나타나는 시간.")]
+        public float introNewsFadeIn = 0.7f;
+        [Tooltip("뉴스 자막 한 줄이 떠 있는 시간.")]
+        public float introNewsLine = 2f;
+        [Tooltip("자막이 다 끝난 뒤 지직거리는 잡음만 남아 있는 시간.")]
+        public float introNewsStatic = 1.2f;
+        [Tooltip("뉴스가 끝난 뒤 검은 화면에서 경찰서(취조실 그림)가 밝아지며 드러나는 시간.")]
+        public float introReveal = 1.4f;
+        [Tooltip("경찰서 그림이 완전히 밝아진 뒤 오프닝 대화가 시작되기까지 머무는 시간(그림 속 나츠, 주황빛 하늘의 창을 볼 시간).")]
+        public float introRoomHold = 1.5f;
+        [Tooltip("오프닝 대화가 끝난 뒤 경찰서 그림이 걷히며 게임(취조실) 화면으로 넘어가는 시간.")]
+        public float introRoomOut = 0.8f;
+
+        [Header("오프닝 시퀀스 (유키 방 → 포스트잇 → 단어 포스트잇 4장 → 창문 → 소녀 → Death. By. Complex. ?. → 뉴스 → 타이틀 → 메인 화면)")]
+        [Tooltip("장면 사이 암전(검게 덮이고 다시 걷히는) 한 번의 시간.")]
+        public float seqFade = 0.6f;
+        [Tooltip("1: 유키 방이 밝아지며 머무는 시간(포스트잇이 붙기 전).")]
+        public float seqRoomHold = 2.4f;
+        [Tooltip("2: 유키 위에 포스트잇이 붙은 뒤 머무는 시간.")]
+        public float seqYukiNoteHold = 1.8f;
+        [Tooltip("3·6·12: 암전이 유지되는 시간.")]
+        public float seqBlackout = 0.7f;
+        [Tooltip("4: 단어 포스트잇 4장이 하나씩 붙는 간격(붙는 모션이 끝난 뒤부터). 장 사이 세 번이라 전체 등장 구간은 이 값의 세 배만큼 늘어난다.")]
+        public float seqWindowInterval = 0.733f;
+        [Tooltip("4: 4장이 다 붙은 뒤 2×2 창문 모양으로 미끄러져 정렬되는 시간(빠른 스냅).")]
+        public float seqNotesSnap = 0.3f;
+        [Tooltip("5: 정렬된 4장의 색이 흰색에서 주황으로 바뀌는 시간(배경은 그대로 어둡다).")]
+        public float seqNotesRecolor = 0.45f;
+        [Tooltip("5: 정렬된 4장이 왼쪽 위 → 오른쪽 위 → 왼쪽 아래 → 오른쪽 아래 순서로 색이 바뀌기 시작하는 간격. 전체 구간은 색 전환 시간에 이 값의 세 배를 더한 만큼이다.")]
+        public float seqNotesRecolorStagger = 0.2f;
+        [Tooltip("7: 창문 앞에 소녀 실루엣이 나타나 정지 자세로 머무는 시간.")]
+        public float seqWindowHold = 1.2f;
+        [Tooltip("7: 소녀 실루엣이 창문 앞에 나타나는(밝아지는) 시간.")]
+        public float seqGirlAppear = 0.6f;
+        [Tooltip("8~9: 소녀가 왼쪽 가장자리에서 오른쪽으로 걸어가는(키프레임 A→B→C) 시간.")]
+        public float seqGirlWalk = 4f;
+        [Tooltip("걷기 8프레임이 한 바퀴 도는 동안 나아가는 거리(화면 너비 비율). 클수록 발이 천천히 구른다 — 이동 속도에 프레임 속도를 맞추는 기준. 시트의 발 간격(앞발·뒷발 최대 벌림 약 197px)으로 잰 값이 약 0.18이다.")]
+        [Range(0.05f, 0.6f)] public float seqGirlStride = 0.18f;
+        [Tooltip("11: 종이색 전환이 끝난 뒤 화면 오른쪽 위에 거꾸로 선 소녀가 나타나기까지의 빈 시간. (소녀 사라짐 → 종이색 전환 → 이 시간 → 거꾸로 노출까지 합쳐 약 3.4초.)")]
+        public float seqGirlGap = 0.3f;
+        [Tooltip("11: 거꾸로 선 소녀가 화면 오른쪽 바깥에서 걸어 들어와 자리(D)에 서기까지의 시간.")]
+        public float seqGirlWalkIn = 1.3f;
+        [Tooltip("11: 거꾸로 선 소녀가 걸어 들어오기 시작한 뒤(걷는 시간 포함) 글자 재배열(12)이 시작되기까지 혼자 머무는 시간. (소녀는 이후에도 암전까지 남는다.)")]
+        public float seqGirlFlash = 1.9f;
+        [Tooltip("10: 소녀가 사라진 직후 화면이 종이색으로 바뀌고 포스트잇 바탕이 사라지는 시간.")]
+        public float seqPaperTint = 1.2f;
+        [Tooltip("12: 글자가 한 줄로 모이는 시간.")]
+        public float seqTextGather = 1.3f;
+        [Tooltip("12: 한 줄 문장이 타이핑되는 글자당 간격.")]
+        public float seqTypeInterval = 0.11f;
+        [Tooltip("12: 다 쳐진 뒤 머무는 시간.")]
+        public float seqTextHold = 1.6f;
+        [Tooltip("18: 타이틀이 나타나는 시간.")]
+        public float seqTitleFade = 1.2f;
+        [Tooltip("18: 타이틀이 머무는 시간.")]
+        public float seqTitleHold = 1.8f;
+        [Tooltip("19: 메인 화면이 밝아지는 시간.")]
+        public float seqMenuFade = 1.2f;
+        [Tooltip("취조시작을 누른 뒤 메인 화면이 어두워지는 시간, 그리고 게임 화면이 드러나는 시간.")]
+        public float seqStartFade = 0.7f;
+        [Tooltip("오프닝 배경곡(FinalDetection)이 컷신 시작에 올라오는 시간.")]
+        public float seqThemeFadeIn = 1f;
+        [Tooltip("타이틀이 끝나 메인 화면으로 넘어갈 때(건너뛰기 포함) 오프닝 배경곡이 사라지는 시간.")]
+        public float seqThemeFadeOut = 2f;
 
         [Header("스테이지 클리어 연출 (자물쇠 → 대사 → 컷신 → 다음 스테이지)")]
         [Tooltip("자물쇠 화면으로 넘어가며 화면이 어두워지는 시간.")]
@@ -150,6 +216,8 @@ namespace BlueComplex.UI.Motion
         public float lockKeyTwist = 0.3f;
         [Tooltip("자물쇠 고리가 열리며 들리는 시간.")]
         public float lockUnlatch = 0.35f;
+        [Tooltip("자물쇠가 열린 뒤 열쇠 그림만 서서히 사라지는 시간(자물쇠는 열린 채 남는다).")]
+        public float lockKeyFade = 0.4f;
         [Tooltip("자물쇠 하나가 열린 뒤 다음 자물쇠로 넘어가기 전 쉼.")]
         public float lockInterval = 0.3f;
         [Tooltip("자물쇠가 다 열린 뒤(또는 못 열린 채로) 다음 단계로 넘어가기 전에 머무는 시간.")]

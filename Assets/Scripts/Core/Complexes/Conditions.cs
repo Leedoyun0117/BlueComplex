@@ -186,4 +186,62 @@ namespace BlueComplex.Core.Complexes
             return true;
         }
     }
+
+    /// <summary>해당 극성 감정 중 하나가 minStack개 이상 겹쳐 있으면 성립(슬픔 ×2 같은 중첩). 겹친 감정만 기록한다. (스테이지 3 낭떠러지 — "침체 감정 중첩")</summary>
+    public sealed class HasStackedEmotionOfPolarity : IComplexCondition
+    {
+        private readonly Polarity _polarity;
+        private readonly IEmotionPolarityTable _polarityTable;
+        private readonly int _minStack;
+
+        public HasStackedEmotionOfPolarity(Polarity polarity, IEmotionPolarityTable polarityTable, int minStack = 2)
+        {
+            _polarity = polarity;
+            _polarityTable = polarityTable;
+            _minStack = minStack;
+        }
+
+        public bool Evaluate(ComplexContext context)
+        {
+            var matched = context.Tags.Emotions
+                .Where(pair => _polarityTable.GetPolarity(pair.Key) == _polarity && pair.Value >= _minStack)
+                .Select(pair => pair.Key)
+                .ToList();
+            if (matched.Count == 0) return false;
+            foreach (var emotion in matched) context.MarkEmotion(emotion);
+            return true;
+        }
+    }
+
+    /// <summary>침체 태그와 흥분 태그의 개수(중첩 포함)가 서로 다르면 성립 — 어느 쪽이 더 많은지는 <see cref="EmotionPolarityCounts"/>로 효과가 다시 가른다. (스테이지 3 자아 부정)</summary>
+    public sealed class HasDominantPolarity : IComplexCondition
+    {
+        private readonly IEmotionPolarityTable _polarityTable;
+        public HasDominantPolarity(IEmotionPolarityTable polarityTable) => _polarityTable = polarityTable;
+
+        public bool Evaluate(ComplexContext context)
+        {
+            var (depressed, excited) = EmotionPolarityCounts.Of(context.Tags, _polarityTable);
+            if (depressed == excited) return false;
+            foreach (var emotion in context.Tags.Emotions.Keys) context.MarkEmotion(emotion);
+            return true;
+        }
+    }
+
+    /// <summary>단서의 침체 감정 태그 수와 흥분 감정 태그 수(중첩 포함).</summary>
+    public static class EmotionPolarityCounts
+    {
+        public static (int Depressed, int Excited) Of(TagSet tags, IEmotionPolarityTable polarityTable)
+        {
+            var depressed = 0;
+            var excited = 0;
+            foreach (var pair in tags.Emotions)
+            {
+                if (polarityTable.GetPolarity(pair.Key) == Polarity.Depressed) depressed += pair.Value;
+                else excited += pair.Value;
+            }
+
+            return (depressed, excited);
+        }
+    }
 }

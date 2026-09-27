@@ -72,6 +72,24 @@ namespace BlueComplex.UI.Motion
 
         /// <summary>스테이지 2의 기본 배경음(ClockTower) — 안정 구간에서 <see cref="HeartbeatBase"/> 자리를 대신한다. 침체·흥분 배경음과 크로스페이드로 오간다.</summary>
         HeartbeatBaseStage2,
+
+        /// <summary>스테이지 3의 기본 배경음(Faded Scribbles) — 안정 구간에서 <see cref="HeartbeatBase"/> 자리를 대신한다.</summary>
+        HeartbeatBaseStage3,
+
+        /// <summary>TV 뉴스의 지직거리는 잡음(오프닝·튜토리얼 시작 컷신, RadioStatic 클립). 긴 클립이라 전용 보이스로 울리고, 다시 부르면 처음부터 다시 울린다(겹쳐 쌓이지 않는다) — 뉴스가 끝나면 <see cref="UiSoundHooks.Stop"/>으로 끈다.</summary>
+        TvStatic,
+
+        /// <summary>최면 접속이 시작되는 효과음(튜토리얼 오프닝 대화의 "(효과음)" 자리). 라이브러리에 클립을 채우면 그게 난다 — 아직 소리 파일이 없어 채우기 전까지는 조용하다.</summary>
+        HypnosisConnect,
+
+        /// <summary>화면이 주황으로 물들 때 나는 소리(오프닝, LightSwitch 클립 — 짧은 스위치 소리). 전용 보이스로 울린다.</summary>
+        LightGlow,
+
+        /// <summary>포스트잇이 자리에 붙는 소리(Postit.Stick이 닿는 순간). Paper와 따로 둔 이유: Paper는 카드·엑스레이 등 다른 종이 연출도 쓴다. 떼는 소리는 <see cref="PostitPeel"/>.</summary>
+        PostitStick,
+
+        /// <summary>오프닝 컷신(유키 방 → 타이틀) 전용 배경곡(FinalDetection). <see cref="UiSoundHooks.StartTheme"/>/<see cref="UiSoundHooks.StopTheme"/>로만 켜고 끈다 — 심박수 배경음·상시 배경음과 별개 채널.</summary>
+        IntroTheme,
     }
 
     /// <summary>
@@ -81,6 +99,10 @@ namespace BlueComplex.UI.Motion
     public static class UiSoundHooks
     {
         public static event Action<UiSoundCue> Cue;
+
+        /// <summary>이 큐의 소리를 끈다(페이드아웃) — 긴 클립을 도중에 끊을 때(뉴스가 끝났을 때, 오프닝을 건너뛸 때). 안 울리고 있으면 아무 일도 없다.
+        /// 두 번째 값은 페이드아웃 시간(초).</summary>
+        public static event Action<UiSoundCue, float> CueStopped;
 
         /// <summary>배경음(루프) 교체 요청. null이면 배경음을 끈다.</summary>
         public static event Action<UiSoundCue?> BedChanged;
@@ -97,13 +119,12 @@ namespace BlueComplex.UI.Motion
         /// <summary>지금 켜져 있어야 하는 상시 배경음. SoundManager가 요청 뒤에 켜져도 이 값으로 따라잡는다. 꺼져 있으면 null.</summary>
         public static UiSoundCue? CurrentAmbient { get; private set; }
 
-        /// <summary>심박수 소리를 앞으로 끌어내는 정도가 바뀐다(목표 0~1, 그 값에 이를 때까지 걸리는 초). 심박수 변화 연출이 카메라를 확대하는 동안 배경음(심박수 소리)이 커지고 상시 배경음이 물러난다.</summary>
-        public static event Action<float, float> HeartbeatFocusChanged;
-
         public static void Play(UiSoundCue cue) => Cue?.Invoke(cue);
 
-        /// <summary>심박수 소리를 <paramref name="level"/>(0 = 평소, 1 = 가장 앞)까지 <paramref name="seconds"/> 동안 끌어올리거나 내린다.</summary>
-        public static void FocusHeartbeat(float level, float seconds) => HeartbeatFocusChanged?.Invoke(Mathf.Clamp01(level), Mathf.Max(0f, seconds));
+        /// <param name="fadeSeconds">페이드아웃 시간. 기본 0.25초; 바로 뒤에 다른 소리의 첫 타격이 오는 자리(시계 틱 직전)에서는 짧게 준다.</param>
+        public static void Stop(UiSoundCue cue, float fadeSeconds = DefaultStopFade) => CueStopped?.Invoke(cue, fadeSeconds);
+
+        public const float DefaultStopFade = 0.25f;
 
         public static void StartAmbient(UiSoundCue cue)
         {
@@ -117,6 +138,32 @@ namespace BlueComplex.UI.Motion
 
             CurrentAmbient = null;
             AmbientStopped?.Invoke();
+        }
+
+        // ── 오프닝 컷신 전용 배경곡. 컷신 동안만 깔리고 끝나면 페이드아웃 — 그 뒤 게임 배경음(SetBed)이 스테이지 시작과 함께 올라온다. ──
+
+        /// <summary>오프닝 배경곡 시작 요청(처음부터, 두 번째 값은 페이드인 시간). 이미 재생 중이면 처음부터 다시 시작한다.</summary>
+        public static event Action<UiSoundCue, float> ThemeStarted;
+
+        /// <summary>오프닝 배경곡 종료 요청(값은 페이드아웃 시간).</summary>
+        public static event Action<float> ThemeStopped;
+
+        /// <summary>지금 켜져 있어야 하는 오프닝 배경곡. SoundManager가 요청 뒤에 켜져도 이 값으로 따라잡는다. 꺼져 있으면 null.</summary>
+        public static UiSoundCue? CurrentTheme { get; private set; }
+
+        public static void StartTheme(UiSoundCue cue, float fadeIn)
+        {
+            CurrentTheme = cue;
+            ThemeStarted?.Invoke(cue, fadeIn);
+        }
+
+        /// <summary>오프닝 배경곡을 페이드아웃으로 끈다. 안 울리고 있으면 아무 일도 없다.</summary>
+        public static void StopTheme(float fadeOut)
+        {
+            if (CurrentTheme == null) return;
+
+            CurrentTheme = null;
+            ThemeStopped?.Invoke(fadeOut);
         }
 
         /// <summary>배경음을 이 큐로 바꾼다. 이미 그 큐면 아무 일도 없다.</summary>

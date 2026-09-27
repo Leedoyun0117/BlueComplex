@@ -78,11 +78,13 @@ namespace BlueComplex.Core.Tests
             new ClueRow { Name = "바게트", SetId = null, Times = new[] { Present }, Persons = new[] { Other }, Emotions = new[] { Happy },
                 RawUi = "바게트<br><br>//<br><br>B씨가 저녁 식사를 위해 만들어 주셨어. 고소한 냄새가 기분을 좋게 만들어." },
             new ClueRow { Name = "만년필", SetId = null, Times = new[] { Past }, Persons = new[] { Other }, Emotions = new[] { Happy },
-                RawUi = "만년필<br><br>//<br><br>B씨가 지원서에 서명한 만년필이야. 오래된 흔적이 보여." }
+                RawUi = "만년필<br><br>//<br><br>B씨가 지원서에 서명한 만년필이야. 오래된 흔적이 보여." },
+            new ClueRow { Name = "우산", SetId = "set3", Times = new[] { Past }, Persons = new[] { Family }, Emotions = new[] { Happy, Love },
+                RawUi = "우산<br><br>예전에, 가족들과 비 오는 날 처음으로 갓 구운 빵을 먹었어. 그 때도 부모님은 내게 빵 조각을 더 나누어 주지 못해서 아쉬워 하셨지. 그 순간 만큼은 누구보다 행복했어." }
         };
 
         /// <summary>노션 UI 칸 → 게임 텍스트. &lt;br&gt;&lt;br&gt; = 빈 줄, &lt;br&gt; = 줄바꿈, "//"는 사물 설명과 혼잣말 사이 칸(스테이지 1은 빈 줄)이라 사라지고 양옆이 이어진다.</summary>
-        private static string FromNotion(string raw)
+        internal static string FromNotion(string raw)
         {
             var tokens = raw.Split(new[] { "<br>" }, System.StringSplitOptions.None).Select(t => t.Trim()).Where(t => t != "//").ToList();
             var collapsed = new List<string>();
@@ -97,15 +99,12 @@ namespace BlueComplex.Core.Tests
 
         private static ClueDefinition ClueNamed(string name) => Stage2Content.Clues().Single(c => c.DisplayName == name);
 
-        /// <summary>표 대조용 — 실험용 임시 단서(<see cref="Stage2Content.DummyClueId"/>, 표에 없음)를 뺀 단서들. 더미를 지우면 이 필터도 필요 없다.</summary>
-        private static IReadOnlyList<ClueDefinition> TableClues() => Stage2Content.Clues().Where(c => c.Id != Stage2Content.DummyClueId).ToList();
-
         [Test]
-        public void Clues_AreExactlyTheFourteenFromTheStageTable()
+        public void Clues_AreExactlyTheFifteenFromTheStageTable()
         {
-            var clues = TableClues();
+            var clues = Stage2Content.Clues();
 
-            Assert.AreEqual(14, ClueTable.Length);
+            Assert.AreEqual(15, ClueTable.Length);
             Assert.AreEqual(ClueTable.Length, clues.Count);
             CollectionAssert.AreEquivalent(ClueTable.Select(r => r.Name).ToList(), clues.Select(c => c.DisplayName).ToList());
             Assert.AreEqual(clues.Count, clues.Select(c => c.Id).Distinct().Count(), "단서 id는 서로 달라야 한다.");
@@ -175,24 +174,24 @@ namespace BlueComplex.Core.Tests
 
         // ── set ───────────────────────────────────────────────────────────────
 
-        private static readonly (string SetId, string A, string B)[] SetTable =
+        private static readonly (string SetId, string[] Members)[] SetTable =
         {
-            ("set1", "지원 신청서", "B의 편지"),
-            ("set2", "식탁 맡의 쪽지", "깨진 액자"),
-            ("set3", "TV 뉴스", "빗물이 고인 그릇")
+            ("set1", new[] { "지원 신청서", "B의 편지" }),
+            ("set2", new[] { "식탁 맡의 쪽지", "깨진 액자" }),
+            ("set3", new[] { "TV 뉴스", "빗물이 고인 그릇", "우산" })
         };
 
         [Test]
-        public void Sets_AreTheThreeTwoClueSetsFromTheTable()
+        public void Sets_AreTheThreeSetsFromTheTable_Set3HavingThreeClues()
         {
-            var clues = TableClues();
+            var clues = Stage2Content.Clues();
             var bySet = clues.Where(c => c.SetId != null).GroupBy(c => c.SetId).ToList();
 
             Assert.AreEqual(SetTable.Length, bySet.Count);
-            foreach (var (setId, a, b) in SetTable)
+            foreach (var (setId, expected) in SetTable)
             {
                 var members = bySet.Single(g => g.Key.EndsWith(setId)).Select(c => c.DisplayName).ToList();
-                CollectionAssert.AreEquivalent(new[] { a, b }, members, setId);
+                CollectionAssert.AreEquivalent(expected, members, setId);
             }
 
             Assert.AreEqual(8, clues.Count(c => c.SetId == null), "set에 속하지 않는 단서는 8개다.");
@@ -351,7 +350,7 @@ namespace BlueComplex.Core.Tests
         }
 
         /// <summary>Assets/Resources/ComplexReactionLines.asset(YAML)에서 컴플렉스 id → 대사 목록을 읽는다.</summary>
-        private static Dictionary<string, List<string>> ParseReactionAsset()
+        internal static Dictionary<string, List<string>> ParseReactionAsset()
         {
             var path = Path.Combine(Application.dataPath, "Resources", "ComplexReactionLines.asset");
             var result = new Dictionary<string, List<string>>();
@@ -855,7 +854,7 @@ namespace BlueComplex.Core.Tests
             Assert.AreEqual(5, config.Quarters.QuarterCount);
             Assert.AreEqual(3, config.Quarters.TurnsPerQuarter);
             Assert.AreEqual(3, config.RequiredKeys);
-            Assert.AreEqual(14, config.Clues.Count(c => c.Id != Stage2Content.DummyClueId));
+            Assert.AreEqual(15, config.Clues.Count);
             Assert.AreEqual(14, config.ComplexPool.Count);
             Assert.LessOrEqual(config.Quarters.TurnsPerQuarter, ClueHand.HandSize,
                 "손패는 쿼터 시작에만 채워지므로 쿼터당 턴 수가 손패 크기를 넘으면 마지막 턴에 낼 카드가 없다.");

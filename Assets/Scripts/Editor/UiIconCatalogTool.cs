@@ -56,8 +56,41 @@ namespace BlueComplex.EditorTools
             ("Novel_with_simple_cover", "s1_horror_novel"),
             ("a_broccoli", "s1_broccoli"),
             ("Worn-out_rabbit_doll", "s1_old_rabbit"),
+            ("A_family_photo_of_a_blonde_dau", "s1_family_photo"),
+            ("a_notebook_filled_with_creepy", "s1_kids_doodle"),
             ("Landscape_painting_of_a_field", "s1_landscape"),
             ("round_clock", "s1_clock"),
+            ("A_document_bearing_a_signatur", "s2_death_notice"),
+            // 지원 신청서는 사망 통지서와 같은 그림을 임시로 쓴다 — 별도 그림이 생기면 파일 이름만 바꾼다.
+            ("A_document_bearing_a_signatur", "s2_application_form"),
+            ("Soft_Icecream", "s2_soft_icecream"),
+            // 아래 12종은 생성 도구가 만든 폴더 구조(Room2/<이름>/rotations/<이름>.png) 그대로 두었다 — 그림은 옮기지 않는다.
+            ("Room2/A_bowl_filled_with_rainwater/rotations/A_bowl_filled_with_rainwater", "s2_rainwater_bowl"),
+            ("Room2/a_glass_of_water/rotations/a_glass_of_water", "s2_water_cup"),
+            ("Room2/baguette/rotations/baguette", "s2_baguette"),
+            ("Room2/Broken_picture_frame/rotations/Broken_picture_frame", "s2_broken_frame"),
+            ("Room2/Clock/rotations/Clock", "s2_clock"),
+            ("Room2/crumpled_note/rotations/crumpled_note", "s2_table_note"),
+            ("Room2/fountain_pen/rotations/fountain_pen", "s2_fountain_pen"),
+            ("Room2/Mail/rotations/Mail", "s2_b_letter"),
+            ("Room2/umbrella/rotations/umbrella", "s2_umbrella"),
+            ("Room2/Weather_Report_on_TV/rotations/Weather_Report_on_TV", "s2_tv_news"),
+            ("Room2/white_chrysanthemum/rotations/white_chrysanthemum", "s2_white_flower"),
+            ("Room2/withered_rose/rotations/withered_rose", "s2_withered_flower"),
+            // 스테이지 3 12종 — Room3/<이름>/rotations/<이름>.png. s3_clock은 Room2의 Clock과 다른 그림(Room3/Clock)이다.
+            ("Room3/An_Old_Letter/rotations/An_Old_Letter", "s3_old_letter"),
+            ("Room3/bloody_knife/rotations/bloody_knife", "s3_bloody_knife"),
+            ("Room3/bouquet/rotations/bouquet", "s3_bouquet"),
+            ("Room3/Clock/rotations/Clock", "s3_clock"),
+            ("Room3/mannequin/rotations/mannequin", "s3_mannequin"),
+            ("Room3/Map_of_the_UK_with_a_sketch_ma/rotations/Map_of_the_UK_with_a_sketch_ma", "s3_marked_map"),
+            ("Room3/old_coat/rotations/old_coat", "s3_old_coat"),
+            ("Room3/wet_coat/rotations/wet_coat", "s3_coat"),
+            ("Room3/wooden_cremation_urn_with_name/rotations/wooden_cremation_urn_with_name", "s3_urn"),
+            ("Room3/A_notebook_full_of_doodles/rotations/A_notebook_full_of_doodles", "s3_scribbled_notebook"),
+            ("Room3/A_picture_frame_featuring_the/rotations/A_picture_frame_featuring_the", "s3_picture_frame"),
+            // 소프트 아이스크림은 스테이지 2와 같은 원본을 쓴다(의도).
+            ("Soft_Icecream", "s3_soft_icecream"),
         };
 
         /// <summary>스테이지 클리어 연출의 자물쇠·열쇠 그림(Assets/Art 바로 아래) 파일 이름(확장자 제외) → 카탈로그 id. 그림은 제자리에 두고 임포트 설정만 스프라이트(Point)로 맞춘다.</summary>

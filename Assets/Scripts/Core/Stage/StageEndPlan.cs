@@ -13,7 +13,13 @@ namespace BlueComplex.Core.Stage
         ClearToEnd,
 
         /// <summary>자물쇠가 다 열리지 못했다 — 암전 → 시작 화면으로 복귀.</summary>
-        FailToStart
+        FailToStart,
+
+        /// <summary>마지막 스테이지를 클리어했다 — 클리어 대사 → 컷신 → 엔딩 시퀀스.</summary>
+        ClearToEnding,
+
+        /// <summary>마지막 스테이지에서 자물쇠를 다 못 열었다 — 암전 → 같은 스테이지를 다시 시작(재시도).</summary>
+        FailRetry
     }
 
     /// <summary>
@@ -40,7 +46,8 @@ namespace BlueComplex.Core.Stage
         /// <param name="requiredKeys">클리어에 필요한 키 수 = 자물쇠 수.</param>
         /// <param name="collectedKeys">획득한 키 수.</param>
         /// <param name="hasNextStage">이어질 다음 스테이지가 있는가.</param>
-        public static StageEndPlan Create(StageOutcome outcome, int requiredKeys, int collectedKeys, bool hasNextStage)
+        /// <param name="isFinalStage">진행 흐름상 마지막 스테이지인가 — 클리어는 엔딩으로, 실패는 재시도로 이어진다(다음 스테이지는 없다).</param>
+        public static StageEndPlan Create(StageOutcome outcome, int requiredKeys, int collectedKeys, bool hasNextStage, bool isFinalStage = false)
         {
             if (outcome == StageOutcome.InProgress) throw new ArgumentException("끝나지 않은 스테이지에는 종료 연출이 없다.", nameof(outcome));
             if (requiredKeys < 1) throw new ArgumentOutOfRangeException(nameof(requiredKeys));
@@ -48,7 +55,8 @@ namespace BlueComplex.Core.Stage
             // 코어는 키가 다 모이면 곧바로 Cleared로 끝내므로 Cleared면 자물쇠는 전부 열린 것이다(획득 수 표기가 어긋나도 결과를 따른다).
             var opened = outcome == StageOutcome.Cleared ? requiredKeys : Math.Max(0, Math.Min(collectedKeys, requiredKeys - 1));
             var route = outcome != StageOutcome.Cleared
-                ? StageEndRoute.FailToStart
+                ? isFinalStage ? StageEndRoute.FailRetry : StageEndRoute.FailToStart
+                : isFinalStage ? StageEndRoute.ClearToEnding
                 : hasNextStage ? StageEndRoute.ClearToNextStage : StageEndRoute.ClearToEnd;
             return new StageEndPlan(requiredKeys, opened, route);
         }

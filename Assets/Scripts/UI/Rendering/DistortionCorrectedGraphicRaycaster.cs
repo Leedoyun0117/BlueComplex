@@ -22,6 +22,8 @@ namespace BlueComplex.UI.Rendering
         /// <summary>런타임에 조립되는 캔버스(예: 검증용 디버그 하네스)용. 일반적으로는 인스펙터에서 직접 물린다.</summary>
         public void SetCrtMaterial(Material material) => _crtMaterial = material;
 
+        public Material CrtMaterial => _crtMaterial;
+
         public override void Raycast(PointerEventData eventData, List<RaycastResult> resultAppendList)
         {
             var curvature = _crtMaterial != null ? _crtMaterial.GetFloat(CurvatureId) : 0f;

@@ -1,9 +1,11 @@
 using System.Collections.Generic;
+using BlueComplex.Audio;
 using BlueComplex.Core.Stage;
 using BlueComplex.Core.Stability;
 using BlueComplex.Core.Turn;
 using BlueComplex.UI.Bootstrap;
 using BlueComplex.UI.Presentation;
+using BlueComplex.UI.Rendering;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
@@ -11,14 +13,15 @@ namespace BlueComplex.UI.Effects.DLJ
 {
     /// <summary>
     /// UI 연출 기획의 침체(파란 색감/흰 광원/수중 번짐), 흥분(진입 색수차 후 핑크 단색/2초 글리치).
-    /// 기존 CRT 패스의 런타임 머티리얼만 교체한다. BGM과 게임 심박수는 변경하지 않는다.
+    /// 기존 CRT 패스의 런타임 머티리얼을 교체하고, 그동안 기존 <see cref="CrtEffectDriver"/>의 심박수 반응은 끈다.
+    /// 침체 정도(<c>_state.Depressed</c>)로 BGM 그룹의 로우패스 컷오프도 함께 구동한다(<see cref="BgmMuffle"/>). 게임 심박수는 변경하지 않는다.
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("BlueComplex/DLJ/Heartbeat Mood Effects")]
     public sealed class DLJ_HeartbeatMoodEffectController : MonoBehaviour
     {
         public enum ScatterMode { Lamps, WindowEdges }
-        public enum WindowLightStyle { FineRays, SoftBands, RoomShafts, CenterShafts, WindowGlow }
+        public enum WindowLightStyle { FineRays, SoftBands, RoomShafts, CenterShafts, WindowGlow, ClockShafts, LeftWallShafts, ClockAndLeftWallShafts }
 
         [System.Serializable]
         public sealed class WindowOutline
@@ -31,7 +34,7 @@ namespace BlueComplex.UI.Effects.DLJ
             [HideInInspector]
             public Transform InteriorTarget;
             [HideInInspector] public float Direction = -35f;
-            [Tooltip("화면 높이 기준 빛줄기 길이")]
+            [Tooltip("기본은 화면 높이 기준 빛줄기 길이. Clock Shafts는 시계 중심부터 끝까지, Left Wall Shafts는 화면 너비 기준 벽에서 오른쪽 끝까지의 거리야.")]
             [Range(0.005f, 1f)] public float Length = 0.28f;
             [Range(0f, 2f)] public float Strength = 0.75f;
             [Range(0.001f, 0.05f)] public float EdgeWidth = 0.012f;
@@ -85,10 +88,10 @@ namespace BlueComplex.UI.Effects.DLJ
             [Tooltip("빛줄기 묶음의 전체 벌어짐 각도. 0=평행, 기본 22=참고 이미지처럼 좁게, 120=넓게.")]
             [Range(0f, 160f)] public float WaterScatterAngle = 22f;
 
-            [Header("창문 광선 스타일: 이 방에만 적용")]
+            [Header("광선 스타일: 이 방에만 적용")]
             [InspectorName("광선 방식")]
             public WindowLightStyle WindowStyle = WindowLightStyle.FineRays;
-            [Tooltip("Soft Bands, Room Shafts, Center Shafts의 빛줄기 폭. 화면 높이 기준이며 기존 가는 광선에는 영향이 없어.")]
+            [Tooltip("Soft Bands, Room Shafts, Center Shafts, Clock Shafts의 빛줄기 폭. 화면 높이 기준이며 기존 가는 광선에는 영향이 없어.")]
             [InspectorName("빛줄기 폭")]
             [Range(0.003f, 0.05f)] public float WindowBandWidth = 0.016f;
             [Tooltip("높일수록 빛줄기의 가장자리가 부드러워져.")]
@@ -151,7 +154,7 @@ namespace BlueComplex.UI.Effects.DLJ
             public ScatterMode Mode;
             [Tooltip("전구 산란 출발점. 방 목록에서는 비어 있으면 산란을 끄고 다른 방 광원을 찾지 않아.")]
             public List<Light> ScatterLights = new();
-            [Tooltip("창문 테두리 목록. 한 방에서 최대 8개 변을 렌더링해.")]
+            [Tooltip("창문 테두리 목록. 일반 방식은 최대 8개 변, 시계+왼쪽 벽 동시 방식은 9개 변을 렌더링해.")]
             public List<WindowOutline> Windows = new();
             [InspectorName("연출 설정")] public MoodSettings Settings = new();
             [HideInInspector] public bool SettingsInitialized;
@@ -174,6 +177,13 @@ namespace BlueComplex.UI.Effects.DLJ
         [SerializeField] private Camera _sceneCamera;
         [Tooltip("수중 산란의 출발점으로 허용할 전등(최대 8개). 비워두면 위 광원 중 Point Light만 사용한다.")]
         [SerializeField] private Light[] _scatterLights;
+        [Header("방 2 시계 밝기")]
+        [Tooltip("방 2의 배경 루트. 이 방이 선택되고 침체 상태일 때만 시계 밝기를 낮춘다.")]
+        [SerializeField] private GameObject _clockRoomRoot;
+        [SerializeField] private MeshRenderer _clockFaceRenderer;
+        [SerializeField] private MeshRenderer _clockGlowRenderer;
+        [SerializeField, Range(0f, 1f)] private float _clockFaceDepressedBrightness = 0.7f;
+        [SerializeField, Range(0f, 1f)] private float _clockGlowDepressedBrightness = 0.5f;
         [Tooltip("전등 중심에서 발광부를 포함하는 반경. 화면 높이 기준이며 빛이 퍼지는 폭과는 별개다.")]
         [SerializeField, Range(0.005f, 0.1f)] private float _waterSourceRadius = 0.035f;
 
@@ -322,10 +332,66 @@ namespace BlueComplex.UI.Effects.DLJ
             public bool UseTemperature;
         }
 
+        private sealed class ClockBrightnessState
+        {
+            private MeshRenderer _renderer;
+            private MaterialPropertyBlock _original;
+            private MaterialPropertyBlock _working;
+            private Color _baseColor;
+            private bool _applied;
+
+            public void Apply(MeshRenderer renderer, float depressed, float minimumBrightness)
+            {
+                if (_renderer != renderer)
+                {
+                    Restore();
+                    _renderer = renderer;
+                }
+                if (_renderer == null || depressed <= 0f)
+                {
+                    Restore();
+                    return;
+                }
+
+                var material = _renderer.sharedMaterial;
+                if (material == null || !material.HasProperty(ClockBaseColorId))
+                {
+                    Restore();
+                    return;
+                }
+                if (_original == null)
+                {
+                    _original = new MaterialPropertyBlock();
+                    _working = new MaterialPropertyBlock();
+                    _renderer.GetPropertyBlock(_original);
+                    _baseColor = material.GetColor(ClockBaseColorId);
+                }
+
+                _renderer.GetPropertyBlock(_working);
+                var brightness = Mathf.Lerp(1f, Mathf.Clamp01(minimumBrightness), Mathf.Clamp01(depressed));
+                _working.SetColor(ClockBaseColorId, new Color(
+                    _baseColor.r * brightness, _baseColor.g * brightness,
+                    _baseColor.b * brightness, _baseColor.a));
+                _renderer.SetPropertyBlock(_working);
+                _applied = true;
+            }
+
+            public void Restore()
+            {
+                if (_applied && _renderer != null) _renderer.SetPropertyBlock(_original);
+                _applied = false;
+                _original = null;
+                _working = null;
+            }
+        }
+
         private readonly List<LightState> _lightStates = new();
+        private static readonly int ClockBaseColorId = Shader.PropertyToID("_BaseColor");
+        private readonly ClockBrightnessState _clockFaceBrightness = new();
+        private readonly ClockBrightnessState _clockGlowBrightness = new();
         private const int MaxWaterSources = 8;
         private readonly Vector4[] _waterSources = new Vector4[MaxWaterSources];
-        public const int MaxWindowEdges = 8;
+        public const int MaxWindowEdges = 9;
         private readonly Vector4[] _windowEdges = new Vector4[MaxWindowEdges];
         private readonly Vector4[] _windowDirections = new Vector4[MaxWindowEdges];
         private readonly Vector4[] _windowStyles = new Vector4[MaxWindowEdges];
@@ -336,6 +402,8 @@ namespace BlueComplex.UI.Effects.DLJ
         private readonly DLJ_HeartbeatMoodEffectState _state = new();
         private Material _originalMaterial;
         private Material _runtimeMaterial;
+        private CrtEffectDriver _crtDriver;
+        private UiTagLayer _tagLayer;
         private StageSession _session;
         private float _clock;
         private int _lastPresentedValue = Heartbeat.DefaultStartValue;
@@ -343,6 +411,7 @@ namespace BlueComplex.UI.Effects.DLJ
         private bool _subscribedToHeartRate;
 
         public bool IsPreviewing => _preview;
+        public bool HasScreenEffect => _runtimeMaterial != null;
         public int DisplayedHeartbeat => _state.DisplayedHeartbeat;
         public float GlitchRemaining => _state.GlitchRemaining;
         public float ChromaticRemaining => _state.ChromaticRemaining;
@@ -359,7 +428,6 @@ namespace BlueComplex.UI.Effects.DLJ
         {
             if (_rooms == null || index < 0 || index >= _rooms.Count) return;
             _activeRoomIndex = index;
-            if (_runtimeMaterial == null) return;
             CaptureLights();
             ApplyVisuals();
         }
@@ -370,6 +438,12 @@ namespace BlueComplex.UI.Effects.DLJ
             if (_bootstrapper == null) _bootstrapper = FindInScene<StageBootstrapper>();
             if (_heartRate == null) _heartRate = FindInScene<HeartRateController>();
             if (!AcquireMaterial()) return;
+            // 이 컨트롤러가 화면 톤을 맡는 동안 기존 드라이버는 안정 기본값만 유지한다.
+            if (_runtimeMaterial != null)
+            {
+                _crtDriver = FindInScene<CrtEffectDriver>();
+                if (_crtDriver != null) _crtDriver.SetReactionSuppressed(true);
+            }
             CaptureLights();
             if (_sceneCamera == null)
             {
@@ -380,7 +454,8 @@ namespace BlueComplex.UI.Effects.DLJ
                         break;
                     }
             }
-            _subscribedToHeartRate = _heartRate != null && _heartRate.isActiveAndEnabled;
+            // isActiveAndEnabled는 그 컴포넌트의 OnEnable이 아직 안 돌았으면(씬 로드 순서) false라 구독을 놓친다 — 오브젝트가 켜져 있으면 구독한다.
+            _subscribedToHeartRate = _heartRate != null && _heartRate.gameObject.activeInHierarchy;
             if (_subscribedToHeartRate) _heartRate.HeartbeatPresented += OnPresented;
             if (_bootstrapper != null)
             {
@@ -399,23 +474,26 @@ namespace BlueComplex.UI.Effects.DLJ
 
         private bool AcquireMaterial()
         {
-            if (_crtFeature == null || _crtFeature.passMaterial == null || _effectShader == null)
+            if (_crtFeature == null || _effectShader == null)
             {
-                Debug.LogError("[DLJ Mood] CRT Feature와 Effect Shader를 연결해 줘. Tools/BlueComplex/DLJ 메뉴로 설정 가능해.", this);
-                return false;
+                Debug.LogWarning("[DLJ Mood] CRT Feature 또는 Effect Shader가 없어 화면 셰이더 연출은 건너뛰고 방 광원 연출만 적용해.", this);
+                return true;
             }
-            if (_crtFeature.passMaterial.shader == _effectShader)
+            _originalMaterial = _crtFeature.passMaterial;
+            if (_originalMaterial != null && _originalMaterial.shader == _effectShader)
             {
                 Debug.LogError("[DLJ Mood] 이 CRT 패스를 이미 다른 Mood 컨트롤러가 사용 중이야. 하나만 활성화해 줘.", this);
                 return false;
             }
-            _originalMaterial = _crtFeature.passMaterial;
-            _runtimeMaterial = new Material(_originalMaterial)
-            {
-                name = "DLJ Mood (Runtime)",
-                hideFlags = HideFlags.HideAndDontSave,
-                shader = _effectShader
-            };
+            _runtimeMaterial = _originalMaterial != null
+                ? new Material(_originalMaterial)
+                : new Material(_effectShader);
+            _runtimeMaterial.name = "DLJ Mood (Runtime)";
+            _runtimeMaterial.hideFlags = HideFlags.HideAndDontSave;
+            _runtimeMaterial.shader = _effectShader;
+
+            // Pass Material을 비운 방 작업에서는 UI를 복구하지 않고 배경 연출만 렌더링해.
+            _runtimeMaterial.SetFloat("_MoodOnly", _originalMaterial == null ? 1f : 0f);
             // 기존 드라이버의 상태값이 저장된 머티리얼이어도 기본 CRT만 가져온다.
             // 곡률은 원본 값을 유지해 UI 포인터의 역왜곡 좌표와 일치시킨다.
             var p = _basePreset != null ? _basePreset.Neutral : CrtParams.Default;
@@ -432,6 +510,13 @@ namespace BlueComplex.UI.Effects.DLJ
             _runtimeMaterial.SetFloat("_TintR", 0f);
             _runtimeMaterial.SetFloat("_Pastel", 0f);
             _runtimeMaterial.SetFloat("_Brightness", p.Brightness);
+            // 감정 태그 칩은 색조/글리치를 받지 않는다: UI를 합성하는 원본 패스일 때만 별도 태그 레이어(RT_UITag)를 만들어 셰이더가 그 뒤에 얹게 한다.
+            if (_originalMaterial != null)
+            {
+                _tagLayer = UiTagLayer.Create(_originalMaterial.GetTexture("_UITex") as RenderTexture);
+                if (_tagLayer == null)
+                    Debug.LogWarning("[DLJ Mood] UI 카메라(RT_UI)를 못 찾아 태그 UI를 무드 효과에서 분리하지 못했어. 태그도 함께 색조/글리치를 받아.", this);
+            }
             _crtFeature.passMaterial = _runtimeMaterial;
             return true;
         }
@@ -488,7 +573,6 @@ namespace BlueComplex.UI.Effects.DLJ
 
         private void LateUpdate()
         {
-            if (_runtimeMaterial == null) return;
             if (_boundUsesRooms != UsesRooms || _boundRoom != CurrentRoom || _boundRoomEnabled != RoomEnabled(CurrentRoom))
                 CaptureLights();
             ConfigureState(GetSettings());
@@ -500,65 +584,70 @@ namespace BlueComplex.UI.Effects.DLJ
 
         private void ApplyVisuals()
         {
-            if (_runtimeMaterial == null) return;
             var settings = GetSettings();
             ConfigureState(settings);
-            // 기존 클릭 보정기가 원본 머티리얼에서 읽는 곡률을 그대로 따라간다.
-            if (_originalMaterial != null)
-                _runtimeMaterial.SetFloat("_Curvature", _originalMaterial.GetFloat("_Curvature"));
-            _runtimeMaterial.SetFloat("_MoodTime", _clock);
-            _runtimeMaterial.SetFloat("_DepressedAmount", _state.Depressed);
-            _runtimeMaterial.SetColor("_DepressedTint", settings.DepressedTint);
-            _runtimeMaterial.SetFloat("_BlueTintStrength", settings.BlueTintStrength);
-            _runtimeMaterial.SetFloat("_DepressedContrast", settings.DepressedContrast);
-            _runtimeMaterial.SetFloat("_DepressedSharpness", settings.DepressedSharpness);
-            _runtimeMaterial.SetFloat("_WaterLightStrength", settings.WaterLightStrength);
-            _runtimeMaterial.SetFloat("_WaterLightSpread", settings.WaterLightSpread);
-            _runtimeMaterial.SetFloat("_WaterLightSharpness", settings.WaterLightSharpness);
-            _runtimeMaterial.SetInt("_WaterBeamCount", Mathf.Clamp(settings.WaterBeamCount, 8, 48));
-            _runtimeMaterial.SetFloat("_WaterBeamWidth", Mathf.Clamp(settings.WaterBeamWidth, 0.1f, 5f));
-            _runtimeMaterial.SetFloat("_WaterWidthVariation", settings.WaterWidthVariation);
-            _runtimeMaterial.SetFloat("_WaterWaveStrength", settings.WaterWaveStrength);
-            _runtimeMaterial.SetFloat("_WaterWaveSpeed", settings.WaterWaveSpeed);
-            _runtimeMaterial.SetFloat("_WaterScatterStrength", settings.WaterScatterStrength);
-            _runtimeMaterial.SetFloat("_WaterAfterglowStrength", Mathf.Clamp(settings.WaterAfterglowStrength, 0f, 2f));
-            _runtimeMaterial.SetFloat("_WaterAfterglowAngle", Mathf.Clamp(settings.WaterAfterglowAngle, 0f, 140f));
-            _runtimeMaterial.SetFloat("_WaterAfterglowLength", Mathf.Clamp(settings.WaterAfterglowLength, 0.5f, 2f));
-            _runtimeMaterial.SetFloat("_WaterFadeStart", Mathf.Clamp(settings.WaterFadeStart, 0f, 0.95f));
-            _runtimeMaterial.SetFloat("_WaterDistanceFade", Mathf.Clamp(settings.WaterDistanceFade, 0f, 4f));
-            _runtimeMaterial.SetFloat("_WaterScatterAngle", settings.WaterScatterAngle);
-            _runtimeMaterial.SetFloat("_WaterLightDirection", settings.WaterLightDirection);
-            // 광선 스타일은 현재 방의 창문 모드에만 적용해. 다른 방으로 이동하면 매번 해제해.
-            var windowStyle = CurrentRoom != null && CurrentRoom.Mode == ScatterMode.WindowEdges
-                ? settings.WindowStyle : WindowLightStyle.FineRays;
-            _runtimeMaterial.SetInt("_WindowLightStyle", (int)windowStyle);
-            _runtimeMaterial.SetFloat("_WindowBandWidth", Mathf.Clamp(settings.WindowBandWidth, 0.003f, 0.05f));
-            _runtimeMaterial.SetFloat("_WindowBandSoftness", Mathf.Clamp01(settings.WindowBandSoftness));
-            _runtimeMaterial.SetFloat("_WindowBandOpacity", Mathf.Clamp01(settings.WindowBandOpacity));
-            _runtimeMaterial.SetFloat("_WindowBandCoreBrightness", Mathf.Clamp(settings.WindowBandCoreBrightness, 1f, 5f));
-            _runtimeMaterial.SetVector("_WindowBandTint", settings.WindowBandTint);
-            _runtimeMaterial.SetFloat("_WindowShaftGrouping", Mathf.Clamp01(settings.WindowShaftGrouping));
-            _runtimeMaterial.SetFloat("_WindowShaftVerticalBias", Mathf.Clamp(settings.WindowShaftVerticalBias, 0f, 0.6f));
-            _runtimeMaterial.SetFloat("_WindowShaftTopLength", Mathf.Clamp(settings.WindowShaftTopLength, 0.05f, 1.5f));
-            _runtimeMaterial.SetFloat("_WindowShaftBottomLength", Mathf.Clamp(settings.WindowShaftBottomLength, 0.05f, 1.5f));
-            _runtimeMaterial.SetFloat("_WindowShaftAmbientStrength", Mathf.Clamp(settings.WindowShaftAmbientStrength, 0f, 0.5f));
-            UpdateWaterSources();
-            _runtimeMaterial.SetFloat("_ExcitedAmount", _state.Excited);
-            _runtimeMaterial.SetFloat("_ExcitedBlend", Mathf.Clamp01(_state.Excited / Mathf.Max(0.001f, settings.NormalStateStrength)));
-            _runtimeMaterial.SetFloat("_ChromaticBurst", _state.ChromaticBurst);
-            _runtimeMaterial.SetFloat("_PastelSeparation", settings.PastelSeparation);
-            _runtimeMaterial.SetFloat("_PastelStrength", settings.PastelStrength);
-            // sRGB 팔레트 그대로 전달. 셰이더의 디스플레이 색 공간에서 혼합 후 선형으로 복원한다.
-            _runtimeMaterial.SetVector("_PastelPink", settings.PastelPink);
-            _runtimeMaterial.SetVector("_PastelMint", settings.PastelMint);
-            _runtimeMaterial.SetVector("_PastelLavender", settings.PastelLavender);
-            _runtimeMaterial.SetFloat("_PastelSaturation", settings.PastelSaturation);
-            _runtimeMaterial.SetFloat("_PastelContrast", settings.PastelContrast);
-            _runtimeMaterial.SetFloat("_PastelGradeStrength", settings.PastelGradeStrength);
-            // 마지막 0.35초만 감쇠. 2초를 넘기면 정확히 0이 된다.
-            var glitch = Mathf.Clamp01(_state.GlitchRemaining / 0.35f);
-            _runtimeMaterial.SetFloat("_GlitchAmount", glitch);
-            _runtimeMaterial.SetFloat("_GlitchDisplacement", settings.GlitchDisplacement);
+            BgmMuffle.Apply(_state.Depressed);
+            if (_runtimeMaterial != null)
+            {
+                // 기존 클릭 보정기가 원본 머티리얼에서 읽는 곡률을 그대로 따라간다.
+                if (_originalMaterial != null)
+                    _runtimeMaterial.SetFloat("_Curvature", _originalMaterial.GetFloat("_Curvature"));
+                _runtimeMaterial.SetFloat("_MoodTime", _clock);
+                var tagTexture = _tagLayer != null ? _tagLayer.Texture : null;
+                _runtimeMaterial.SetFloat("_TagEnabled", tagTexture != null ? 1f : 0f);
+                if (tagTexture != null) _runtimeMaterial.SetTexture("_TagTex", tagTexture);
+                _runtimeMaterial.SetFloat("_DepressedAmount", _state.Depressed);
+                _runtimeMaterial.SetColor("_DepressedTint", settings.DepressedTint);
+                _runtimeMaterial.SetFloat("_BlueTintStrength", settings.BlueTintStrength);
+                _runtimeMaterial.SetFloat("_DepressedContrast", settings.DepressedContrast);
+                _runtimeMaterial.SetFloat("_DepressedSharpness", settings.DepressedSharpness);
+                _runtimeMaterial.SetFloat("_WaterLightStrength", settings.WaterLightStrength);
+                _runtimeMaterial.SetFloat("_WaterLightSpread", settings.WaterLightSpread);
+                _runtimeMaterial.SetFloat("_WaterLightSharpness", settings.WaterLightSharpness);
+                _runtimeMaterial.SetInt("_WaterBeamCount", Mathf.Clamp(settings.WaterBeamCount, 8, 48));
+                _runtimeMaterial.SetFloat("_WaterBeamWidth", Mathf.Clamp(settings.WaterBeamWidth, 0.1f, 5f));
+                _runtimeMaterial.SetFloat("_WaterWidthVariation", settings.WaterWidthVariation);
+                _runtimeMaterial.SetFloat("_WaterWaveStrength", settings.WaterWaveStrength);
+                _runtimeMaterial.SetFloat("_WaterWaveSpeed", settings.WaterWaveSpeed);
+                _runtimeMaterial.SetFloat("_WaterScatterStrength", settings.WaterScatterStrength);
+                _runtimeMaterial.SetFloat("_WaterAfterglowStrength", Mathf.Clamp(settings.WaterAfterglowStrength, 0f, 2f));
+                _runtimeMaterial.SetFloat("_WaterAfterglowAngle", Mathf.Clamp(settings.WaterAfterglowAngle, 0f, 140f));
+                _runtimeMaterial.SetFloat("_WaterAfterglowLength", Mathf.Clamp(settings.WaterAfterglowLength, 0.5f, 2f));
+                _runtimeMaterial.SetFloat("_WaterFadeStart", Mathf.Clamp(settings.WaterFadeStart, 0f, 0.95f));
+                _runtimeMaterial.SetFloat("_WaterDistanceFade", Mathf.Clamp(settings.WaterDistanceFade, 0f, 4f));
+                _runtimeMaterial.SetFloat("_WaterScatterAngle", settings.WaterScatterAngle);
+                _runtimeMaterial.SetFloat("_WaterLightDirection", settings.WaterLightDirection);
+                // 광선 스타일은 현재 방의 지정된 선/창문 모드에만 적용해.
+                var windowStyle = CurrentRoom != null && CurrentRoom.Mode == ScatterMode.WindowEdges
+                    ? settings.WindowStyle : WindowLightStyle.FineRays;
+                _runtimeMaterial.SetInt("_WindowLightStyle", (int)windowStyle);
+                _runtimeMaterial.SetFloat("_WindowBandWidth", Mathf.Clamp(settings.WindowBandWidth, 0.003f, 0.05f));
+                _runtimeMaterial.SetFloat("_WindowBandSoftness", Mathf.Clamp01(settings.WindowBandSoftness));
+                _runtimeMaterial.SetFloat("_WindowBandOpacity", Mathf.Clamp01(settings.WindowBandOpacity));
+                _runtimeMaterial.SetFloat("_WindowBandCoreBrightness", Mathf.Clamp(settings.WindowBandCoreBrightness, 1f, 5f));
+                _runtimeMaterial.SetVector("_WindowBandTint", settings.WindowBandTint);
+                _runtimeMaterial.SetFloat("_WindowShaftGrouping", Mathf.Clamp01(settings.WindowShaftGrouping));
+                _runtimeMaterial.SetFloat("_WindowShaftVerticalBias", Mathf.Clamp(settings.WindowShaftVerticalBias, 0f, 0.6f));
+                _runtimeMaterial.SetFloat("_WindowShaftTopLength", Mathf.Clamp(settings.WindowShaftTopLength, 0.05f, 1.5f));
+                _runtimeMaterial.SetFloat("_WindowShaftBottomLength", Mathf.Clamp(settings.WindowShaftBottomLength, 0.05f, 1.5f));
+                _runtimeMaterial.SetFloat("_WindowShaftAmbientStrength", Mathf.Clamp(settings.WindowShaftAmbientStrength, 0f, 0.5f));
+                UpdateWaterSources();
+                _runtimeMaterial.SetFloat("_ExcitedAmount", _state.Excited);
+                _runtimeMaterial.SetFloat("_ExcitedBlend", Mathf.Clamp01(_state.Excited / Mathf.Max(0.001f, settings.NormalStateStrength)));
+                _runtimeMaterial.SetFloat("_ChromaticBurst", _state.ChromaticBurst);
+                _runtimeMaterial.SetFloat("_PastelSeparation", settings.PastelSeparation);
+                _runtimeMaterial.SetFloat("_PastelStrength", settings.PastelStrength);
+                // sRGB 팔레트를 셰이더에 그대로 전달한다.
+                _runtimeMaterial.SetVector("_PastelPink", settings.PastelPink);
+                _runtimeMaterial.SetVector("_PastelMint", settings.PastelMint);
+                _runtimeMaterial.SetVector("_PastelLavender", settings.PastelLavender);
+                _runtimeMaterial.SetFloat("_PastelSaturation", settings.PastelSaturation);
+                _runtimeMaterial.SetFloat("_PastelContrast", settings.PastelContrast);
+                _runtimeMaterial.SetFloat("_PastelGradeStrength", settings.PastelGradeStrength);
+                var glitch = Mathf.Clamp01(_state.GlitchRemaining / 0.35f);
+                _runtimeMaterial.SetFloat("_GlitchAmount", glitch);
+                _runtimeMaterial.SetFloat("_GlitchDisplacement", settings.GlitchDisplacement);
+            }
             foreach (var saved in _lightStates)
             {
                 if (saved.Light == null) continue;
@@ -567,6 +656,16 @@ namespace BlueComplex.UI.Effects.DLJ
                 saved.Light.color = Color.Lerp(saved.Color, Color.white, white);
                 saved.Light.useColorTemperature = white <= 0f && saved.UseTemperature;
             }
+            ApplyClockBrightness();
+        }
+
+        private void ApplyClockBrightness()
+        {
+            var room = CurrentRoom;
+            var depressed = _clockRoomRoot != null && room != null
+                && room.Root == _clockRoomRoot && RoomEnabled(room) ? _state.Depressed : 0f;
+            _clockFaceBrightness.Apply(_clockFaceRenderer, depressed, _clockFaceDepressedBrightness);
+            _clockGlowBrightness.Apply(_clockGlowRenderer, depressed, _clockGlowDepressedBrightness);
         }
 
         private void UpdateWaterSources()
@@ -626,6 +725,12 @@ namespace BlueComplex.UI.Effects.DLJ
         private void AddWindowEdges(WindowOutline window, Camera camera, ref int count)
         {
             if (window == null || window.Corners == null || window.Corners.Count < 2 || window.Strength <= 0f) return;
+            // Clock/Left Wall Shafts는 Blit UV와 Camera viewport Y가 같은 방향이다.
+            // 여기서 CRT 창문용 Y 반전을 적용하면 출발선이 뒤집혀 빛도 반대로 뻗는다.
+            var flipY = SystemInfo.graphicsUVStartsAtTop
+                && GetSettings().WindowStyle != WindowLightStyle.ClockShafts
+                && GetSettings().WindowStyle != WindowLightStyle.LeftWallShafts
+                && GetSettings().WindowStyle != WindowLightStyle.ClockAndLeftWallShafts;
             // 화면 밖으로 잘라내기 전 전체 윤곽의 감김 방향을 사용해. 모서리 등록 순서가 반대여도 바깥은 같아.
             var signedArea = 0f;
             for (var i = 0; i < window.Corners.Count; i++)
@@ -637,9 +742,10 @@ namespace BlueComplex.UI.Effects.DLJ
                 var b = camera.WorldToViewportPoint(next.position);
                 signedArea += a.x * b.y - b.x * a.y;
             }
-            if (SystemInfo.graphicsUVStartsAtTop) signedArea = -signedArea;
+            if (flipY) signedArea = -signedArea;
             var segments = window.Closed && window.Corners.Count > 2 ? window.Corners.Count : window.Corners.Count - 1;
-            for (var i = 0; i < segments && count < MaxWindowEdges; i++)
+            var maxEdges = GetSettings().WindowStyle == WindowLightStyle.ClockAndLeftWallShafts ? MaxWindowEdges : 8;
+            for (var i = 0; i < segments && count < maxEdges; i++)
             {
                 var start = window.Corners[i];
                 var end = window.Corners[(i + 1) % window.Corners.Count];
@@ -647,8 +753,8 @@ namespace BlueComplex.UI.Effects.DLJ
                 var a = camera.WorldToViewportPoint(start.position);
                 var b = camera.WorldToViewportPoint(end.position);
                 if (!ClipWindowEdge(ref a, ref b, camera.nearClipPlane, camera.farClipPlane)) continue;
-                var yA = SystemInfo.graphicsUVStartsAtTop ? 1f - a.y : a.y;
-                var yB = SystemInfo.graphicsUVStartsAtTop ? 1f - b.y : b.y;
+                var yA = flipY ? 1f - a.y : a.y;
+                var yB = flipY ? 1f - b.y : b.y;
                 var outward = WindowOutwardNormal(new Vector2(a.x * camera.aspect, yA),
                     new Vector2(b.x * camera.aspect, yB), signedArea);
                 _windowEdges[count] = new Vector4(a.x, yA, b.x, yB);
@@ -694,7 +800,7 @@ namespace BlueComplex.UI.Effects.DLJ
         /// <summary>플레이 중 표시만 테스트한다. 카드/심박수/게임 결과는 바꾸지 않는다.</summary>
         public void PreviewHeartbeat(int value)
         {
-            if (!Application.isPlaying || _runtimeMaterial == null) return;
+            if (!Application.isPlaying) return;
             _preview = true;
             ApplyHeartbeat(value, false);
         }
@@ -713,10 +819,17 @@ namespace BlueComplex.UI.Effects.DLJ
             _session = null;
             _subscribedToHeartRate = false;
             RestoreLights();
+            _clockFaceBrightness.Restore();
+            _clockGlowBrightness.Restore();
+            BgmMuffle.Apply(0f);
+            if (_crtDriver != null) _crtDriver.SetReactionSuppressed(false);
+            _crtDriver = null;
             if (_crtFeature != null && _runtimeMaterial != null && _crtFeature.passMaterial == _runtimeMaterial)
                 _crtFeature.passMaterial = _originalMaterial;
             if (_runtimeMaterial != null) Destroy(_runtimeMaterial);
             _runtimeMaterial = null;
+            if (_tagLayer != null) Destroy(_tagLayer.gameObject);
+            _tagLayer = null;
             _originalMaterial = null;
             _preview = false;
             _state.Reset();

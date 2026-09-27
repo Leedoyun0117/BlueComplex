@@ -52,6 +52,9 @@ namespace BlueComplex.UI.Layout
             }
         }
 
+        /// <summary>참이면 말림 없이 평평한 사각형 종이로만 그린다(평상시 살짝 말린 모서리도, 붙는 동안 들리는 모서리도 없다).</summary>
+        public bool Flat { get; set; }
+
         public event System.Action Changed;
 
         public void Set(float amount, float shadowLift)
@@ -62,7 +65,7 @@ namespace BlueComplex.UI.Layout
         }
 
         /// <summary>사각형 종이의 말림 기하를 계산한다.</summary>
-        public Layout Compute(Rect rect) => new Layout(rect, AngleDegrees, _amount);
+        public Layout Compute(Rect rect) => new Layout(rect, AngleDegrees, _amount, Flat);
 
         /// <summary>한 프레임의 기하. 종이 국소 좌표(사각형 rect 기준)의 점 p는 O + s·D + w·N이다(s: 말림 축 방향 거리, w: 그에 수직).</summary>
         public readonly struct Layout
@@ -88,7 +91,7 @@ namespace BlueComplex.UI.Layout
             private readonly float[] _s;
             private readonly float[] _w;
 
-            public Layout(Rect rect, float angleDegrees, float amount)
+            public Layout(Rect rect, float angleDegrees, float amount, bool flat = false)
             {
                 Rect = rect;
                 O = new Vector2(rect.xMax, rect.yMin);
@@ -116,7 +119,7 @@ namespace BlueComplex.UI.Layout
                 var rMax = MaxRadius * S;
                 // 끝까지 말려도 원통 한 바퀴 반쯤 더 감기게 — 종이가 남지 않고 두루마리처럼 말려 올라간다.
                 var fullFold = S + Mathf.PI * rMax * 1.1f;
-                T = Mathf.LerpUnclamped(RestFold * S, fullFold, amount);
+                T = flat ? 0f : Mathf.LerpUnclamped(RestFold * S, fullFold, amount); // 평평하면 접힘선이 모서리에 있어 종이 전체가 납작한 사각형이다.
                 R = Mathf.Min(rMax, T / 6f);
             }
 

@@ -80,6 +80,12 @@ namespace BlueComplex.UI.Layout
         private ITurnResultPresenter _presenter;
 
         public RectTransform Root => _rect;
+
+        /// <summary>접힌 상태에서 눈에 보이는 태블릿 — 튜토리얼 가이드가 "끌어서 열기"를 가리킬 때 강조하는 자리(<see cref="Root"/>는 열렸을 때의 넓은 판 전체다).</summary>
+        public RectTransform TabletRect => _tablet;
+
+        /// <summary>"엑스레이 · 끌어서 열기" 이름표.</summary>
+        public RectTransform HandleTagRect => _handleTag;
         public bool IsOpen { get; private set; }
 
         /// <summary>0 = 접힘, 1 = 펼침(트윈 중에는 그 사이, 펼칠 때 살짝 넘칠 수 있다).</summary>

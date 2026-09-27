@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d8b6f2a91c44e7fa5b0c7e1d2f49a63, type: 3}
   m_Name: YukiBreathSet
   m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.YukiBreathSet
-  frame1Hold: 1.2
-  frame3Hold: 0.6
-  stepSeconds: 0.15
+  frame1Hold: 1.4
+  frame3Hold: 0.7
+  stepSeconds: 0.25
   normal:
   - {fileID: 1086634847, guid: 5a4ecf0980d66e54a94d9d44a01281be, type: 3}
   - {fileID: 1577136139, guid: 5a4ecf0980d66e54a94d9d44a01281be, type: 3}

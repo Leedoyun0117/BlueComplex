@@ -3,6 +3,7 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
 {
     Properties
     {
+        [HideInInspector] _MoodOnly ("Mood Only", Float) = 0
         _ScanIntensity ("Scanline Intensity", Range(0, 1)) = 0.35
         _ScanCount ("Scanline Count", Range(100, 900)) = 420
         _ScanThickness ("Scanline Thickness", Range(0.2, 4)) = 1.0
@@ -73,6 +74,11 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
         // 깨져 화면 전체가 배럴 클리핑으로 새까맣게 나오는 문제가 있었다 — 그래서 한 패스로 합쳤다.
         // RT_UI를 에디터에서 이 슬롯에 직접 할당한다(전역 텍스처 아님).
         _UITex ("UI Texture", 2D) = "black" {}
+
+        // 무드 효과(색조/글리치/블룸/색수차)를 받지 않는 UI(감정 태그 칩). 별도 태그 카메라(UiTagLayer)가 그린 RT_UITag를
+        // 컨트롤러가 런타임에 할당하고 _TagEnabled를 1로 켠다 — 꺼져 있으면 기본 텍스처가 무엇이든 아무것도 얹지 않는다.
+        [HideInInspector] _TagEnabled ("Mood-exempt UI Enabled", Float) = 0
+        _TagTex ("Mood-exempt UI Texture", 2D) = "black" {}
     }
 
     SubShader
@@ -100,8 +106,12 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
 
             TEXTURE2D(_UITex);
             SAMPLER(sampler_UITex);
+            TEXTURE2D(_TagTex);
+            SAMPLER(sampler_TagTex);
 
             CBUFFER_START(UnityPerMaterial)
+                float _MoodOnly;
+                float _TagEnabled;
                 float _ScanIntensity;
                 float _ScanCount;
                 float _ScanThickness;
@@ -141,9 +151,9 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
                 int _WaterSourceCount;
                 float4 _WaterSources[8];
                 int _WindowEdgeCount;
-                float4 _WindowEdges[8];
-                float4 _WindowDirections[8];
-                float4 _WindowStyles[8];
+                float4 _WindowEdges[9];
+                float4 _WindowDirections[9];
+                float4 _WindowStyles[9];
                 int _WindowLightStyle;
                 float _WindowBandWidth;
                 float _WindowBandSoftness;
@@ -190,6 +200,8 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
             float3 SampleComposited(float2 uv)
             {
                 float3 scene = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv).rgb;
+                [branch]
+                if (_MoodOnly > 0.5) return scene;
                 float4 ui = SAMPLE_TEXTURE2D(_UITex, sampler_UITex, uv);
                 return lerp(scene, ui.rgb, ui.a);
             }
@@ -582,10 +594,163 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
 
             // 창문은 지정된 테두리에서만 출발해. 어두운 창틀도 발광 경계로 쓸 수 있도록 밝기 추출과 분리해.
             // 변마다 고정된 수의 광선을 분배하며 전구 묶음을 지점마다 복제하지 않아.
+            // 시계 중심을 지나는 가로선에서 아래로 뻗는다. 시계판의 아래쪽도 옅은 빛에 잠긴다.
+            float3 ClockWindowShafts(float2 uv)
+            {
+                int edgeCount = min(_WindowEdgeCount, 8);
+                if (edgeCount < 2) return 0.0;
+                float aspect = abs(_BlitTexture_TexelSize.y / _BlitTexture_TexelSize.x);
+                float2 scale = float2(aspect, 1.0);
+                float2 left = _WindowEdges[0].xy * scale;
+                float2 right = _WindowEdges[edgeCount - 1].zw * scale;
+                float radius = length(right - left) * 0.5;
+                if (radius <= 0.001) return 0.0;
+                float2 center = (left + right) * 0.5;
+                float2 across = (right - left) / (radius * 2.0);
+                float2 down = float2(across.y, -across.x);
+                float2 pixel = uv * scale;
+                float2 delta = pixel - center;
+                float depth = dot(delta, down);
+                float reach = max(_WindowDirections[0].z, 0.001);
+                if (depth <= 0.0 || depth >= reach) return 0.0;
+                float feather = max(abs(_BlitTexture_TexelSize.y) * 1.5, 0.001);
+                // 시계판 아래쪽은 살짝만 가리고, 시계탑으로 내려갈수록 빛을 드러내.
+                float sourceFade = lerp(0.25, 1.0, smoothstep(0.0, radius * 1.15, depth));
+                float slope = tan(radians(clamp(_WaterScatterAngle, 0.0, 100.0) * 0.5));
+                float lateral = abs(dot(delta, across));
+                float coneWidth = radius + depth * slope;
+                float envelope = sourceFade * (1.0 - smoothstep(coneWidth * 0.88, coneWidth, lateral));
+                if (envelope <= 0.001) return 0.0;
+                float clockFade = WaterDistanceOpacity(depth / reach);
+                float strength = _WindowDirections[0].w;
+                float3 beams = float3(0.0, 0.0, strength * 0.3 * envelope * clockFade);
+                float waveTime = _MoodTime * max(_WaterWaveSpeed, 0.0);
+                int count = clamp(_WaterBeamCount, 8, 48);
+                [loop]
+                for (int i = 0; i < count; i++)
+                {
+                    float seed = Rand(float2(i + 19.0, 73.0));
+                    float detail = Rand(float2(i + 43.0, 29.0));
+                    float slot = ((float)i + lerp(0.2, 0.8, seed)) / (float)count * edgeCount;
+                    int edge = min((int)floor(slot), edgeCount - 1);
+                    float4 endpoints = _WindowEdges[edge];
+                    float2 origin = lerp(endpoints.xy, endpoints.zw, frac(slot)) * scale;
+                    float lane = dot(origin - center, across) / radius;
+                    float2 axis = normalize(down + across * lane * slope);
+                    float2 sideways = float2(-axis.y, axis.x);
+                    float2 relative = pixel - origin;
+                    float along = dot(relative, axis);
+                    if (along <= 0.0) continue;
+                    float beamLength = max((reach - dot(origin - center, down)) / dot(axis, down), 0.001);
+                    float progress = along / (beamLength * lerp(0.86, 1.0, detail));
+                    float fade = WaterDistanceOpacity(progress);
+                    float bend = sin(progress * 2.0 + waveTime * 0.45 + seed * 6.28318)
+                        * 0.004 * clamp(_WaterWaveStrength, 0.0, 2.0) * progress * progress;
+                    float distance = abs(dot(relative, sideways) - bend);
+                    float variation = i % 5 == 0 ? 1.6 : lerp(0.28, 0.75, detail);
+                    float clockWidth = _WindowLightStyle == 7 ? _WindowStyles[0].x : _WindowBandWidth;
+                    float width = max(clockWidth * lerp(1.0, variation, _WaterWidthVariation)
+                        * clamp(_WaterBeamWidth, 0.1, 5.0) * (1.0 + progress * 0.35), feather);
+                    float clockSoftness = _WindowLightStyle == 7 ? 0.0 : _WindowBandSoftness;
+                    float softness = lerp(0.2, 1.0, saturate(clockSoftness));
+                    float core = 1.0 - smoothstep(width * 0.15, width * (0.4 + softness), distance);
+                    float halo = exp2(-pow(distance / max(width * 2.5, feather), 2.0) * 2.0);
+                    float shimmer = 1.0 + 0.12 * clamp(_WaterWaveStrength, 0.0, 2.0)
+                        * sin(waveTime * lerp(0.6, 1.3, detail) + seed * 6.28318);
+                    float energy = _WindowDirections[edge].w * lerp(0.45, 0.8, seed)
+                        * pow(24.0 / (float)count, 0.65) * fade * shimmer * envelope
+                        * smoothstep(0.0, feather * 3.0, along);
+                    beams.x += core * energy * 0.4;
+                    beams.y += halo * energy * 0.5;
+                }
+                return beams;
+            }
+
+            // 벽의 세로 출발선에서만 오른쪽으로 비춘다. 선 왼쪽은 빛을 완전히 제외해.
+            float3 LeftWallShafts(float2 uv)
+            {
+                if (_WindowEdgeCount < (_WindowLightStyle == 7 ? 9 : 1)) return 0.0;
+                float aspect = abs(_BlitTexture_TexelSize.y / _BlitTexture_TexelSize.x);
+                float2 scale = float2(aspect, 1.0);
+                int wallEdge = _WindowLightStyle == 7 ? 8 : 0;
+                float4 edge = _WindowEdges[wallEdge];
+                float2 bottom = edge.xy * scale;
+                float2 top = edge.zw * scale;
+                float height = length(top - bottom);
+                if (height <= 0.001) return 0.0;
+                float2 up = (top - bottom) / height;
+                float2 right = float2(up.y, -up.x);
+                float2 center = (bottom + top) * 0.5;
+                float2 delta = uv * scale - center;
+                float depth = dot(delta, right);
+                float reach = max(_WindowDirections[wallEdge].z * aspect, 0.001);
+                if (depth <= 0.0 || depth >= reach) return 0.0;
+                float halfHeight = height * 0.5;
+                float wallAngle = _WaterScatterAngle * (_WindowLightStyle == 7 ? 17.0 / 22.0 : 1.0);
+                float slope = tan(radians(clamp(wallAngle, 0.0, 80.0) * 0.5));
+                float halfWidth = halfHeight + depth * slope;
+                float lateral = abs(dot(delta, up));
+                float feather = max(abs(_BlitTexture_TexelSize.y) * 2.0, 0.002);
+                float envelope = (1.0 - smoothstep(halfWidth * 0.88, halfWidth, lateral))
+                    * smoothstep(0.0, feather * 3.0, depth);
+                if (envelope <= 0.001) return 0.0;
+                float fade = WaterDistanceOpacity(depth / reach);
+                float strength = _WindowDirections[wallEdge].w;
+                float3 beams = float3(0.0, 0.0, strength * 0.3 * envelope * fade);
+                float waveTime = _MoodTime * max(_WaterWaveSpeed, 0.0);
+                int count = clamp(_WaterBeamCount, 8, 48);
+                [loop]
+                for (int i = 0; i < count; i++)
+                {
+                    float seed = Rand(float2(i + 37.0, 91.0));
+                    float detail = Rand(float2(i + 71.0, 19.0));
+                    float slot = ((float)i + lerp(0.2, 0.8, seed)) / (float)count;
+                    float2 origin = lerp(bottom, top, slot);
+                    float lane = dot(origin - center, up) / halfHeight;
+                    float2 axis = normalize(right + up * lane * slope);
+                    float2 sideways = float2(-axis.y, axis.x);
+                    float2 relative = uv * scale - origin;
+                    float along = dot(relative, axis);
+                    if (along <= 0.0) continue;
+                    float progress = along * dot(axis, right) / reach;
+                    float rayFade = WaterDistanceOpacity(progress);
+                    float bend = sin(progress * 2.0 + waveTime * 0.45 + seed * 6.28318)
+                        * 0.004 * clamp(_WaterWaveStrength, 0.0, 2.0) * progress * progress;
+                    float distance = abs(dot(relative, sideways) - bend);
+                    float variation = i % 5 == 0 ? 1.5 : lerp(0.3, 0.8, detail);
+                    float wallWidth = _WindowLightStyle == 7 ? _WindowStyles[wallEdge].x : _WindowBandWidth;
+                    float width = max(wallWidth * lerp(1.0, variation, _WaterWidthVariation)
+                        * clamp(_WaterBeamWidth, 0.1, 5.0) * (1.0 + progress * 0.3), feather);
+                    float wallSoftness = _WindowLightStyle == 7 ? 1.0 : _WindowBandSoftness;
+                    float softness = lerp(0.2, 1.0, saturate(wallSoftness));
+                    float core = 1.0 - smoothstep(width * 0.15, width * (0.4 + softness), distance);
+                    float halo = exp2(-pow(distance / max(width * 2.5, feather), 2.0) * 2.0);
+                    float shimmer = 1.0 + 0.12 * clamp(_WaterWaveStrength, 0.0, 2.0)
+                        * sin(waveTime * lerp(0.6, 1.3, detail) + seed * 6.28318);
+                    float energy = strength * lerp(0.4, 0.75, seed)
+                        * pow(24.0 / (float)count, 0.65) * rayFade * shimmer * envelope;
+                    beams.x += core * energy * 0.35;
+                    beams.y += halo * energy * 0.5;
+                }
+                return beams;
+            }
+
             float3 WindowBeams(float2 uv)
             {
                 float3 beams = 0.0;
                 if (_WindowEdgeCount <= 0 || _WaterLightStrength <= 0.001) return beams;
+                [branch]
+                if (_WindowLightStyle == 5) return ClockWindowShafts(uv);
+                [branch]
+                if (_WindowLightStyle == 6) return LeftWallShafts(uv);
+                [branch]
+                if (_WindowLightStyle == 7)
+                {
+                    // 단독 시계 버전의 낮은 불투명도에 맞추고, 두 빛이 겹치는 곳만 다시 올려.
+                    float3 clockBeams = ClockWindowShafts(uv) * 0.56;
+                    float3 wallBeams = LeftWallShafts(uv);
+                    return clockBeams + wallBeams + min(clockBeams, wallBeams) * 0.45;
+                }
                 [branch]
                 if (_WindowLightStyle == 4) return beams;
                 [branch]
@@ -669,7 +834,10 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
             // UI는 산란광 합성에서 제외해.
             float3 Underwater(float2 uv, float3 col)
             {
-                float uiAlpha = SAMPLE_TEXTURE2D(_UITex, sampler_UITex, uv).a;
+                float uiAlpha = 0.0;
+                [branch]
+                if (_MoodOnly < 0.5)
+                    uiAlpha = SAMPLE_TEXTURE2D(_UITex, sampler_UITex, uv).a;
                 float2 texel = abs(_BlitTexture_TexelSize.xy);
                 float3 scene = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv).rgb;
                 float3 neighbors = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv + float2(texel.x, 0)).rgb
@@ -694,7 +862,7 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
                     + float3(0.24, 0.64, 0.78) * haze
                     + float3(0.3, 0.7, 0.82) * afterglow;
                 [branch]
-                if (_WindowLightStyle == 1 || _WindowLightStyle == 2 || _WindowLightStyle == 3 || _WindowLightStyle == 4)
+                if (_WindowLightStyle == 1 || _WindowLightStyle == 2 || _WindowLightStyle == 3 || _WindowLightStyle == 4 || _WindowLightStyle == 5 || _WindowLightStyle == 6 || _WindowLightStyle == 7)
                     scattering = _WindowBandTint.rgb * (core * clamp(_WindowBandCoreBrightness, 1.0, 5.0)
                         + haze * 0.85 + afterglow * 0.7)
                         * saturate(_WindowBandOpacity);
@@ -783,6 +951,8 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
                 float2 res = _BlitTexture_TexelSize.zw;
                 float time = _Time.y;
                 float2 c = input.texcoord;
+                // 태그 UI는 글리치 변위를 받지 않는다 — 원래 좌표를 따로 쥐고 있다가 흔들림/배럴만 같이 적용한다.
+                float2 tagC = c;
 
                 // 진입 후 2초만 활성화되는 가로 슬라이스 글리치. 진입 색수차와 별도 제어.
                 float frame = floor(_MoodTime * 13.0);
@@ -792,12 +962,25 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
                     * selected * _GlitchAmount * _GlitchDisplacement;
                 c.x += sin(c.y * 9.0 + _MoodTime * 1.4) * 0.0012 * _ExcitedAmount * _ChromaticBurst;
 
+                // 원본 Pass Material이 없는 작업 모드: UI와 CRT 필터 없이 방 연출만 적용해.
+                [branch]
+                if (_MoodOnly > 0.5)
+                {
+                    float3 mood = SampleComposited(c);
+                    if (_ExcitedAmount > 0.001) mood = PastelExcitement(c, mood);
+                    if (_DepressedAmount > 0.001) mood = Underwater(c, mood);
+                    return float4(mood, 1.0);
+                }
+
                 // 화면 흔들림
                 c.x += sin(time * 37.0) * _Shake * 0.5;
                 c.y += cos(time * 23.0) * _Shake * 0.35;
+                tagC.x += sin(time * 37.0) * _Shake * 0.5;
+                tagC.y += cos(time * 23.0) * _Shake * 0.35;
 
                 // 배럴 왜곡
                 c = Barrel(c);
+                tagC = Barrel(tagC);
 
                 // 화면 밖 클리핑
                 if (c.x < 0.0 || c.x > 1.0 || c.y < 0.0 || c.y > 1.0)
@@ -828,6 +1011,11 @@ Shader "BlueComplex/DLJ/HeartbeatMood"
 
                 [branch]
                 if (_DepressedAmount > 0.001) col = Underwater(c, col);
+
+                // 감정 태그 UI: 파스텔/침체 색조와 글리치가 끝난 뒤에 원래 색으로 얹는다(색으로 구분되는 라벨이라 톤이 입혀지면 읽기 어렵다).
+                // 이 뒤의 스캔라인/섀도우 마스크/비네트/밝기는 화면 전체가 공유하는 CRT 질감이라 그대로 적용된다.
+                float4 tag = SAMPLE_TEXTURE2D(_TagTex, sampler_TagTex, tagC);
+                col = lerp(col, tag.rgb, tag.a * _TagEnabled);
 
                 // 스캔라인 (두께: sin파를 지수로 눌러서 어두운 대역의 폭을 넓힘)
                 float sl = sin((c.y + time * _ScanSpeed * 0.05) * _ScanCount * 3.14159);
