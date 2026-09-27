@@ -52,11 +52,17 @@ namespace BlueComplex.UI.Presentation
             _complexList.Refresh(Session.Complexes.InPriorityOrder().ToList());
             _complexStatus?.Refresh();
             _traitStatus?.Refresh();
-            // 이 Presenter는 연출 없이 한 줄만 보여주므로, 결과 대사가 있으면 사건 요약 뒤에 이어 붙인다
-            // (Cinematic 쪽은 "결과"와 "결과 대사"를 별도의 타이핑 단계로 재생한다).
-            var summaryLine = TurnSummaryFormatter.Build(report);
-            var resultTagLine = TurnSummaryFormatter.BuildResultTagLine(report);
-            _dialogue.PlayTyped(resultTagLine != null ? $"{summaryLine} {resultTagLine}" : summaryLine);
+            // 순수 감정 반응 대사만 대사창에 낸다 — 심박수·키 획득 등은 다른 뷰(포스트잇 등)가 전달한다.
+            // 컴플렉스 발현만은 예외(노션 "UI 연출": 나츠의 독백으로 전달) — 이 창은 한 번에 한 줄만 보여주므로 결과 대사보다 우선한다.
+            if (report.SpawnedComplex != null)
+            {
+                _dialogue.PlayNatsuLine(TurnSummaryFormatter.BuildComplexSpawnLine(report.SpawnedComplex));
+            }
+            else
+            {
+                var line = report.IsPass ? TurnSummaryFormatter.BuildPassLine() : TurnSummaryFormatter.BuildResultTagLine(report);
+                if (line != null) _dialogue.PlayTyped(line);
+            }
             _heartRate?.PlayTurnResult(report);
             if (!report.IsPass)
                 _memoryBubble?.SetPersistentSummary(TurnSummaryFormatter.BuildFinalEmotionSummary(report));
