@@ -106,7 +106,42 @@ namespace BlueComplex.UI.Presentation
             yield return StageDialoguePlayer.GetOrCreate(_canvasRoot).PlayOver(variant, null);
             if (generation != _generation) yield break;
 
-            // 게임 UI가 돌아오는 동안 초상화도 덮인 채 제자리로 돌아오고, 도착하면 포스트잇이 떼어진다.
+            yield return Return(generation);
+        }
+
+        /// <summary>
+        /// 스테이지 시작 대화: 분기 대사 장면과 같은 "배경 + 대사만" 화면이지만, 스테이지가 막 열린 참이라 빠지는 연출 없이 처음부터 빠진 상태
+        /// (게임 UI 투명, 초상화는 이름 포스트잇에 덮인 채 벽 밖)로 시작한다. 대사가 끝나면 분기 대사 장면의 복귀와 똑같이 돌아온다. 줄이 없으면 아무것도 안 한다.
+        /// </summary>
+        public IEnumerator PlayFromHidden(DialogueVariant variant)
+        {
+            if (variant.lines == null || variant.lines.Length == 0) yield break;
+
+            ResetNow();
+            var generation = _generation;
+            BuildCovers();
+            foreach (var cover in _covers)
+            {
+                AttachPostit(cover); // 지어지는 순간 붙은 모습이다 — 이미 덮인 채 벽 밖에 있는 상태.
+                cover.Portrait.anchoredPosition = cover.Away;
+            }
+
+            var group = GameUi;
+            group.DOKill();
+            group.alpha = 0f;
+            group.blocksRaycasts = false;
+
+            yield return StageDialoguePlayer.GetOrCreate(_canvasRoot).PlayOver(variant, null);
+            if (generation != _generation) yield break;
+
+            yield return Return(generation);
+        }
+
+        /// <summary>게임 UI가 페이드 인 되는 동안 초상화가 덮인 채 제자리로 돌아오고, 도착하면 두 포스트잇이 함께 떼어진다.</summary>
+        private IEnumerator Return(int generation)
+        {
+            var fade = UiMotion.Settings.branchSceneFade;
+            var exit = Mathf.Max(0.05f, UiMotion.Settings.branchPortraitExit);
             var showing = FadeGameUi(1f, fade);
             var returning = Slide(toAway: false, exit, 0f);
             if (showing.IsActive() && !showing.IsComplete()) yield return showing.WaitForCompletion(true);

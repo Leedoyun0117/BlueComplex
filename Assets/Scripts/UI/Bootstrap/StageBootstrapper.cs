@@ -26,8 +26,10 @@ namespace BlueComplex.UI.Bootstrap
         [SerializeField] private LampLightDriver _lampLightDriver;
 
         [Header("디버그 입력")]
-        [Tooltip("숫자키 1~4로 해당 인덱스의 손패 카드를 즉시 낸다.")]
+        [Tooltip("숫자키 1~4로 해당 인덱스의 손패 카드를 즉시 낸다(F1~F5, Q/E와 함께 에디터 전용 — 빌드에는 없다).")]
+#pragma warning disable CS0414 // 빌드에서는 디버그 키 코드가 빠져 읽는 곳이 없다.
         [SerializeField] private bool _enableKeyboardInput = true;
+#pragma warning restore CS0414
 
         [Tooltip("인스펙터에서 낼 카드의 손패 인덱스. 컨텍스트 메뉴 'Play Selected Card'로 실행.")]
         [SerializeField] private int _selectedCardIndex;
@@ -44,7 +46,7 @@ namespace BlueComplex.UI.Bootstrap
         [SerializeField] private bool _playOpening = true;
 
         /// <summary>진행 흐름상 마지막 스테이지 번호 — 클리어 뒤 이어질 다음 스테이지가 있는지 가리는 기준이다.
-        /// 스테이지 3까지 이어 붙였다: 스테이지 2 종료 컷신 뒤 스테이지 3이 시작되고, 스테이지 3 클리어는 컷신 → 엔딩, 실패는 재시도(<see cref="StageEndRoute"/>).</summary>
+        /// 스테이지 3까지 이어 붙였다: 스테이지 2 종료 컷신 뒤 스테이지 3이 시작되고, 스테이지 3 클리어는 컷신 → 엔딩, 실패는 다른 스테이지와 같이 메인 화면 복귀(<see cref="StageEndRoute"/>).</summary>
         public const int LastStageNumber = 3;
 
         /// <summary>디버그로 시작할 수 있는 마지막 스테이지 번호(F1~F3, <see cref="StartStage"/>).</summary>
@@ -61,7 +63,7 @@ namespace BlueComplex.UI.Bootstrap
         /// <summary>클리어하면 이어서 시작할 다음 스테이지가 있는가. 튜토리얼은 스테이지 번호 흐름 밖이라 없다.</summary>
         public bool HasNextStage => !_isTutorial && _stageNumber < LastStageNumber;
 
-        /// <summary>지금 돌고 있는 것이 진행 흐름상 마지막 스테이지인가 — 클리어는 엔딩으로, 실패는 같은 스테이지 재시도로 이어진다.</summary>
+        /// <summary>지금 돌고 있는 것이 진행 흐름상 마지막 스테이지인가 — 클리어는 엔딩으로 이어진다(실패는 다른 스테이지와 같이 메인 화면으로).</summary>
         public bool IsFinalStage => !_isTutorial && _stageNumber == LastStageNumber;
 
         /// <summary>지금 돌고 있는 것이 튜토리얼인가(<see cref="TutorialContent.StageId"/>). 스테이지 번호(<see cref="StageNumber"/>)는 마지막으로 시작한 본편 스테이지 그대로다.</summary>
@@ -104,6 +106,10 @@ namespace BlueComplex.UI.Bootstrap
         private readonly Queue<TurnReport> _pendingQuarterDialogue = new();
         private bool _quarterDialoguePlaying;
 
+        /// <summary>쿼터 분기 대사가 재생 중이거나 재생을 기다리는 중인가(턴 결과 연출이 끝나기를 기다리는 동안도 포함).
+        /// 쿼터 마지막 턴 뒤 같은 입력 안에서 넘어간 턴에 스테이지가 끝나면, 스테이지 종료 연출(<see cref="StageEndController"/>)은 이 분기 대사가 다 끝난 뒤에 시작한다.</summary>
+        public bool QuarterDialogueBusy => _quarterDialoguePlaying;
+
         private Coroutine _endingRoutine;
 
         /// <summary>이 세션(앱 실행)에서 이미 들어온 적 있는 스테이지 id — "처음" 시작 대사는 스테이지별로 딱 한 번만 나온다.
@@ -114,6 +120,10 @@ namespace BlueComplex.UI.Bootstrap
         {
             _polarityTable = new DefaultEmotionPolarityTable();
             _ledger = new ClueKnowledgeLedger();
+
+            // 지난 실행에서 쌓인 단서 지식(본 단서·해금)을 되살리고, 런이 끝나 지식이 확정될 때마다 저장한다. 튜토리얼 장부는 저장하지 않는다.
+            GameSave.LoadInto(_ledger);
+            _ledger.Committed += SaveKnowledge;
 
             // 설정창(ESC)은 메인 화면부터 게임 끝까지 어디서든 열려야 해서 세션 캔버스에 한 번만 지어 둔다.
             LSO_EscPanel.GetOrCreate(FindCanvasRoot());
@@ -126,6 +136,9 @@ namespace BlueComplex.UI.Bootstrap
             StageFlowHooks.CutsceneCovering = () => StageCutsceneHost.Find() is { Covering: true };
             StageFlowHooks.ReleaseCutscene = () => StageCutsceneHost.Find()?.Release();
 
+            // 스테이지 실패(1~3 공통) 뒤 암전에서 메인 화면으로 돌아간다. 튜토리얼 실패는 이 훅을 타지 않는다(결과 패널로 재시도).
+            StageFlowHooks.ReturnToStart = ReturnToMainMenu;
+
             // 오프닝이 켜져 있으면 세션은 메인 화면의 "취조시작"이 연다 — 그때까지 화면은 오프닝이 덮고 있다(뷰들은 SessionStarted를 기다린다).
             if (_playOpening)
             {
@@ -133,6 +146,7 @@ namespace BlueComplex.UI.Bootstrap
                 var opening = openingRoot != null ? IntroSequencePlayer.GetOrCreate(openingRoot) : IntroSequencePlayer.CreateStandalone();
                 if (opening != null && opening.isActiveAndEnabled)
                 {
+                    opening.NotesLedger = _ledger; // 메인 화면의 "단서 노트"가 보여 줄 지식.
                     opening.Begin(StartGameFromOpening);
                     return;
                 }
@@ -154,21 +168,63 @@ namespace BlueComplex.UI.Bootstrap
 
         private bool _startingFromOpening;
 
+        /// <summary>실패한 스테이지의 암전에서 오프닝 없이 메인 화면만 연다(<see cref="StageFlowHooks.ReturnToStart"/>). 메인 화면을 띄울 캔버스가 없으면 null — 종료 연출이 결과 패널로 대신한다.</summary>
+        private IEnumerator ReturnToMainMenu()
+        {
+            var root = FindOpeningCanvasRoot();
+            var menu = root != null ? IntroSequencePlayer.GetOrCreate(root) : IntroSequencePlayer.CreateStandalone();
+            if (menu == null || !menu.isActiveAndEnabled) return null;
+
+            // 메인 화면도 CRT를 거쳐 보인다 — 끝난 판의 심박수 톤(예: 즉사로 끝났으면 붉은 화면)이 메인 화면에 남지 않게 안정 값으로 되돌린다(아직 암전 중이라 보이지 않는다).
+            if (_crtEffectDriver != null) _crtEffectDriver.Bind(null);
+            FindFirstObjectByType<HeartRateController>()?.PresentResting();
+
+            menu.NotesLedger = _ledger; // 방금 끝난 런의 지식까지 확정된 장부(StageEnded에서 CommitRun).
+            return menu.ShowMenuFromBlack(RetryStageFromMenu);
+        }
+
+        /// <summary>실패 뒤 메인 화면의 "취조시작": 튜토리얼이 아니라 실패한 스테이지를 새 시드로 다시 시작한다(예전 재시도와 같은 곳 — 실패 컷신이 시도마다 하나씩 이어지는 것도 그대로다).
+        /// 메인 화면 막은 이 호출을 부른 쪽이 스스로 걷는다.</summary>
+        private void RetryStageFromMenu()
+        {
+            _startingFromOpening = true;
+            try { StartStage(_stageNumber); }
+            finally { _startingFromOpening = false; }
+        }
+
         private IEnumerator PlayTutorialIntro() => IntroCutsceneDirector.GetOrCreate(FindCanvasRoot())?.Play();
 
         /// <summary>번호의 스테이지 종료 컷신. 프리팹이 없는 번호는 null(건너뜀).</summary>
         private static IEnumerator PlayStageCutscene(int number) => StageCutsceneHost.GetOrCreate().Play(number);
 
+        private void SaveKnowledge() => GameSave.Save(_ledger);
+
+        /// <summary>게임을 끌 때(에디터의 Play 종료 포함) — 런 도중에 본 단서도 남는다. 확정 안 된 관찰(pending)은 저장하지 않는다.</summary>
+        private void OnApplicationQuit()
+        {
+            if (_ledger != null) SaveKnowledge();
+        }
+
+        [ContextMenu("Delete Save File")]
+        private void DeleteSaveFromInspector() => GameSave.Delete();
+
+        /// <summary>본편의 단서 지식 장부(세이브로 복원된 것). 튜토리얼 장부가 아니다.</summary>
+        public ClueKnowledgeLedger KnowledgeLedger => _ledger;
+
         private void OnDestroy()
         {
+            if (_ledger != null) _ledger.Committed -= SaveKnowledge;
             _logger?.Dispose();
             UiSoundHooks.StopAmbient();
             StageFlowHooks.PlayTutorialIntro = null;
             StageFlowHooks.PlayCutscene = null;
             StageFlowHooks.CutsceneCovering = null;
             StageFlowHooks.ReleaseCutscene = null;
+            StageFlowHooks.ReturnToStart = null;
         }
 
+        // 디버그 키(F1~F5 스테이지·튜토리얼·엔딩 바로가기, Q/E 심박수, 숫자키 카드 내기)는 에디터에서만 — 실제 빌드에는 이 입력이 아예 들어가지 않는다.
+#if UNITY_EDITOR
         private void Update()
         {
             if (!_enableKeyboardInput || Keyboard.current == null) return;
@@ -207,6 +263,7 @@ namespace BlueComplex.UI.Bootstrap
             if (_debugHeartRate == null) _debugHeartRate = FindFirstObjectByType<HeartRateController>();
             _debugHeartRate?.PresentCurrentHeartbeat();
         }
+#endif
 
         [ContextMenu("Play Selected Card")]
         private void PlaySelectedCardFromInspector() => PlayCardAtIndex(_selectedCardIndex);
@@ -410,9 +467,11 @@ namespace BlueComplex.UI.Bootstrap
             var variant = StageDialogues.PickStageStart(stageId, isFirstEntry);
             if (variant.HasValue && canvasRoot != null)
             {
+                // 튜토리얼 시작 컷신이 경찰서 그림을 쥐고 있으면 그 위에서, 아니면 분기 대사 장면처럼 게임 UI가 빠진 채 배경과 대사만으로 하고 대사가 끝나면 UI가 돌아온다.
                 InputBlocked = true;
-                var player = StageDialoguePlayer.GetOrCreate(canvasRoot);
-                yield return intro != null && intro.HoldsRoom ? player.PlayOver(variant.Value, null) : player.Play(variant.Value);
+                yield return intro != null && intro.HoldsRoom
+                    ? StageDialoguePlayer.GetOrCreate(canvasRoot).PlayOver(variant.Value, null)
+                    : BranchSceneDirector.GetOrCreate(canvasRoot).PlayFromHidden(variant.Value);
                 InputBlocked = false;
             }
 
@@ -463,7 +522,7 @@ namespace BlueComplex.UI.Bootstrap
             var variant = StageDialogues.PickQuarterEnd(Config.Id, mood);
             if (!variant.HasValue) yield break;
 
-            // 분기 대사 장면: 게임 UI가 빠지고 배경과 대사만 남는다(스테이지 시작·클리어 대화는 그대로 어두운 막 위에서 한다).
+            // 분기 대사 장면: 게임 UI가 빠지고 배경과 대사만 남는다(스테이지 시작 대화도 같은 장면 — BeginStageAfterIntro. 클리어 대화는 그대로 어두운 막 위에서 한다).
             InputBlocked = true;
             yield return BranchSceneDirector.GetOrCreate(canvasRoot).Play(variant.Value);
             InputBlocked = false;

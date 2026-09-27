@@ -229,6 +229,9 @@ namespace BlueComplex.UI.Presentation
                 _heartRate.SyncTurnState();
                 _complexStatus?.RefreshForTurn();
 
+                // 뇌 영역(좌/중/우)도 컴플렉스 포스트잇과 같은 순간에 최신 보드로 바뀐다 — 새로 발현된 컴플렉스·만료·남은 턴이 포스트잇보다 먼저 보이지 않게.
+                _brain.Refresh(Session.Complexes.InPriorityOrder().ToList());
+
                 // 새 쿼터가 시작되는 순간 — 포스트잇이 새 쿼터 정보로 갱신된다. 스테이지가 끝났으면 다음 쿼터가 없다.
                 if (Session.Runner.Outcome == StageOutcome.InProgress && Session.Runner.CurrentTurnInQuarter == 1)
                     UiSoundHooks.Play(UiSoundCue.QuarterStart);
@@ -278,11 +281,10 @@ namespace BlueComplex.UI.Presentation
 
             // TickDurations/스폰은 Resolve 이후에 일어나 이 시점의 보드에는 이미 만료된 컴플렉스가 없다 — 그대로 배치하면 마지막 턴에
             // 발동한 컴플렉스(지속 1턴짜리는 항상)가 영역을 못 찾아 발광·대사가 통째로 빠진다. 그래서 발광 동안은 해석 당시의
-            // 컴플렉스(DisplayOrder, 화면에 보이는 우선순위 순서 — 평가 순서와 다를 수 있어 Steps 순서로 배치하면 칸이 뒤바뀐다)로 배치하고,
-            // 반응이 끝난 뒤에 최신 보드로 맞춘다.
-            _brain.Refresh(report.Interpretation.DisplayOrder);
+            // 컴플렉스(DisplayOrder, 화면에 보이는 우선순위 순서 — 평가 순서와 다를 수 있어 Steps 순서로 배치하면 칸이 뒤바뀐다)로 배치한다.
+            // 이미 보이는 영역은 그대로 둔다(Arrange) — 최신 보드(새로 발현·만료·남은 턴)로 맞추는 건 포스트잇이 떼어져 갱신되는 순간이다(PostitRoutine의 RefreshContent).
+            _brain.Arrange(report.Interpretation.DisplayOrder);
             yield return PlayComplexReactions(report);
-            _brain.Refresh(Session.Complexes.InPriorityOrder().ToList());
 
             yield return PlaySummaryWithResultTags(report);
 

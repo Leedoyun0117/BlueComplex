@@ -23,7 +23,8 @@ namespace BlueComplex.UI.Presentation
         /// <summary>컷신이 덮고 있던 화면을 걷어 게임 화면으로 돌아온다. 컷신 사이(통합 컷신 6+7 같은)에는 부르지 않는다 — 스테이지 종료 연출이 컷신을 다 재생한 뒤 한 번 부른다.</summary>
         public static Action ReleaseCutscene { get; set; }
 
-        /// <summary>실패한 스테이지에서 완전한 암전 뒤 시작 화면으로 돌아간다. 화면은 완전히 어두운 상태에서 시작한다. 연결이 없으면(null) 결과 패널을 보여 준다.</summary>
+        /// <summary>실패한 스테이지(1~3)에서 완전한 암전 뒤 메인 화면으로 돌아간다. 화면은 완전히 어두운 상태에서 시작하고, 메인 화면이 다 밝아지면 끝난다.
+        /// 연결이 없거나 핸들러가 null을 돌려주면 결과 패널을 보여 준다. 튜토리얼 실패는 이 훅을 쓰지 않는다.</summary>
         public static Func<IEnumerator> ReturnToStart { get; set; }
 
         /// <summary>튜토리얼이 시작되기 전에 재생하는 시작 컷신(암흑 → 뉴스 → 경찰서). 내용은 컷신 담당 영역(<see cref="IntroCutsceneDirector"/>)이 채운다.

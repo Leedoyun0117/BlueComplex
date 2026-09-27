@@ -50,6 +50,9 @@ namespace BlueComplex.Core.Stage
             var pool = new CluePool(config.Clues, random);
             var hand = new ClueHand(pool);
 
+            // 손패에 들어온 단서는 "본 적 있는 단서"다 — 시작 화면의 단서 노트가 이것으로 목록을 거른다(회상·선택적 기억으로 들어온 것도 포함).
+            hand.CardAdded += card => ledger.MarkSeen(card.Definition.Id);
+
             var complexBoard = new ComplexBoard(config.MaxComplexSlots);
             var startingComplex = ChooseStartingComplex(config, random);
             if (startingComplex != null)

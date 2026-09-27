@@ -52,14 +52,23 @@ namespace BlueComplex.UI.Presentation
             Refresh(Session.Complexes.InPriorityOrder().ToList());
         }
 
-        public void Refresh(IReadOnlyList<ComplexInstance> complexes)
+        public void Refresh(IReadOnlyList<ComplexInstance> complexes) => Place(complexes, keepShown: false);
+
+        /// <summary>턴 연출의 발광 단계용 배치: 이미 그 컴플렉스가 들어 있는 영역은 건드리지 않는다. 코어는 해석 직후 남은 턴을 이미 줄여 두어서
+        /// 다시 할당하면 "N턴" 글자가 포스트잇보다 먼저 바뀐다 — 최신 상태는 포스트잇이 갱신되는 순간 <see cref="Refresh"/>가 맞춘다.</summary>
+        public void Arrange(IReadOnlyList<ComplexInstance> complexes) => Place(complexes, keepShown: true);
+
+        private void Place(IReadOnlyList<ComplexInstance> complexes, bool keepShown)
         {
             for (var slot = 0; slot < _regions.Length; slot++)
             {
                 var regionIndex = slot < FillOrder.Length ? FillOrder[slot] : slot;
                 if (regionIndex >= _regions.Length) continue;
 
-                _regions[regionIndex].Assign(slot < complexes.Count ? complexes[slot] : null);
+                var complex = slot < complexes.Count ? complexes[slot] : null;
+                if (keepShown && _regions[regionIndex].Complex == complex) continue;
+
+                _regions[regionIndex].Assign(complex);
             }
         }
 

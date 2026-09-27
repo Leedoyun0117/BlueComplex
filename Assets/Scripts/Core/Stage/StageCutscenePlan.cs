@@ -30,7 +30,7 @@ namespace BlueComplex.Core.Stage
         private static readonly int[][] Stage3Clear = { new[] { 10, 11 } };
 
         /// <summary>
-        /// 끝난 스테이지의 컷신 단계들. 스테이지 1·2는 성공/실패와 무관하게 같고, 스테이지 3은 성공했을 때만 있다(실패는 컷신 없이 재시도).
+        /// 끝난 스테이지의 컷신 단계들. 스테이지 1·2는 성공/실패와 무관하게 같고, 스테이지 3은 성공했을 때만 있다(실패는 컷신 없이 메인 화면으로).
         /// 컷신이 없는 스테이지 번호는 빈 목록.
         /// </summary>
         public static IReadOnlyList<int[]> For(int stageNumber, StageOutcome outcome)

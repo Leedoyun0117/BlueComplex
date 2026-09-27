@@ -31,25 +31,26 @@ namespace BlueComplex.UI.Presentation
     /// </summary>
     public static class ClueCardFormatter
     {
-        public static ClueCardViewModel Format(ClueInstance card, ClueKnowledgeLedger ledger)
+        public static ClueCardViewModel Format(ClueInstance card, ClueKnowledgeLedger ledger) => Format(card.Definition, ledger);
+
+        /// <summary>손패 카드가 아닌 단서 정의 그대로 — 시작 화면의 단서 노트가 쓴다. 가리는 규칙(<see cref="ClueNote.Reveal"/>)은 카드와 같다.</summary>
+        public static ClueCardViewModel Format(ClueDefinition def, ClueKnowledgeLedger ledger)
         {
-            var def = card.Definition;
+            var reveal = ClueNote.Reveal(def, ledger);
 
-            var knowledge = ledger.GetKnowledge(def.Id);
-
-            var timeText = knowledge.TimeRevealed ? KoreanLabels.Times(def.Times) : "?";
-            var personTexts = new string[def.Persons.Count];
-            for (var i = 0; i < def.Persons.Count; i++)
+            var timeText = reveal.TimeRevealed ? KoreanLabels.Times(def.Times) : "?";
+            var personTexts = new string[reveal.Persons.Count];
+            for (var i = 0; i < personTexts.Length; i++)
             {
-                var person = def.Persons[i];
-                personTexts[i] = knowledge.IsPersonRevealed(person) ? KoreanLabels.Person(person) : "?";
+                var (person, revealed) = reveal.Persons[i];
+                personTexts[i] = revealed ? KoreanLabels.Person(person) : "?";
             }
 
-            var emotionTexts = new string[def.Emotions.Count];
-            for (var i = 0; i < def.Emotions.Count; i++)
+            var emotionTexts = new string[reveal.Emotions.Count];
+            for (var i = 0; i < emotionTexts.Length; i++)
             {
-                var emotion = def.Emotions[i];
-                emotionTexts[i] = knowledge.IsEmotionRevealed(emotion) ? KoreanLabels.Emotion(emotion) : "?";
+                var (emotion, revealed) = reveal.Emotions[i];
+                emotionTexts[i] = revealed ? KoreanLabels.Emotion(emotion) : "?";
             }
 
             return new ClueCardViewModel(def.DisplayName, timeText, personTexts, emotionTexts, $"\"{def.Story}\"");
