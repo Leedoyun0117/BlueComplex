@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 5855829041135002871}
   - component: {fileID: 4361439839726379806}
   - component: {fileID: 6142554832000440415}
+  - component: {fileID: 3804349401408968704}
   m_Layer: 0
   m_Name: TimeLine
   m_TagString: Untagged
@@ -770,3 +771,16 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &3804349401408968704
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 15637454844806175}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2b1a0f011a62024081f077c1599c78f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineSkip
+  skipKey: 1
