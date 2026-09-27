@@ -14,8 +14,9 @@ namespace BlueComplex.UI.Presentation
 {
     /// <summary>
     /// 3단계 연출 버전 ITurnResultPresenter. Present() 순서:
-    /// 엑스레이 판넬 Open()(관절 팔이 펴지며 뇌가 드러난다) → 컴플렉스가 우선순위 순서로 뇌에서 빛남(발동할 때마다 대사창에 짧은 이벤트 대사) →
-    /// 남은 감정 태그가 풍선 안에 나타남(요약 대사가 타이핑되는 동안, 다 나타난 뒤 최소 tagHold초 정지) →
+    /// 엑스레이 판넬 Open()(관절 팔이 펴지며 뇌가 드러난다) → (이 턴에 컴플렉스가 새로 발현됐다면 나츠의 독백이 먼저 나온다) →
+    /// 컴플렉스가 우선순위 순서로 뇌에서 빛남(발동할 때마다 대사창에 짧은 이벤트 대사) →
+    /// 남은 감정 태그가 풍선 안에 나타남(표에 맞는 조합이면 그동안 결과 대사가 타이핑됨, 다 나타난 뒤 최소 tagHold초 정지) →
     /// (태그 상승·페이드 + 심박수 모니터 변화를 동시에) → 풍선이 지워짐 + 판넬 Close() → 손패 갱신 →
     /// 두 포스트잇(컴플렉스·대화)이 떼어짐 → 글자 쓰는 소리(그 사이 포스트잇 내용 갱신) → 갱신된 포스트잇이 붙음 →
     /// (모든 연출이 끝나면) 아이템 칸 갱신. 다음 턴이 쿼터의 마지막 턴(키 턴)이면 떼어지며 화면이 어두워지고 나츠의 독백이 나온 뒤 밝아지며 붙는다(<see cref="PostitDirector"/>).
@@ -261,7 +262,15 @@ namespace BlueComplex.UI.Presentation
         {
             _heartRate.PlayTurnResult(report);
             _traitStatus?.Refresh();
-            yield return PlayDialogue(TurnSummaryFormatter.Build(report));
+
+            // 단서를 못 낸 턴에도 심박수에 따라 컴플렉스가 새로 발현될 수 있다(TurnRunner.CompleteTurn).
+            if (report.SpawnedComplex != null)
+            {
+                yield return PlayDialogue(TurnSummaryFormatter.BuildComplexSpawnLine(report.SpawnedComplex), isNatsu: true);
+                yield return new WaitForSeconds(_eventLinePause);
+            }
+
+            yield return PlayDialogue(TurnSummaryFormatter.BuildPassLine());
 
             // 넘어간 턴에도 손패는 연출이 도는 동안 갱신이 미뤄져 있다(ClueHandController.OnHandChanged 참고).
             _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger);
@@ -284,6 +293,14 @@ namespace BlueComplex.UI.Presentation
             // 컴플렉스(DisplayOrder, 화면에 보이는 우선순위 순서 — 평가 순서와 다를 수 있어 Steps 순서로 배치하면 칸이 뒤바뀐다)로 배치한다.
             // 이미 보이는 영역은 그대로 둔다(Arrange) — 최신 보드(새로 발현·만료·남은 턴)로 맞추는 건 포스트잇이 떼어져 갱신되는 순간이다(PostitRoutine의 RefreshContent).
             _brain.Arrange(report.Interpretation.DisplayOrder);
+
+            // 노션 "UI 연출" — 컴플렉스 발현 이펙트는 나츠의 독백으로 전달된다. 기존 컴플렉스의 반응 대사(유키)보다 먼저 나온다.
+            if (report.SpawnedComplex != null)
+            {
+                yield return PlayDialogue(TurnSummaryFormatter.BuildComplexSpawnLine(report.SpawnedComplex), isNatsu: true);
+                yield return new WaitForSeconds(_eventLinePause);
+            }
+
             yield return PlayComplexReactions(report);
 
             yield return PlaySummaryWithResultTags(report);
@@ -313,19 +330,20 @@ namespace BlueComplex.UI.Presentation
             }
         }
 
-        private IEnumerator PlayDialogue(string line, bool isEvent = false)
+        private IEnumerator PlayDialogue(string line, bool isEvent = false, bool isNatsu = false)
         {
             var done = false;
             void OnComplete() => done = true;
 
             _dialogue.TypingComplete += OnComplete;
-            _dialogue.PlayTyped(line, isEvent);
+            if (isNatsu) _dialogue.PlayNatsuLine(line);
+            else _dialogue.PlayTyped(line, isEvent);
             yield return new WaitUntil(() => done);
             _dialogue.TypingComplete -= OnComplete;
         }
 
         /// <summary>UI 가이드: "시퀀스가 끝나고, 남은 감정 태그도 생각 공간에 나타난다." 컴플렉스 발광이 끝나면 태그 칩이 풍선 안에 나타나고,
-        /// 그동안 요약 대사가 타이핑된다. 칩이 다 나타난 뒤에도 최소 <c>tagHold</c>초는 가만히 둔다 — 읽을 시간 없이 바로 떠오르지 않게.</summary>
+        /// 표에 맞는 조합이면 그동안 결과 대사가 타이핑된다. 칩이 다 나타난 뒤에도 최소 <c>tagHold</c>초는 가만히 둔다 — 읽을 시간 없이 바로 떠오르지 않게.</summary>
         private IEnumerator PlaySummaryWithResultTags(TurnReport report)
         {
             var tags = BuildResultTags(report);
@@ -335,8 +353,6 @@ namespace BlueComplex.UI.Presentation
             var show = _memoryBubble.ShowResultTags(tags, traitNames);
             // DLJ: 대사를 기다리는 동안 자동 해제될 수 있으므로 재생 직후 길이를 저장한다.
             var showDuration = show.Duration();
-
-            yield return PlayDialogue(TurnSummaryFormatter.Build(report));
 
             // "대화 루프": 결과 → 결과 대사. 표에 맞는 조합이 없으면(태그 없음, 침체/흥분 혼합 등) 조용히 건너뛴다.
             var resultTagLine = TurnSummaryFormatter.BuildResultTagLine(report);

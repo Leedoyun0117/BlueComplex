@@ -54,6 +54,12 @@ namespace UI.Esc
             row.AddComponent<LSO_EscExitButton>().Build(panel, rect);
         }
 
+        /// <summary>줄(row)은 다른 설정 줄과 같은 폭(320)으로 VerticalLayoutGroup 자리만 차지하고,
+        /// 실제 보이는 사각형 버튼은 그 안에 더 좁게 중앙 정렬로 따로 둔다 — SettingsLayout의 정렬이
+        /// 왼쪽 기준(UpperLeft)이라 row 폭 그대로 그리면 폭이 좁아지는 순간 왼쪽으로 쏠린다.</summary>
+        private const float ButtonWidth = 220f;
+        private const float ButtonHeight = 40f;
+
         private void Build(LSO_EscPanel panel, RectTransform row)
         {
             _panel = panel;
@@ -63,11 +69,15 @@ namespace UI.Esc
             layoutElement.preferredHeight = RowHeight;
             layoutElement.minHeight = RowHeight;
 
-            var background = RuntimeUi.CreateImage(row, "Background", new Color(1f, 1f, 1f, 0.08f),
-                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, RuntimeUi.RoundedRect, raycastTarget: true);
+            var button = RuntimeUi.CreateRect(row, "Button", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            button.sizeDelta = new Vector2(ButtonWidth, ButtonHeight);
+
+            var background = RuntimeUi.CreateImage(button, "Background", new Color(1f, 1f, 1f, 0.08f),
+                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, raycastTarget: true);
             WireButton(background, HandleClick, new Color(1f, 1f, 1f, 0.18f), new Color(1f, 1f, 1f, 0.28f));
 
-            RuntimeUi.CreateText(row, "Label", "메인 메뉴로 나가기", _font, 22f, Color.white,
+            RuntimeUi.CreateText(button, "Label", "메인 메뉴로 나가기", _font, 22f, Color.white,
                 TextAlignmentOptions.Center, Vector2.zero, Vector2.one);
 
             panel.Closed += HideConfirm;
@@ -107,7 +117,7 @@ namespace UI.Esc
                 Vector2.zero, Vector2.zero);
             box.sizeDelta = new Vector2(560f, 220f);
             RuntimeUi.CreateImage(box, "Panel", new Color(0.12f, 0.12f, 0.14f, 0.97f), Vector2.zero, Vector2.one,
-                Vector2.zero, Vector2.zero, RuntimeUi.RoundedRect, raycastTarget: true);
+                Vector2.zero, Vector2.zero, raycastTarget: true);
 
             var message = RuntimeUi.CreateText(box, "Message",
                 "진행 중인 내용은 저장되지 않습니다.\n메인 메뉴로 나가시겠습니까?", _font, 24f, Color.white,
@@ -122,7 +132,7 @@ namespace UI.Esc
             UnityEngine.Events.UnityAction onConfirm)
         {
             var background = RuntimeUi.CreateImage(parent, name, new Color(1f, 1f, 1f, 0.12f), anchorMin, anchorMax,
-                Vector2.zero, Vector2.zero, RuntimeUi.RoundedRect, raycastTarget: true);
+                Vector2.zero, Vector2.zero, raycastTarget: true);
             WireButton(background, () =>
             {
                 UiSoundHooks.Play(UiSoundCue.ButtonClick);

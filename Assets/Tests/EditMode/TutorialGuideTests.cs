@@ -313,9 +313,9 @@ namespace BlueComplex.Core.Tests
                 TutorialGuideContent.RejectionLine(donut, session.Runner.CurrentTurn, Emotion));
 
             session.Runner.PlayClue(session.Hand.Cards.First(c => c.Definition.Id == "tutorial_calendar"));
-            var paper = session.CheckPlay(session.Hand.Cards.First(c => c.Definition.Id == "tutorial_paper_pile"));
+            var fishingRod = session.CheckPlay(session.Hand.Cards.First(c => c.Definition.Id == "tutorial_fishing_rod"));
             Assert.AreEqual("이게 아니네. 다시 한 번 생각해 봐.",
-                TutorialGuideContent.RejectionLine(paper, session.Runner.CurrentTurn, Emotion), "턴 3의 오답");
+                TutorialGuideContent.RejectionLine(fishingRod, session.Runner.CurrentTurn, Emotion), "턴 3의 오답");
         }
 
         [Test]

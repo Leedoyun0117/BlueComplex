@@ -9,27 +9,29 @@ using BlueComplex.Core.Tags;
 namespace BlueComplex.Core.Stage
 {
     /// <summary>
-    /// 기획서 '게임 시작 연출 / 튜토리얼' 표를 옮긴 데이터와 스크립트. 일반 스테이지와 완전히 분리된 스테이지(<see cref="StageId"/>)다 —
+    /// 기획서 '게임 시작 연출 / 튜토리얼' 표를 옮긴 데이터와 스크립트(2026-09-27 노션 개정 — 자아 비판 → 애정 공허 교체). 일반 스테이지와 완전히 분리된 스테이지(<see cref="StageId"/>)다 —
     /// 스테이지 번호 흐름(1→2→3)에 들어 있지 않고, 단서 id는 전부 "tutorial_" 접두어, 해금 장부(<see cref="ClueKnowledgeLedger"/>)도 본편과 따로 쓴다(<see cref="CreateSession"/>).
     ///
     /// 구조: 2쿼터 × 2턴(총 4턴, 키 2개). 균일한 <see cref="QuarterSchedule"/>을 그대로 쓰려고 원문의 3단계를 이렇게 재배치했다.
     ///  · 턴 1 — 흥분 단서를 내는 실전(정답 = 달력). 낸 뒤 손패를 비워 턴 2는 시간만 흐른다(필러): 결과 화면 뒤에 곧바로 첫 키가 판정된다("잘했어 → 키 획득 → 분기 변환").
-    ///  · 턴 3 — 반 과거 하나가 붙은 첫 컴플렉스 실전(정답 = 어린 딸의 사진). 손패는 표 2의 4장.
-    ///  · 턴 4 — 반 과거 + 자아 비판 중첩(아이템 자아비대를 함께 써야 두 번째 키). 손패는 표 2의 4장이 다시 채워지고, 아이템이 이 턴에 처음 손에 들어온다.
-    ///    정답은 어린 딸의 사진 하나 — 반 과거(행복 → 혐오)와 자아 비판(침체가 있으니 슬픔 +1)이 둘 다 발동해 침체 둘이 된다. 나머지 셋은 흥분 그대로라 오답이다.
+    ///  · 턴 3 — 반 과거 하나가 붙은 첫 컴플렉스 실전. 손패는 표 2의 4장 — 정답은 기념품·어린 딸의 사진(둘 다 과거+행복이 반 과거로 혐오가 됨), 전화벨 소리·낚싯대는 오답(둘 다 과거가 아니라 반 과거가 안 붙는다).
+    ///  · 턴 4 — 반 과거 + 애정 공허 중첩(아이템 자아비대를 함께 써야 두 번째 키). 손패는 표 2의 4장이 다시 채워지고, 아이템이 이 턴에 처음 손에 들어온다.
+    ///    정답은 기념품·전화벨 소리·어린 딸의 사진 셋 — 애정 공허("가족" + 임의의 감정 → 슬픔)의 조건 범위가 넓어 감정 종류를 가리지 않는다: 전화벨 소리는 반 과거가 안 붙어도 애정 공허(가족+사랑→슬픔)만으로 침체가 된다.
+    ///    낚싯대만 둘 다 미발동(미래+친구, 가족 아님)이라 흥분 그대로 오답이다. 세 정답 카드 모두 최종 감정 태그가 1개뿐이라(변환만 하고 추가하지 않음) 심박수 변화량이 서로 같다 — 어느 카드를 내도 경로가 갈리지 않는다.
     ///
-    /// 키 구역은 좌/우 끝이 아니라 정확한 심박수 범위다: 1쿼터 90~100, 2쿼터 70~80. 이 좁은 범위에 4턴 경로가 들어가도록 태그 하나의 영향력을 5로 줄였다(스테이지 기본 10).
-    /// 영향력 10이면 자아비대를 켠 턴 4(−4태그)가 −40이라 범위를 지나쳐 버려 아이템이 오히려 독이 된다. 경로 계산의 근거는 TutorialContentTests에 검증으로 남아 있다.
+    /// 키 구역은 좌/우 끝이 아니라 정확한 심박수 범위다: 1쿼터 90~100, 2쿼터 70~80. 이 좁은 범위에 4턴 경로가 들어가도록 태그 하나의 영향력을 6으로 줄였다(스테이지 기본 10).
+    /// 애정 공허 교체로 정답 카드의 최종 감정 태그 수가 1개로 줄어(자아 비판은 슬픔을 "추가"해 2개였다) 예전 영향력 5·시작 93 조합은 자아비대를 켠 턴 4가 83에 그쳐 70~80을 놓친다 — 재조정한 값이다.
+    /// 경로 계산의 근거는 TutorialContentTests에 검증으로 남아 있다.
     /// </summary>
     public static class TutorialContent
     {
         public const string StageId = "tutorial";
 
-        /// <summary>태그 하나가 심박수에 미치는 영향력(기본 10의 절반). 본편은 기본값 그대로다 — 튜토리얼 세션에만 주입한다(<see cref="StageFactory.Create"/>의 tagMagnitude).</summary>
-        public const int TagMagnitude = 5;
+        /// <summary>태그 하나가 심박수에 미치는 영향력(본편 기본 10보다 작다). 본편은 기본값 그대로다 — 튜토리얼 세션에만 주입한다(<see cref="StageFactory.Create"/>의 tagMagnitude).</summary>
+        public const int TagMagnitude = 6;
 
-        /// <summary>시작 심박수. 경로: 93 → 턴 1 후 98 → 턴 2(넘김) 98 → 턴 3 후 93 → 턴 4 후 73(자아비대 사용, 아이템 없이는 83).</summary>
-        public const int StartHeartbeat = 93;
+        /// <summary>시작 심박수. 경로: 89 → 턴 1 후 95 → 턴 2(넘김) 95 → 턴 3 후 89 → 턴 4 후 77(자아비대 사용, 아이템 없이는 83).</summary>
+        public const int StartHeartbeat = 89;
 
         /// <summary>1쿼터 키 구역(양 끝 포함) — 턴 2가 끝날 때 판정한다.</summary>
         public const int Quarter1KeyMin = 90;
@@ -59,16 +61,16 @@ namespace BlueComplex.Core.Stage
             "빈 어항\n\n저번 주에 키우던 금붕어가 죽었어. 밥을 주는 걸 깜박 했었나? 괜시리 울적해 지니 어항을 치우던지 해야지.",
             TimeTag.Past, new[] { PersonTag.Other }, new[] { EmotionTag.Sadness });
 
-        public static ClueDefinition PaperPile { get; } = new("tutorial_paper_pile", "산더미처럼 쌓인 서류",
-            "산더미처럼 쌓인 서류\n\n어제 일을 그만둔 누군가가 나한테 떠넘긴 일들이 산더미야. 미안하지도 않나?",
-            TimeTag.Past, new[] { PersonTag.Other }, new[] { EmotionTag.Anger });
+        public static ClueDefinition Souvenir { get; } = new("tutorial_souvenir", "기념품",
+            "기념품\n\n1년 전에 친구와 다른 도시에서 사온 기념품이야.",
+            TimeTag.Past, new[] { PersonTag.Friend }, new[] { EmotionTag.Happiness });
 
         public static ClueDefinition PhoneRing { get; } = new("tutorial_phone_ring", "전화벨 소리",
-            "전화벨 소리\n\n딸의 전화가 울리고 있어. 빨리 가서 받아야지.",
+            "전화벨 소리\n\n지금 딸의 전화가 울리고 있어. 빨리 가서 받아야지.",
             TimeTag.Present, new[] { PersonTag.Family }, new[] { EmotionTag.Love });
 
-        public static ClueDefinition FishingRod { get; } = new("tutorial_fishing_rod", "낙싯대",
-            "낙싯대\n\n이번 주말에는 친구를 만나서 낚시를 갈거야.",
+        public static ClueDefinition FishingRod { get; } = new("tutorial_fishing_rod", "낚싯대",
+            "낚싯대\n\n이번 주말에는 친구를 만나서 낚시를 갈거야.",
             TimeTag.Future, new[] { PersonTag.Friend }, new[] { EmotionTag.Happiness });
 
         public static ClueDefinition DaughterPhoto { get; } = new("tutorial_daughter_photo", "어린 딸의 사진",
@@ -78,8 +80,8 @@ namespace BlueComplex.Core.Stage
         /// <summary>턴 1의 손패(표 1): 침체 셋과 흥분 하나.</summary>
         public static IReadOnlyList<ClueDefinition> Quarter1Hand() => new[] { StaleDonut, HorrorPoster, Calendar, EmptyFishbowl };
 
-        /// <summary>턴 3·4의 손패(표 2): 감정이 분노/사랑/행복/행복.</summary>
-        public static IReadOnlyList<ClueDefinition> Quarter2Hand() => new[] { PaperPile, PhoneRing, FishingRod, DaughterPhoto };
+        /// <summary>턴 3·4의 손패(표 2): 감정이 행복/사랑/행복/행복 — 2026-09-27 노션 개정으로 서류(분노)가 기념품(행복)으로 바뀌었다.</summary>
+        public static IReadOnlyList<ClueDefinition> Quarter2Hand() => new[] { Souvenir, PhoneRing, FishingRod, DaughterPhoto };
 
         public static IReadOnlyList<ClueDefinition> AllClues() => Quarter1Hand().Concat(Quarter2Hand()).ToArray();
 
@@ -88,20 +90,21 @@ namespace BlueComplex.Core.Stage
         /// <summary>반 과거는 스테이지 1의 것과 조건·효과·설명이 표와 같아 그대로 쓴다(<see cref="PrototypeContent.AntiPast"/>).</summary>
         public static ComplexDefinition AntiPast(IEmotionPolarityTable polarityTable) => PrototypeContent.AntiPast(polarityTable);
 
-        /// <summary>침체 감정이 있으면 슬픔 +1(흥분 감정만 있으면 반응하지 않는다). 스테이지 3의 자아 부정(<c>Stage3Content.SelfDenial</c>)과는 별개다.
-        /// 설명 문구와 지속 턴(2)은 확정값이다.</summary>
-        public static ComplexDefinition SelfCriticism(IEmotionPolarityTable polarityTable) => new(
-            "tutorial_self_criticism",
-            "자아 비판 컴플렉스",
-            "침체된 감정을 느끼면 자신을 탓하며 슬픔을 더한다.",
+        /// <summary>'가족' + 임의의 감정 → 그 감정을 슬픔으로 변환(감정 종류를 가리지 않는다 — 스테이지 2 죄책감 컴플렉스가 행복만 보는 것과 다르다).
+        /// 2026-09-27 노션 개정으로 옛 자아 비판(<c>tutorial_self_criticism</c>, 침체면 슬픔 +1)을 대체한다. 지속 턴(2)은 노션 표에 값이 없어 반 과거와 같게 임의로 정한 값이다.</summary>
+        public static ComplexDefinition LoveVoid(IEmotionPolarityTable polarityTable) => new(
+            "tutorial_love_void",
+            "애정 공허 컴플렉스",
+            "가족에 대한 감정을 슬픔으로 느낀다.",
             defaultDuration: 2,
             new IComplexCondition[]
             {
-                new HasEmotionOfPolarity(Polarity.Depressed, polarityTable)
+                new HasPerson(PersonTag.Family),
+                HasAnyEmotion.Any()
             },
             new IComplexEffect[]
             {
-                new AddEmotion(EmotionTag.Sadness)
+                new ConvertMatchedEmotionsTo(EmotionTag.Sadness)
             });
 
         // ── 아이템 ───────────────────────────────────────────────────────────────
@@ -110,11 +113,17 @@ namespace BlueComplex.Core.Stage
         public static ItemDefinition EgoInflation() =>
             PrototypeContent.CommonItems().First(item => item.Id == EgoInflationItemId);
 
+        /// <summary>기억 공감('슬픔' 감정을 결과에서 1씩 제거, 환각 특성 부여) — 2026-09-27 노션 개정으로 튜토리얼 아이템 표에 추가됐다.
+        /// 아직 <see cref="Config"/>의 itemPool에는 넣지 않는다 — itemPool을 채우면 <c>StartStage</c>가 스테이지 시작 시점에 하나뿐인 아이템 칸을 즉시 채워 버려(<c>ItemInventory.Refill</c>),
+        /// 턴 4에 자아비대를 쥐여 주는 <see cref="Script"/>의 TryGrant가 칸이 없어 실패한다(스테이지를 절대 못 깨게 됨) — 일반 드로우로 내놓으려면 별도 칸이나 드로우 시점 설계가 먼저 필요해 보고만 해 둔다.</summary>
+        public static ItemDefinition MemoryEmpathy() =>
+            PrototypeContent.CommonItems().First(item => item.Id == "item_empathy");
+
         // ── 스테이지 ─────────────────────────────────────────────────────────────
 
         /// <summary>
         /// 단서 풀은 비워 둔다 — 손패는 전부 스크립트가 정해 주는 카드로 채워진다(<see cref="TutorialScript"/>). 컴플렉스도 확률로 붙지 않고 정해진 턴에 붙는다(<see cref="Schedule"/>).
-        /// 아이템 풀도 비워 둔다 — 아이템 칸은 하나이고, 자아비대는 턴 4가 시작될 때 스크립트가 쥐여 준다(그 전에는 손에 없어 미리 쓸 수 없다).
+        /// 아이템 풀도 비워 둔다 — 아이템 칸은 하나이고, 자아비대는 턴 4가 시작될 때 스크립트가 쥐여 준다(그 전에는 손에 없어 미리 쓸 수 없다). <see cref="MemoryEmpathy"/> 주석 참고.
         /// </summary>
         public static StageConfig Config(IEmotionPolarityTable polarityTable) => new(
             StageId,
@@ -124,18 +133,18 @@ namespace BlueComplex.Core.Stage
             requiredKeys: 2,
             complexWeight: 1.0,
             clues: new List<ClueDefinition>(),
-            complexPool: new[] { AntiPast(polarityTable), SelfCriticism(polarityTable) },
+            complexPool: new[] { AntiPast(polarityTable), LoveVoid(polarityTable) },
             startingComplex: null,
             itemPool: new List<ItemDefinition>(),
             keyWidth: Quarter1KeyMax - Quarter1KeyMin + 1,
             maxComplexSlots: ComplexBoard.DefaultMaxSlots,
             itemSlots: 1);
 
-        /// <summary>컴플렉스 발현 표: 턴 2가 끝나면(= 2쿼터 시작) 반 과거, 턴 3이 끝나면 자아 비판.</summary>
+        /// <summary>컴플렉스 발현 표: 턴 2가 끝나면(= 2쿼터 시작) 반 과거, 턴 3이 끝나면 애정 공허.</summary>
         public static ScriptedComplexSchedule Schedule(IEmotionPolarityTable polarityTable) => new(new Dictionary<int, ComplexDefinition>
         {
             [2] = AntiPast(polarityTable),
-            [3] = SelfCriticism(polarityTable)
+            [3] = LoveVoid(polarityTable)
         });
 
         public static TutorialScript Script(IEmotionPolarityTable polarityTable) => new(new[]
