@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 5855829041135002871}
   - component: {fileID: 4361439839726379806}
   - component: {fileID: 6142554832000440415}
+  - component: {fileID: 3804349401408968704}
   m_Layer: 0
   m_Name: TimeLine
   m_TagString: Untagged
@@ -369,8 +370,8 @@ MonoBehaviour:
     \uC798 \uB3CC\uBD10 \uC8FC\uC138\uC694.\u201D"
   - "B\uC528\uB294 \u2018\uC9C0\uC6D0 \uC2E0\uCCAD\uC11C\u2019\uB77C\uACE0 \uC4F0\uC778
     \uBB38\uC11C \uBB49\uCE58\uC5D0\n\uBB50\uB77C\uACE0 \uD718\uAC08\uACA8 \uC4F0\uB354\uB2C8
-    \uC544\uBE60\uC5D0\uAC8C \uAC74\uB0C8\uB2E4."
-  - "\u201D\uC55E\uC73C\uB85C \uB9E4 \uB2EC\uB9C8\uB2E4 \uC544\uBC84\uB2D8 \uC55E\uC73C\uB85C\n\uC218\uD45C\uAC00
+    \uC544\uBE60\uC5D0\uAC8C \uAC74\uB138\uB2E4."
+  - "\u201D\uC55E\uC73C\uB85C \uB9E4\uB2EC \uC544\uBC84\uB2D8 \uC55E\uC73C\uB85C\n\uC218\uD45C\uAC00
     \uD55C \uC7A5\uC529 \uB3C4\uCC29\uD560 \uAC81\uB2C8\uB2E4.\u201D"
   - "\u201D\uC0AC\uC6A9\uD560 \uB54C\uB294, \uC740\uD589\uC5D0\uC11C\n\uC5EC\uAE30
     \uC11C\uBA85\uACFC \uC2DD\uBCC4 \uBC88\uD638\uB97C \uBCF4\uC5EC\uC8FC\uBA74 \uB429\uB2C8\uB2E4.\u201D"
@@ -387,7 +388,7 @@ MonoBehaviour:
     \uB9CC\uB0A0 \uC218 \uC788\uC5C8\uB2E4."
   - "\uADF8\uB7F0 \uB0A0\uC5D0\uB294 B\uC528\uC640 \uD3C9\uC18C\uC5D0 \uAC08 \uC218
     \uC5C6\uC5C8\uB358\n\uCEE4\uB2E4\uB780 \uC7A5\uB09C\uAC10 \uC0C1\uC810\uC5D0
-    \uAC00\uAC70\uB098 \uACF5\uC6D0\uC744 \uC0B0\uCC45 \uD558\uACE4 \uD588\uB2E4."
+    \uAC00\uAC70\uB098 \uACF5\uC6D0\uC744 \uC0B0\uCC45\uD558\uACE4 \uD588\uB2E4."
   - "B\uC528\uB294 \uB298 \uBCC4 \uB9D0\uC774 \uC5C6\uC5C8\uC9C0\uB9CC\n\uB0B4\uAC00
     \uC2E0\uB098\uC11C \uC5B4\uB518\uAC00\uB85C \uB6F0\uC5B4\uAC00\uB3C4 \uD56D\uC0C1
     \uC606\uC5D0 \uC788\uC5C8\uB2E4."
@@ -512,6 +513,39 @@ MonoBehaviour:
   fadeOutDuration: 3
   channel: 2
   mixer: {fileID: 0}
+--- !u!114 &3505000000000000777
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4440638838971907462}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fbac7c361c34b6e87f7d5016557a4a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineSfxReceiver
+  volume: 1
+--- !u!114 &3803000000000000666
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4440638838971907462}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03c9b54310d84003ab3d95cdf3811638, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_LineSfx
+  typing: {fileID: 5721460358409268056}
+  entries:
+  - line: 6
+    timing: 0
+    clip: {fileID: 8300000, guid: 144c330613b9421b98fd76c2a4b74396, type: 3}
+    volume: 0.81
+    duration: 0
+    startAt: 0
 --- !u!1 &5271925303450793920
 GameObject:
   m_ObjectHideFlags: 0
@@ -527,7 +561,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1063531456300268068
 Transform:
   m_ObjectHideFlags: 0
@@ -737,38 +771,16 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!114 &3505000000000000777
+--- !u!114 &3804349401408968704
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4440638838971907462}
+  m_GameObject: {fileID: 15637454844806175}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5fbac7c361c34b6e87f7d5016557a4a6, type: 3}
+  m_Script: {fileID: 11500000, guid: b2b1a0f011a62024081f077c1599c78f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineSfxReceiver
-  volume: 1
-  channel: 1
-  mixer: {fileID: 0}
---- !u!114 &3803000000000000666
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4440638838971907462}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 03c9b54310d84003ab3d95cdf3811638, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_LineSfx
-  typing: {fileID: 5721460358409268056}
-  entries:
-  - line: 6
-    timing: 0
-    clip: {fileID: 8300000, guid: 144c330613b9421b98fd76c2a4b74396, type: 3}
-    volume: 0.81
-    duration: 0
-    startAt: 0
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineSkip
+  skipKey: 1

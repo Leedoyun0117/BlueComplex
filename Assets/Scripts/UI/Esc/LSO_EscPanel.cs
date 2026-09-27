@@ -1,6 +1,8 @@
 using System;
+using BlueComplex.UI.Rendering;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 namespace UI.Esc
 {
@@ -52,6 +54,9 @@ namespace UI.Esc
         [Tooltip("연출을 게임 시간과 무관하게 돌린다(Time.timeScale = 0 이어도 움직인다).")]
         [SerializeField] private bool ignoreTimeScale = true;
 
+        [Tooltip("ESC 전용 Canvas 정렬 순서. 일반 UI와 인트로 Canvas(5000)보다 앞에 표시한다.")]
+        [SerializeField] private int sortingOrder = 10000;
+
         [Header("연출")]
         [SerializeField] private LSO_PanelSlide slide = new LSO_PanelSlide();
 
@@ -62,6 +67,9 @@ namespace UI.Esc
         public event Action Closed;
 
         public bool IsOpen => _opened;
+
+        /// <summary>위에서 내려오는 창. 화면에 고정돼야 하는 것(배경막 등)은 이 아래에 두면 같이 내려가니 주의.</summary>
+        public RectTransform Content => content;
 
         private bool _opened;
         private CanvasGroup _group;
@@ -75,6 +83,8 @@ namespace UI.Esc
                 enabled = false;
                 return;
             }
+
+            ConfigureCanvas();
 
             // 창은 CanvasGroup으로 숨기므로 오브젝트 자체는 켜져 있어야 한다(꺼져 있으면 아예 안 그려진다).
             // activeInHierarchy가 아니라 activeSelf를 본다 — 조상이 꺼져 있는 건 여기서 켤 수 없고,
@@ -105,6 +115,7 @@ namespace UI.Esc
             slide.Bind(content, _group, ignoreTimeScale);
             slide.SnapClosed();
             SetInteractable(false);
+            LSO_EscSilhouette.Ensure(this);
         }
 
         private void OnDestroy()
@@ -134,19 +145,43 @@ namespace UI.Esc
             slide.Show();
         }
 
-        /// <summary>
-        /// 열릴 때마다 형제 중 맨 뒤(= 맨 앞에 그려짐)로 보낸다.
-        ///
-        /// uGUI는 형제 순서가 곧 그리는 순서인데, 이 프로젝트의 여러 패널이 런타임에 캔버스 아래에 생기면서
-        /// 스스로를 SetAsLastSibling()으로 앞에 세운다(ClueBookPanel·QuarterHud·StageDialoguePlayer 등).
-        /// 그래서 씬에 미리 놓아둔 ESC 창은 플레이가 진행될수록 뒤로 밀려 가려진다.
-        /// 이 창은 캔버스 루트의 직속 자식이라(그 패널들과 같은 형제 레벨) 여기서 한 번 밀어 주면 앞에 선다.
-        ///
-        /// 부모가 캔버스 루트가 아니게 되면 이 한 줄로는 부족해진다 — 형제 순서는 같은 부모 안에서만
-        /// 의미가 있어서, 더 깊이 들어가면 루트 수준의 앞뒤는 조상 가지가 정한다. 그때는 창 전용 Canvas에
-        /// overrideSorting을 켜는 쪽으로 바꿔야 하는데, 그 경우 이 프로젝트에서는 GraphicRaycaster를
-        /// 일반 것이 아니라 DistortionCorrectedGraphicRaycaster로 붙여야 클릭 좌표가 어긋나지 않는다.
-        /// </summary>
+        // 씬·프리팹 오버라이드를 바꾸지 않고 모든 ESC 인스턴스에 적용한다.
+        private void ConfigureCanvas()
+        {
+            var parentCanvas = transform.parent != null
+                ? transform.parent.GetComponentInParent<Canvas>(true)
+                : null;
+            if (parentCanvas == null)
+            {
+                Debug.LogWarning("[LSO_EscPanel] 부모 Canvas가 없어 ESC 정렬 순서를 설정할 수 없다.", this);
+                return;
+            }
+
+            var canvas = GetComponent<Canvas>();
+            if (canvas == null) canvas = gameObject.AddComponent<Canvas>();
+            canvas.worldCamera = parentCanvas.rootCanvas.worldCamera;
+            canvas.additionalShaderChannels = parentCanvas.additionalShaderChannels;
+            canvas.sortingLayerID = parentCanvas.sortingLayerID;
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = sortingOrder;
+
+            var source = transform.parent.GetComponentInParent<DistortionCorrectedGraphicRaycaster>(true);
+            var raycaster = GetComponent<DistortionCorrectedGraphicRaycaster>();
+            if (raycaster == null) raycaster = gameObject.AddComponent<DistortionCorrectedGraphicRaycaster>();
+            if (source != null)
+            {
+                raycaster.SetCrtMaterial(source.CrtMaterial);
+                raycaster.ignoreReversedGraphics = source.ignoreReversedGraphics;
+                raycaster.blockingObjects = source.blockingObjects;
+                raycaster.blockingMask = source.blockingMask;
+            }
+
+            // 일반 레이캐스터가 함께 있으면 보정 전후 좌표로 클릭이 중복 판정된다.
+            foreach (var existing in GetComponents<GraphicRaycaster>())
+                if (existing != raycaster) existing.enabled = false;
+        }
+
+        /// <summary>같은 정렬 순서 안의 형제 순서도 정리한다. 새 UI보다 앞에 유지하는 역할은 전용 Canvas가 맡는다.</summary>
         private void BringToFront() => transform.SetAsLastSibling();
 
         private void ClosePanel()

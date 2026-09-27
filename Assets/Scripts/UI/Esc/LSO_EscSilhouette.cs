@@ -4,133 +4,177 @@ using UnityEngine.UI;
 namespace UI.Esc
 {
     /// <summary>
-    /// 설정창이 열릴 때, 창에 가려지는 UI의 실루엣을 창 뒤에 비춘다.
-    /// 이 컴포넌트는 <see cref="RawImage"/>에 붙인다 — 그 RawImage가 실루엣이 그려질 판이다.
-    /// 창 배경(어두운 막)보다 앞, 창 내용보다는 뒤에 두면 된다.
-    ///
-    /// ─── 왜 스냅샷인가 ─────────────────────────────────────────────────
-    /// 창이 열리면 <see cref="LSO_GameplayLock"/>이 Time.timeScale을 0으로 만든다. 그러면 뒤쪽 UI의
-    /// 트윈도, 셰이더의 _Time 기반 움직임도 멈춘다 — 멈춰 있는 그림이라 실시간으로 떠 와도 결과가 같다.
-    /// 그래서 카메라를 새로 달지 않고 열리는 순간 한 번만 뜬다.
-    /// 시간을 안 멈추는 설정으로 바꾸면 이 그림이 굳어 보인다. 그때는 UI 전용 레이어를 하나 더 파고
-    /// 실루엣용 카메라가 그 레이어만 RT에 계속 그리게 해야 한다(셰이더는 그대로 쓸 수 있다).
-    ///
-    /// ─── 왜 프레임 끝을 기다리지 않는가 ────────────────────────────────
-    /// 페이지 넘김(LSO_PageTurnEffect)은 "이번 프레임"을 떠야 해서 프레임 끝까지 기다렸지만, 여기는
-    /// 반대로 <b>창이 나타나기 전</b>의 화면이 필요하다. 카메라는 Update 뒤에 그리므로, 열리는 순간의
-    /// RT_UI에는 아직 지난 프레임(= 창이 없는 화면)이 들어 있다. 그대로 뜨면 된다.
-    /// 프레임 끝까지 기다리면 그새 창이 번져 들어와 자기 자신이 실루엣에 찍힌다.
+    /// ESC가 나타나기 전 RT_UI를 저장하고 알파 형태만 단색으로 표시한다.
+    /// ESC 종이 배경 위, 설정 컨트롤 아래에 배치하고 화면 좌표를 유지한다.
     /// </summary>
+    [DisallowMultipleComponent]
     [RequireComponent(typeof(RawImage))]
     public sealed class LSO_EscSilhouette : MonoBehaviour
     {
-        private const string ShaderName = "BlueComplex/LSO/ScreenSilhouette";
-
-        [Tooltip("비워 두면 부모에서 찾는다.")]
-        [SerializeField] private LSO_EscPanel panel;
-
-        [Tooltip("실루엣 색과 진하기. 알파가 진하기다.")]
         [SerializeField] private Color silhouetteColor = new Color(1f, 1f, 1f, 0.18f);
 
         private static readonly int ColorId = Shader.PropertyToID("_Color");
-
+        private LSO_EscPanel _panel;
+        private CanvasGroup _panelGroup;
         private RawImage _image;
         private Material _material;
         private RenderTexture _snapshot;
-        private Canvas _canvas;
+        private Transform _background;
+        private readonly Vector3[] _screenCorners = new Vector3[4];
+        private int _lastVisibleFrame = -2;
+
+        internal static void Ensure(LSO_EscPanel panel)
+        {
+            if (panel.GetComponent<LSO_EscBackdrop>() == null)
+                panel.gameObject.AddComponent<LSO_EscBackdrop>();
+            if (panel.GetComponentInChildren<LSO_EscSilhouette>(true) != null) return;
+
+            var go = new GameObject("UI Silhouette", typeof(RectTransform), typeof(RawImage));
+            go.layer = panel.gameObject.layer;
+            go.transform.SetParent(panel.transform, false);
+            go.AddComponent<LSO_EscSilhouette>();
+        }
 
         private void Awake()
         {
             _image = GetComponent<RawImage>();
-            _image.raycastTarget = false; // 창 조작을 가로채지 않는다.
+            _image.enabled = false;
+            _image.raycastTarget = false;
+            _panel = GetComponentInParent<LSO_EscPanel>();
+            if (_panel == null) { enabled = false; return; }
 
-            var shader = Shader.Find(ShaderName);
+            var rect = _image.rectTransform;
+            // 루트의 Backdrop 위에만 놓으면 Content/BG의 불투명 종이가 다시 덮는다.
+            _background = _panel.Content != null ? _panel.Content.Find("BG") : null;
+            rect.SetParent(_background != null ? _panel.Content : _panel.transform, false);
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.localScale = Vector3.one;
+            rect.localRotation = Quaternion.identity;
+            UpdatePlacement();
+
+            var shader = Shader.Find("BlueComplex/LSO/ScreenSilhouette");
             if (shader == null || !shader.isSupported)
             {
-                // 조용히 핑크로 칠해지느니 실루엣만 끄고 이유를 남긴다.
-                Debug.LogWarning($"[LSO_EscSilhouette] 셰이더 '{ShaderName}'를 쓸 수 없다. 실루엣 없이 동작한다. " +
-                    "빌드에서는 Project Settings > Graphics > Always Included Shaders에 넣어야 한다.", this);
+                Debug.LogWarning("[LSO_EscSilhouette] 실루엣 셰이더를 사용할 수 없습니다.", this);
                 enabled = false;
                 return;
             }
-
             _material = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
             _material.SetColor(ColorId, silhouetteColor);
             _image.material = _material;
-            _image.enabled = false;
-
-            _canvas = GetComponentInParent<Canvas>();
-            if (panel == null) panel = GetComponentInParent<LSO_EscPanel>();
-
-            if (panel == null)
-                Debug.LogWarning("[LSO_EscSilhouette] LSO_EscPanel을 찾지 못했다. 실루엣이 뜨지 않는다.", this);
         }
 
         private void OnEnable()
         {
-            if (panel == null) return;
-            panel.Opened += Capture;
-            panel.Closed += Clear;
+            if (_panel == null || _material == null) return;
+            _panel.Opened += Capture;
+            _panel.Closed += Clear;
         }
 
         private void OnDisable()
         {
-            if (panel == null) return;
-            panel.Opened -= Capture;
-            panel.Closed -= Clear;
+            if (_panel != null)
+            {
+                _panel.Opened -= Capture;
+                _panel.Closed -= Clear;
+            }
+            Clear();
+        }
+
+        private void LateUpdate()
+        {
+            if (_panel == null) return;
+            if (_panelGroup == null) _panelGroup = _panel.GetComponent<CanvasGroup>();
+            if (_panel.IsOpen || (_panelGroup != null && _panelGroup.alpha > 0f))
+                _lastVisibleFrame = Time.frameCount;
+
+            UpdatePlacement();
+        }
+
+        private void UpdatePlacement()
+        {
+            var background = _background;
+            if (background == null)
+            {
+                var backdrop = _panel.GetComponent<LSO_EscBackdrop>();
+                background = backdrop != null ? backdrop.Surface : null;
+            }
+            if (background != null && transform.GetSiblingIndex() != background.GetSiblingIndex() + 1)
+            {
+                transform.SetAsLastSibling();
+                transform.SetSiblingIndex(background.GetSiblingIndex() + 1);
+            }
+
+            // Content의 슬라이드 이동을 상쇄한다. 캡처한 UI는 원래 화면 위치에 남는다.
+            var screen = (RectTransform)_panel.transform;
+            screen.GetWorldCorners(_screenCorners);
+            var parent = transform.parent;
+            var bottomLeft = parent.InverseTransformPoint(_screenCorners[0]);
+            var topRight = parent.InverseTransformPoint(_screenCorners[2]);
+            var rect = _image.rectTransform;
+            rect.sizeDelta = new Vector2(topRight.x - bottomLeft.x, topRight.y - bottomLeft.y);
+            rect.localPosition = (bottomLeft + topRight) * 0.5f;
+        }
+
+        private void Capture()
+        {
+            // 닫는 도중 연타하면 ESC가 찍힌 RT 대신 이전 스냅샷을 재사용한다.
+            if (_snapshot != null && Time.frameCount <= _lastVisibleFrame + 1)
+            {
+                _image.enabled = true;
+                return;
+            }
+
+            // RT_UI를 그리는 루트 Canvas의 카메라를 사용한다.
+            var canvas = _panel.GetComponentInParent<Canvas>();
+            var camera = canvas != null ? canvas.rootCanvas.worldCamera : null;
+            var source = camera != null ? camera.targetTexture : null;
+            if (source == null || !source.IsCreated())
+            {
+                Clear();
+                Debug.LogWarning("[LSO_EscSilhouette] UI 카메라의 RT_UI가 없어 실루엣을 표시할 수 없습니다.", this);
+                return;
+            }
+
+            if (_snapshot == null || _snapshot.width != source.width || _snapshot.height != source.height)
+            {
+                ReleaseSnapshot();
+                _snapshot = new RenderTexture(source.width, source.height, 0, RenderTextureFormat.ARGB32)
+                {
+                    name = "LSO_EscSilhouetteSnapshot",
+                    filterMode = FilterMode.Bilinear,
+                    wrapMode = TextureWrapMode.Clamp,
+                    hideFlags = HideFlags.HideAndDontSave,
+                };
+                _snapshot.Create();
+            }
+
+            // Opened는 렌더링 전이다. 프레임 끝까지 기다리면 ESC까지 찍힌다.
+            var previous = RenderTexture.active;
+            try { Graphics.Blit(source, _snapshot); }
+            finally { RenderTexture.active = previous; }
+            _image.texture = _snapshot;
+            _image.enabled = true;
+        }
+
+        private void Clear()
+        {
+            if (_image != null) _image.enabled = false;
+        }
+
+        private void ReleaseSnapshot()
+        {
+            if (_image != null) _image.texture = null;
+            if (_snapshot == null) return;
+            _snapshot.Release();
+            Destroy(_snapshot);
+            _snapshot = null;
         }
 
         private void OnDestroy()
         {
             ReleaseSnapshot();
             if (_material != null) Destroy(_material);
-        }
-
-        /// <summary>창이 나타나기 직전의 화면을 떠서 실루엣 판에 물린다.</summary>
-        private void Capture()
-        {
-            var camera = _canvas != null ? _canvas.worldCamera : null;
-            var source = camera != null ? camera.targetTexture : null;
-            if (source == null)
-            {
-                // Screen Space - Overlay 이거나 UI 카메라 배선이 빠진 상태 — 떠올 원본이 없다.
-                Debug.LogWarning("[LSO_EscSilhouette] UI 카메라의 targetTexture(RT_UI)가 없어 실루엣을 뜰 수 없다. " +
-                    "(UICompositorSetupTool 배선 확인)", this);
-                return;
-            }
-
-            EnsureSnapshot(source.width, source.height);
-            Graphics.Blit(source, _snapshot);
-
-            _image.texture = _snapshot;
-            _image.enabled = true;
-        }
-
-        private void Clear() => _image.enabled = false;
-
-        private void EnsureSnapshot(int width, int height)
-        {
-            if (_snapshot != null && _snapshot.width == width && _snapshot.height == height) return;
-
-            ReleaseSnapshot();
-            _snapshot = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32)
-            {
-                name = "LSO_EscSilhouetteSnapshot",
-                filterMode = FilterMode.Bilinear,
-                wrapMode = TextureWrapMode.Clamp,
-                hideFlags = HideFlags.HideAndDontSave,
-            };
-            _snapshot.Create();
-        }
-
-        private void ReleaseSnapshot()
-        {
-            if (_snapshot == null) return;
-
-            if (_image != null) _image.texture = null;
-            _snapshot.Release();
-            Destroy(_snapshot);
-            _snapshot = null;
         }
     }
 }
