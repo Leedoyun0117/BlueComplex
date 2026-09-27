@@ -12,7 +12,7 @@ namespace BlueComplex.UI.Effects.DLJ
     public static class DLJ_ItemArrivalMotion
     {
         public static Sequence Play(RectTransform slot, Image background, TMP_Text label, Image icon,
-            Color emptyColor, Action onFinished)
+            Color emptyColor, Action onFinished, int insertOrder = 0)
         {
             Canvas.ForceUpdateCanvases();
             var ghost = new GameObject("DLJ Item Arrival", typeof(RectTransform), typeof(CanvasGroup), typeof(LayoutElement));
@@ -60,7 +60,25 @@ namespace BlueComplex.UI.Effects.DLJ
             if (icon != null) icon.enabled = false;
             if (group != null) { group.blocksRaycasts = false; group.interactable = false; }
 
-            var total = Mathf.Max(0.24f, DLJ_ItemArrivalSettings.Settings.duration);
+            var settings = DLJ_ItemArrivalSettings.Settings;
+            // DLJ: 움직이는 복제본만 어둡게 한다. 원본 색과 알파는 그대로 보존한다.
+            var graphics = ghost.GetComponentsInChildren<Graphic>(true);
+            var originalColors = new Color[graphics.Length];
+            for (var i = 0; i < graphics.Length; i++) originalColors[i] = graphics[i].color;
+            var brightness = Mathf.Clamp01(settings.preInsertBrightness);
+            void ApplyBrightness(float value)
+            {
+                brightness = value;
+                for (var i = 0; i < graphics.Length; i++)
+                {
+                    if (graphics[i] == null) continue;
+                    var color = originalColors[i];
+                    graphics[i].color = new Color(color.r * value, color.g * value, color.b * value, color.a);
+                }
+            }
+            ApplyBrightness(brightness);
+            var total = Mathf.Max(0.24f, settings.duration);
+            var wait = Mathf.Max(0, insertOrder) * Mathf.Max(0f, settings.insertStagger);
             var width = Mathf.Max(1f, slot.rect.width);
             var offset = new Vector3(-width * 1.12f, slot.rect.height * 0.08f, 0f);
             var approach = new Vector3(-width * 0.16f, 0f, 0f);
@@ -89,12 +107,15 @@ namespace BlueComplex.UI.Effects.DLJ
                 onFinished?.Invoke();
             }
 
-            // 세 단계를 겹치지 않는다. 패널이 접히거나 해상도가 바뀌어도 매 프레임 실제 슬롯을 따라간다.
+            // 확대는 모두 동시에 시작하고, 왼쪽에서 기다린 뒤 위 슬롯부터 차례로 삽입한다.
+            // 패널이 접히거나 해상도가 바뀌어도 매 프레임 실제 슬롯을 따라간다.
             return DOTween.Sequence().SetUpdate(true).SetTarget(slot)
                 .Append(DOTween.To(() => scale, value => scale = value, 1.08f, total * 0.3f).SetEase(Ease.OutBack, 1.2f))
                 .Join(DOTween.To(() => tilt, value => tilt = value, -3f, total * 0.3f).SetEase(Ease.OutQuad))
+                .AppendInterval(wait)
                 .Append(DOTween.To(() => offset, value => offset = value, approach, total * 0.35f).SetEase(Ease.InOutSine))
                 .Append(DOTween.To(() => offset, value => offset = value, Vector3.zero, total * 0.15f).SetEase(Ease.InCubic))
+                .Join(DOTween.To(() => brightness, ApplyBrightness, 1f, total * 0.15f).SetEase(Ease.InCubic))
                 .Join(DOTween.To(() => scale, value => scale = value, 0.97f, total * 0.15f).SetEase(Ease.InQuad))
                 .Join(DOTween.To(() => tilt, value => tilt = value, 0f, total * 0.15f))
                 .Append(DOTween.To(() => scale, value => scale = value, 1f, total * 0.2f).SetEase(Ease.OutQuad))

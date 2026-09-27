@@ -99,7 +99,7 @@ namespace BlueComplex.Core.Turn
         private readonly ClueHand _hand;
         private readonly ComplexBoard _complexBoard;
         private readonly ComplexResolver _resolver;
-        private readonly ComplexSpawner _spawner;
+        private readonly IComplexSpawner _spawner;
         private readonly IComplexSpawnPolicy _spawnPolicy;
         private readonly Heartbeat _heartbeat;
         private readonly HeartbeatZone _zone;
@@ -131,7 +131,7 @@ namespace BlueComplex.Core.Turn
         public TurnRunner(ClueHand hand,
                           ComplexBoard complexBoard,
                           ComplexResolver resolver,
-                          ComplexSpawner spawner,
+                          IComplexSpawner spawner,
                           IComplexSpawnPolicy spawnPolicy,
                           Heartbeat heartbeat,
                           HeartbeatZone zone,

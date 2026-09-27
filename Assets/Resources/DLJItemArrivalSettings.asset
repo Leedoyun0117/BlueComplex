@@ -12,4 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b0ab26921b745058ed3a9e17db96f33, type: 3}
   m_Name: DLJItemArrivalSettings
   m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Effects.DLJ.DLJ_ItemArrivalSettings
-  duration: 0.42
+  duration: 0.6
+  insertStagger: 0.2
+  preInsertBrightness: 0.45

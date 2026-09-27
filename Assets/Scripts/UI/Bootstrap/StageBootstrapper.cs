@@ -32,22 +32,42 @@ namespace BlueComplex.UI.Bootstrap
         [SerializeField] private int _selectedCardIndex;
 
         [Header("스테이지 (임시 디버그 선택)")]
-        [Tooltip("시작할 스테이지 번호(1 또는 2). Play 중에는 F1/F2 키로 해당 스테이지를 새로 시작한다.")]
-        [SerializeField, Range(1, 2)] private int _stageNumber = 1;
+        [Tooltip("시작할 스테이지 번호(1~3). Play 중에는 F1/F2/F3 키로 해당 스테이지를 새로 시작한다.")]
+        [SerializeField, Range(1, 3)] private int _stageNumber = 1;
 
         [Header("시드")]
         [SerializeField] private int _seed = 20260916;
 
-        /// <summary>플레이할 수 있는 마지막 스테이지 번호. 이보다 큰 스테이지는 없다 — 클리어 뒤 이어질 다음 스테이지가 있는지 가리는 기준이다.</summary>
-        public const int LastStageNumber = 2;
+        [Header("오프닝")]
+        [Tooltip("켜면 Play가 시작될 때 오프닝 시퀀스(PPT 19단계, IntroSequencePlayer)를 먼저 재생하고, 메인 화면의 '취조시작'을 눌러야 세션이 열린다. 끄면 예전처럼 바로 세션을 연다(프로브·디버그용).")]
+        [SerializeField] private bool _playOpening = true;
+
+        /// <summary>진행 흐름상 마지막 스테이지 번호 — 클리어 뒤 이어질 다음 스테이지가 있는지 가리는 기준이다.
+        /// 스테이지 3까지 이어 붙였다: 스테이지 2 종료 컷신 뒤 스테이지 3이 시작되고, 스테이지 3 클리어는 컷신 → 엔딩, 실패는 재시도(<see cref="StageEndRoute"/>).</summary>
+        public const int LastStageNumber = 3;
+
+        /// <summary>디버그로 시작할 수 있는 마지막 스테이지 번호(F1~F3, <see cref="StartStage"/>).</summary>
+        public const int LastDebugStageNumber = 3;
 
         public StageSession Session { get; private set; }
 
         /// <summary>지금 돌고 있는(또는 마지막으로 시작한) 스테이지 번호.</summary>
         public int StageNumber => _stageNumber;
 
-        /// <summary>클리어하면 이어서 시작할 다음 스테이지가 있는가.</summary>
-        public bool HasNextStage => _stageNumber < LastStageNumber;
+        /// <summary>클리어하면 이어서 시작할 다음 스테이지가 있는가. 튜토리얼은 스테이지 번호 흐름 밖이라 없다.</summary>
+        public bool HasNextStage => !_isTutorial && _stageNumber < LastStageNumber;
+
+        /// <summary>지금 돌고 있는 것이 진행 흐름상 마지막 스테이지인가 — 클리어는 엔딩으로, 실패는 같은 스테이지 재시도로 이어진다.</summary>
+        public bool IsFinalStage => !_isTutorial && _stageNumber == LastStageNumber;
+
+        /// <summary>지금 돌고 있는 것이 튜토리얼인가(<see cref="TutorialContent.StageId"/>). 스테이지 번호(<see cref="StageNumber"/>)는 마지막으로 시작한 본편 스테이지 그대로다.</summary>
+        public bool IsTutorial => _isTutorial;
+
+        /// <summary>튜토리얼을 클리어한 뒤 종료 연출이 끝나면 한 번 알린다. 본편 시작으로 넘어가는 연결은 이 이벤트를 구독하는 쪽이 정한다(구독이 없으면 결과 패널만 남는다).</summary>
+        public event Action TutorialCompleted;
+
+        /// <summary>튜토리얼 종료 연출이 끝났음을 알린다(<see cref="StageEndController"/>가 부른다).</summary>
+        public void NotifyTutorialCompleted() => TutorialCompleted?.Invoke();
 
         /// <summary>지금 돌고 있는 스테이지의 저작 설정 — 스테이지 이름 표시 같은 UI가 읽는다. 세션이 바뀌면 함께 바뀐다.</summary>
         public StageConfig Config { get; private set; }
@@ -61,6 +81,11 @@ namespace BlueComplex.UI.Bootstrap
         public event Action<StageSession> SessionStarted;
 
         private ClueKnowledgeLedger _ledger;
+
+        /// <summary>튜토리얼 전용 해금 장부 — 튜토리얼을 시작할 때마다 새로 만든다. 본편 장부(<see cref="_ledger"/>)와 완전히 분리되어, 튜토리얼에서 밝혀진 단서 속성이 본편에 새어 들지 않는다.</summary>
+        private ClueKnowledgeLedger _tutorialLedger;
+
+        private bool _isTutorial;
         private IEmotionPolarityTable _polarityTable;
         private StageTurnLogger _logger;
 
@@ -68,6 +93,8 @@ namespace BlueComplex.UI.Bootstrap
         /// (CinematicTurnResultPresenter 문서 참고) 큐에 쌓아 순서대로 재생한다.</summary>
         private readonly Queue<TurnReport> _pendingQuarterDialogue = new();
         private bool _quarterDialoguePlaying;
+
+        private Coroutine _endingRoutine;
 
         /// <summary>이 세션(앱 실행)에서 이미 들어온 적 있는 스테이지 id — "처음" 시작 대사는 스테이지별로 딱 한 번만 나온다.
         /// 재시작(RestartWithSameSeed/NewSeed)은 여기서 지우지 않는다: 같은 스테이지를 다시 들어오는 것도 "재진입"이다.</summary>
@@ -78,22 +105,62 @@ namespace BlueComplex.UI.Bootstrap
             _polarityTable = new DefaultEmotionPolarityTable();
             _ledger = new ClueKnowledgeLedger();
 
+            // 튜토리얼 시작 컷신(암흑 → 뉴스 → 경찰서)을 흐름의 훅에 연결한다. 정적 값이라 OnDestroy에서 되돌린다.
+            StageFlowHooks.PlayTutorialIntro = PlayTutorialIntro;
+
+            // 오프닝이 켜져 있으면 세션은 메인 화면의 "취조시작"이 연다 — 그때까지 화면은 오프닝이 덮고 있다(뷰들은 SessionStarted를 기다린다).
+            if (_playOpening)
+            {
+                var openingRoot = FindOpeningCanvasRoot();
+                var opening = openingRoot != null ? IntroSequencePlayer.GetOrCreate(openingRoot) : IntroSequencePlayer.CreateStandalone();
+                if (opening != null && opening.isActiveAndEnabled)
+                {
+                    opening.Begin(StartGameFromOpening);
+                    return;
+                }
+
+                Debug.LogWarning("[StageBootstrapper] 오프닝을 재생할 수 없다(켜진 캔버스를 못 찾았다) — 오프닝 없이 바로 시작한다.");
+            }
+
             BeginNewSession(_seed);
         }
+
+        /// <summary>오프닝 메인 화면의 "취조시작": 튜토리얼(시작 컷신 → 오프닝 대화 → 첫 턴)로 이어진다. 오프닝 막은 이 호출을 부른 쪽이 스스로 걷는다.
+        /// 튜토리얼 시드는 <see cref="_seed"/>를 쓰지 않고 F4(<see cref="StartTutorial"/>)와 같이 새로 뽑는다.</summary>
+        private void StartGameFromOpening()
+        {
+            _startingFromOpening = true;
+            try { StartTutorial(); }
+            finally { _startingFromOpening = false; }
+        }
+
+        private bool _startingFromOpening;
+
+        private IEnumerator PlayTutorialIntro() => IntroCutsceneDirector.GetOrCreate(FindCanvasRoot())?.Play();
 
         private void OnDestroy()
         {
             _logger?.Dispose();
             UiSoundHooks.StopAmbient();
+            StageFlowHooks.PlayTutorialIntro = null;
         }
 
         private void Update()
         {
-            if (!_enableKeyboardInput || Session == null || Keyboard.current == null) return;
+            if (!_enableKeyboardInput || Keyboard.current == null) return;
 
-            // 스테이지 선택은 대화 재생 중(InputBlocked)에도 통한다 — BeginNewSession이 재생 중인 대화를 끊는다.
+            // 스테이지 선택은 대화 재생 중(InputBlocked)에도, 오프닝이 재생 중(아직 세션 없음)이어도 통한다 — BeginNewSession이 재생 중인 대화·오프닝을 끊는다.
             if (Keyboard.current.f1Key.wasPressedThisFrame) StartStage(1);
             else if (Keyboard.current.f2Key.wasPressedThisFrame) StartStage(2);
+            else if (Keyboard.current.f3Key.wasPressedThisFrame) StartStage(3);
+            else if (Keyboard.current.f4Key.wasPressedThisFrame) StartTutorial();
+            else if (Keyboard.current.f5Key.wasPressedThisFrame) PlayEnding();
+
+            if (Session == null) return;
+
+            // 심박수 효과 테스트 — 대화·오버레이와 무관하게 항상 통한다.
+            if (Keyboard.current.qKey.wasPressedThisFrame) NudgeHeartbeat(-DebugHeartbeatStep);
+            else if (Keyboard.current.eKey.wasPressedThisFrame) NudgeHeartbeat(DebugHeartbeatStep);
 
             if (InputBlocked) return;
 
@@ -101,6 +168,20 @@ namespace BlueComplex.UI.Bootstrap
             else if (Keyboard.current.digit2Key.wasPressedThisFrame) PlayCardAtIndex(1);
             else if (Keyboard.current.digit3Key.wasPressedThisFrame) PlayCardAtIndex(2);
             else if (Keyboard.current.digit4Key.wasPressedThisFrame) PlayCardAtIndex(3);
+        }
+
+        private const int DebugHeartbeatStep = 10;
+
+        private HeartRateController _debugHeartRate;
+
+        /// <summary>디버그(Q/E): TurnRunner를 거치지 않고 심박수만 직접 바꾼다. Heartbeat.Changed가 CRT·램프를 움직이고,
+        /// 턴 결과 연출이 쥔 모니터·배경음·나츠 반응은 HeartRateController에 직접 알린다. 0~200 범위 제한은 코어(Heartbeat.Change)의 것을 그대로 쓴다.
+        /// 즉사 구간 진입은 턴 종료 때만 판정되므로 여기서는 표시만 바뀐다.</summary>
+        private void NudgeHeartbeat(int delta)
+        {
+            Session.Heartbeat.Change(delta);
+            if (_debugHeartRate == null) _debugHeartRate = FindFirstObjectByType<HeartRateController>();
+            _debugHeartRate?.PresentCurrentHeartbeat();
         }
 
         [ContextMenu("Play Selected Card")]
@@ -116,20 +197,68 @@ namespace BlueComplex.UI.Bootstrap
                 return;
             }
 
-            Session.Runner.PlayClue(Session.Hand.Cards[index]);
-        }
-
-        /// <summary>스테이지 번호(1 또는 2)를 골라 새 무작위 시드로 시작한다. 해금 지식(Ledger)은 유지된다. 임시 디버그 선택용.</summary>
-        public void StartStage(int stageNumber)
-        {
-            if (stageNumber < 1 || stageNumber > LastStageNumber)
+            var card = Session.Hand.Cards[index];
+            var verdict = Session.CheckPlay(card);
+            if (!verdict.Allowed)
             {
-                Debug.LogWarning($"스테이지 {stageNumber}는 없습니다. (1~{LastStageNumber})");
+                PlayGateFeedback.Show(FindCanvasRoot(), verdict, Session.Runner.CurrentTurn);
                 return;
             }
 
+            Session.Runner.PlayClue(card);
+        }
+
+        /// <summary>스테이지 번호(1~3)를 골라 새 무작위 시드로 시작한다. 해금 지식(Ledger)은 유지된다. 임시 디버그 선택용.</summary>
+        public void StartStage(int stageNumber)
+        {
+            if (stageNumber < 1 || stageNumber > LastDebugStageNumber)
+            {
+                Debug.LogWarning($"스테이지 {stageNumber}는 없습니다. (1~{LastDebugStageNumber})");
+                return;
+            }
+
+            _isTutorial = false;
             _stageNumber = stageNumber;
             BeginNewSession(Environment.TickCount);
+        }
+
+        /// <summary>튜토리얼을 시작한다(새 시드, 새 튜토리얼 장부). 스테이지 번호 흐름과 무관하다 — 클리어해도 다음 스테이지로 이어지지 않는다(<see cref="TutorialCompleted"/>).
+        /// 시작 컷신은 <see cref="StageFlowHooks.PlayTutorialIntro"/> 훅으로 걸린다. 임시 디버그 시작은 F4.</summary>
+        public void StartTutorial()
+        {
+            _isTutorial = true;
+            BeginNewSession(Environment.TickCount);
+        }
+
+        [ContextMenu("Start Tutorial")]
+        private void StartTutorialFromInspector() => StartTutorial();
+
+        /// <summary>엔딩(컷신 9 → 에필로그 → 크레딧)을 지금 화면 위에서 바로 재생한다. 정식 진행에서는 스테이지 3 클리어 컷신 뒤에 스테이지 종료 연출이 이어 붙이고, 임시 디버그 재생은 F5.
+        /// 재생 중 다시 부르면 처음부터 다시, F1~F4로 세션을 바꾸면 끊긴다. 끝나면 게임 화면으로 돌아온다.</summary>
+        public void PlayEnding()
+        {
+            if (_endingRoutine != null) StopCoroutine(_endingRoutine);
+            _endingRoutine = StartCoroutine(RunEnding());
+        }
+
+        [ContextMenu("Play Ending")]
+        private void PlayEndingFromInspector() => PlayEnding();
+
+        private IEnumerator RunEnding()
+        {
+            yield return PlayEndingSequence();
+            _endingRoutine = null;
+        }
+
+        /// <summary>엔딩을 재생하는 코루틴 — 스테이지 종료 연출(<see cref="StageEndController"/>)이 스테이지 3 클리어 컷신 뒤에 이어 붙여 기다린다. 입력은 재생 동안만 잠근다.</summary>
+        public IEnumerator PlayEndingSequence()
+        {
+            var director = EndingCutsceneDirector.GetOrCreate(FindCanvasRoot());
+            if (director == null) yield break;
+
+            InputBlocked = true;
+            yield return director.Play();
+            InputBlocked = false;
         }
 
         /// <summary>다음 스테이지를 새 무작위 시드로 시작한다(스테이지 클리어 연출이 컷신 뒤에 부른다). 다음 스테이지가 없으면 아무 일도 안 한다.</summary>
@@ -144,9 +273,15 @@ namespace BlueComplex.UI.Bootstrap
         [ContextMenu("Start Stage 2")]
         private void StartStage2FromInspector() => StartStage(2);
 
-        private StageConfig CreateConfig() => _stageNumber == 2
-            ? Stage2Content.Stage2(_polarityTable)
-            : PrototypeContent.PrototypeStage(_polarityTable);
+        [ContextMenu("Start Stage 3")]
+        private void StartStage3FromInspector() => StartStage(3);
+
+        private StageConfig CreateConfig() => _stageNumber switch
+        {
+            2 => Stage2Content.Stage2(_polarityTable),
+            3 => Stage3Content.Stage3(_polarityTable),
+            _ => PrototypeContent.PrototypeStage(_polarityTable)
+        };
 
         /// <summary>같은 시드로 스테이지를 재시작한다. 해금 지식(Ledger)은 그대로 유지된다.</summary>
         public void RestartWithSameSeed() => BeginNewSession(CurrentSeed);
@@ -161,19 +296,31 @@ namespace BlueComplex.UI.Bootstrap
             // 끝나지 않은 채 버려지는 판(F1/F2 등 StageEnded를 안 거친 재시작)의 미확정 관찰은 다음 판에 딸려 가지 않게 버린다.
             // 결과 패널 경로는 StageEnded에서 이미 CommitRun했으므로 여기서 비는 게 정상이다.
             _ledger.DiscardPending();
+            _tutorialLedger?.DiscardPending();
 
             // 재시작이 대화 재생 도중이면 그 코루틴을 끊고 막을 치운다 — InputBlocked도 켜진 채로 남지 않게.
             StopAllCoroutines();
+            _endingRoutine = null;
             InputBlocked = false;
             _pendingQuarterDialogue.Clear();
             _quarterDialoguePlaying = false;
 
             CurrentSeed = seed;
-            var config = CreateConfig();
             var random = new SystemRandomSource(seed);
 
+            // 튜토리얼은 본편과 다른 장부·다른 조립 경로(스크립트 손패·고정 키 구역·정해진 컴플렉스)를 쓴다. 그 뒤의 흐름(뷰 연결, 시작 대화, 쿼터 대화)은 똑같다.
+            if (_isTutorial)
+            {
+                _tutorialLedger = new ClueKnowledgeLedger();
+                Session = TutorialContent.CreateSession(_polarityTable, random, _tutorialLedger);
+            }
+            else
+            {
+                Session = StageFactory.Create(CreateConfig(), random, _ledger, _polarityTable);
+            }
+
+            var config = Session.Config;
             Config = config;
-            Session = StageFactory.Create(config, random, _ledger, _polarityTable);
             _logger = new StageTurnLogger(Session);
 
             if (_crtEffectDriver != null)
@@ -184,6 +331,14 @@ namespace BlueComplex.UI.Bootstrap
 
             var canvasRoot = FindCanvasRoot();
             StageDialoguePlayer.GetOrCreate(canvasRoot)?.ResetNow();
+
+            // 튜토리얼 가이드(청장의 말풍선·강조·클릭 막)는 튜토리얼 세션에만 붙는다 — 첫 턴이 시작될 때(시작 대화 뒤) 안내가 시작된다. 다른 세션이면 남은 것을 치운다.
+            if (_isTutorial) TutorialGuide.GetOrCreate(canvasRoot)?.Begin(Session);
+            else TutorialGuide.Find(canvasRoot)?.ResetNow();
+            BranchSceneDirector.GetOrCreate(canvasRoot)?.ResetNow(); // 분기 대사 장면 도중이었으면 게임 UI를 되돌린다.
+            IntroCutsceneDirector.Find(canvasRoot)?.ResetNow(); // 시작 컷신 도중이었으면 막을 치우고 나츠를 되돌린다.
+            if (!_startingFromOpening) IntroSequencePlayer.Current?.ResetNow(); // 오프닝 도중에 디버그로 스테이지를 시작했으면 오프닝을 끊는다(오프닝이 직접 연 세션이면 오프닝이 스스로 걷는다).
+            EndingCutsceneDirector.Find(canvasRoot)?.ResetNow(); // 엔딩 도중이었으면 막을 치운다.
 
             // 상시 배경음은 스테이지(재시작 포함)가 시작될 때 처음부터 — 시작 대화 재생 중에도 이미 깔려 있다.
             var ambient = StageSounds.For(config).Ambient;
@@ -209,11 +364,35 @@ namespace BlueComplex.UI.Bootstrap
         /// <summary>스테이지 시작 대화(있으면) 재생 → 입력 잠금 해제 → StartStage(). 대화가 없으면 그대로 바로 시작한다.</summary>
         private IEnumerator BeginStageAfterIntro(Transform canvasRoot, string stageId, bool isFirstEntry)
         {
+            // 튜토리얼의 시작 컷신 훅(컷신 담당 영역이 채운다). 걸려 있지 않으면 건너뛴다.
+            // 컷신이 끝나도 경찰서 그림은 화면에 남는다(IntroCutsceneDirector.HoldsRoom) — 오프닝 대화가 그 위에서 이어지고, 대화가 끝난 뒤에 게임 화면으로 걷는다.
+            IntroCutsceneDirector intro = null;
+            if (_isTutorial)
+            {
+                var cutscene = StageFlowHooks.PlayTutorialIntro?.Invoke();
+                if (cutscene != null)
+                {
+                    InputBlocked = true;
+                    yield return cutscene;
+                    InputBlocked = false;
+                    intro = IntroCutsceneDirector.Find(canvasRoot);
+                }
+            }
+
             var variant = StageDialogues.PickStageStart(stageId, isFirstEntry);
             if (variant.HasValue && canvasRoot != null)
             {
                 InputBlocked = true;
-                yield return StageDialoguePlayer.GetOrCreate(canvasRoot).Play(variant.Value);
+                var player = StageDialoguePlayer.GetOrCreate(canvasRoot);
+                yield return intro != null && intro.HoldsRoom ? player.PlayOver(variant.Value, null) : player.Play(variant.Value);
+                InputBlocked = false;
+            }
+
+            // 대화가 끝난 이 지점에서 경찰서 그림이 게임(취조실) 화면으로 넘어간다 — 그래야 손패가 채워지는 StartStage()가 걷힌 화면에서 시작한다.
+            if (intro != null)
+            {
+                InputBlocked = true;
+                yield return intro.Dismiss();
                 InputBlocked = false;
             }
 
@@ -255,16 +434,43 @@ namespace BlueComplex.UI.Bootstrap
             var variant = StageDialogues.PickQuarterEnd(Config.Id, mood);
             if (!variant.HasValue) yield break;
 
+            // 분기 대사 장면: 게임 UI가 빠지고 배경과 대사만 남는다(스테이지 시작·클리어 대화는 그대로 어두운 막 위에서 한다).
             InputBlocked = true;
-            yield return StageDialoguePlayer.GetOrCreate(canvasRoot).Play(variant.Value);
+            yield return BranchSceneDirector.GetOrCreate(canvasRoot).Play(variant.Value);
             InputBlocked = false;
         }
 
-        /// <summary>StageBootstrapper가 MainHud 캔버스의 자식이라는 보장이 없어(씬 배치에 따라 다르다) 대화 오버레이를 지을 캔버스를 직접 찾는다.</summary>
+        /// <summary>StageBootstrapper가 MainHud 캔버스의 자식이라는 보장이 없어(씬 배치에 따라 다르다) 대화 오버레이를 지을 캔버스를 직접 찾는다.
+        /// 대사 오버레이처럼 자기 캔버스를 가진 중첩 캔버스가 먼저 잡히지 않게, 부모 쪽에 다른 캔버스가 없는 최상위 캔버스만 고른다
+        /// (꺼져 있는 중첩 캔버스는 rootCanvas가 자기 자신을 돌려주므로 그걸 믿지 않는다).</summary>
         private static Transform FindCanvasRoot()
         {
-            var canvas = FindFirstObjectByType<Canvas>(FindObjectsInactive.Include);
-            return canvas != null ? canvas.transform : null;
+            foreach (var canvas in FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.InstanceID))
+            {
+                var parent = canvas.transform.parent;
+                if (parent == null || parent.GetComponentInParent<Canvas>(true) == null) return canvas.transform;
+            }
+
+            return null;
+        }
+
+        /// <summary>오프닝을 얹을 캔버스: 켜져 있는 최상위 캔버스 중 게임 HUD("MainHud")를 우선한다. <see cref="FindCanvasRoot"/>는 꺼져 있는 캔버스도 집어서(인스턴스 순서에 따라 다르다)
+        /// 그 밑에 만든 오프닝은 코루틴이 못 돌고 아무것도 안 그려진다. 켜진 캔버스가 없으면 null(전용 캔버스를 쓴다).</summary>
+        private static Transform FindOpeningCanvasRoot()
+        {
+            Transform firstActive = null;
+            foreach (var canvas in FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.InstanceID))
+            {
+                if (!canvas.enabled) continue;
+
+                var parent = canvas.transform.parent;
+                if (parent != null && parent.GetComponentInParent<Canvas>() != null) continue;
+
+                if (canvas.name == "MainHud") return canvas.transform;
+                if (firstActive == null) firstActive = canvas.transform;
+            }
+
+            return firstActive;
         }
 
         /// <summary>구독자마다 따로 부른다 — 뷰 하나의 초기화가 예외로 죽어도(참조가 끊긴 프리팹 등) 뒤의 뷰들이 초기화를 못 받아 화면이 통째로 비는 일이 없게 한다.

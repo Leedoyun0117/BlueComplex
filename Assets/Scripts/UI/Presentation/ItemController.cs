@@ -1,3 +1,4 @@
+using System.Collections;
 using BlueComplex.Core.Items;
 using BlueComplex.Core.Stage;
 using BlueComplex.Core.Turn;
@@ -22,6 +23,7 @@ namespace BlueComplex.UI.Presentation
         private int _shownCount;
         private int _crumpling;
         private bool _insertPending;
+        private Coroutine _arrivalRoutine;
         private ItemTargetSelector _selector;
 
         protected override void Awake()
@@ -41,27 +43,44 @@ namespace BlueComplex.UI.Presentation
         /// <summary>세션 시작(재시작 포함): 애니메이션 없이 현재 보유 상태를 그대로 놓는다.</summary>
         protected override void Render()
         {
+            CancelPendingArrival();
             _crumpling = 0;
             _insertPending = false;
             _shownCount = Session.Items.Held.Count;
             Refresh(animateNew: false);
         }
 
-        /// <summary>연출이 끝난 뒤 Presenter가 부른다 — 미뤄 둔 새 카드를 끼운다.</summary>
+        /// <summary>DLJ: 같은 프레임의 지급을 모아 대사/턴 연출이 끝난 뒤 한 번에 끼운다.</summary>
         public void FlushPending()
         {
-            if (Session == null || !_insertPending || _crumpling > 0) return;
+            if (Session == null || !_insertPending || _arrivalRoutine != null) return;
+            _arrivalRoutine = StartCoroutine(PlayPendingArrival());
+        }
 
+        private IEnumerator PlayPendingArrival()
+        {
+            // Refill은 Gained를 슬롯 수만큼 동기 호출한다. 즉시 Refresh하면 앞 슬롯 연출이 매번 끊긴다.
+            yield return null;
+            _presenter ??= transform.root.GetComponentInChildren<ITurnResultPresenter>(true);
+            while (_crumpling > 0 || (Bootstrapper != null && Bootstrapper.InputBlocked)
+                   || (_presenter != null && _presenter.IsPresenting))
+                yield return null;
+
+            _arrivalRoutine = null;
+            if (Session == null || !_insertPending) yield break;
             _insertPending = false;
             Refresh(animateNew: true);
+        }
+
+        private void CancelPendingArrival()
+        {
+            if (_arrivalRoutine != null) StopCoroutine(_arrivalRoutine);
+            _arrivalRoutine = null;
         }
 
         private void OnGained(ItemDefinition item)
         {
             _insertPending = true;
-
-            _presenter ??= transform.root.GetComponentInChildren<ITurnResultPresenter>(true);
-            if (_presenter != null && _presenter.IsPresenting) return;
 
             FlushPending();
         }
@@ -111,7 +130,8 @@ namespace BlueComplex.UI.Presentation
             {
                 var slot = _panel.GetSlot(i);
                 if (i >= capacity) slot.Hide();
-                else if (i < held.Count) slot.Render(held[i], insert: i >= firstNew);
+                else if (i < held.Count) slot.Render(held[i], insert: i >= firstNew,
+                    insertOrder: i >= firstNew ? i - firstNew : 0);
                 else slot.SetEmpty();
             }
 
@@ -185,6 +205,7 @@ namespace BlueComplex.UI.Presentation
 
         protected override void Unsubscribe(StageSession session)
         {
+            CancelPendingArrival();
             _selector?.Cancel();
             session.Items.Gained -= OnGained;
             session.Items.Used -= OnUsed;

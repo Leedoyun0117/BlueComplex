@@ -1,9 +1,11 @@
 using System.Collections;
+using System.Linq;
 using BlueComplex.Core.Stage;
 using BlueComplex.UI.Layout;
 using BlueComplex.UI.Motion;
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace BlueComplex.UI.Presentation
 {
@@ -20,6 +22,12 @@ namespace BlueComplex.UI.Presentation
     {
         /// <summary>대사 한 줄이 끝날 때마다 막이 그만큼 걷히는 데 걸리는 시간.</summary>
         private const float BrightenStep = 0.6f;
+
+        /// <summary>자물쇠 줄 중심의 세로 위치(화면 비율). 심박수 모니터·포스트잇(위쪽)과 클리어 대사(0.4~0.6) 사이의 빈 높이다.</summary>
+        private const float LockRowHeight = 0.68f;
+
+        /// <summary>두 초상화를 못 찾았을 때 쓰는 빈 자리의 가로 범위(화면 비율) — 유키 오른쪽 끝과 나츠 왼쪽 끝 사이.</summary>
+        private static readonly Vector2 FallbackSpan = new Vector2(0.36f, 0.57f);
 
         private Transform _canvasRoot;
         private ScreenCurtain _curtain;
@@ -43,7 +51,7 @@ namespace BlueComplex.UI.Presentation
         {
             var settings = UiMotion.Settings;
             transform.SetAsLastSibling();
-            _locks.Build(plan.LockCount);
+            _locks.Build(plan.LockCount, FreeArea());
 
             yield return _curtain.FadeTo(settings.keyTurnDim, settings.clearDimFade).WaitForCompletion(true);
             yield return _locks.FadeTo(1f, settings.lockAppear).WaitForCompletion(true);
@@ -55,6 +63,62 @@ namespace BlueComplex.UI.Presentation
             }
 
             yield return new WaitForSecondsRealtime(settings.lockHold);
+        }
+
+        /// <summary>
+        /// 자물쇠가 들어갈 빈 자리 — 두 초상화(유키/나츠) 사이의 가로 폭, <see cref="LockRowHeight"/> 높이(캔버스 로컬 좌표, 중심이 놓일 곳).
+        /// 모니터·포스트잇·키 서랍·아이템 패널은 모두 이 세로 띠 밖에 있어서 초상화 사이만 재면 어느 해상도에서도 겹치지 않는다.
+        /// 다른 종횡비에서도 HUD가 앵커로 움직이므로 미리 정한 좌표가 아니라 지금 위치를 잰다.
+        /// </summary>
+        private Rect FreeArea()
+        {
+            var root = (RectTransform)transform;
+            var canvas = root.rect;
+            var left = canvas.xMin + canvas.width * FallbackSpan.x;
+            var right = canvas.xMin + canvas.width * FallbackSpan.y;
+
+            var yuki = PortraitBox(root, "Yuki Portrait");
+            var natsu = PortraitBox(root, "Natsu Portrait");
+            if (yuki.HasValue && natsu.HasValue)
+            {
+                var gapLeft = Mathf.Min(yuki.Value.xMax, natsu.Value.xMax);
+                var gapRight = Mathf.Max(yuki.Value.xMin, natsu.Value.xMin);
+                if (gapRight - gapLeft > canvas.width * 0.1f)
+                {
+                    // 초상화 틀에 맞닿지 않게 양쪽에 살짝 여유를 둔다.
+                    var pad = canvas.width * 0.01f;
+                    left = gapLeft + pad;
+                    right = gapRight - pad;
+                }
+            }
+
+            var y = canvas.yMin + canvas.height * LockRowHeight;
+            return new Rect(left, y - 0.5f, right - left, 1f);
+        }
+
+        /// <summary>이름이 <paramref name="portraitName"/>인 초상화 오브젝트 아래 보이는 그림 전체를 감싸는 틀(<paramref name="space"/> 로컬 좌표). 못 찾으면 null.</summary>
+        private Rect? PortraitBox(RectTransform space, string portraitName)
+        {
+            var portrait = _canvasRoot.GetComponentsInChildren<RectTransform>(false).FirstOrDefault(rect => rect.name == portraitName);
+            if (portrait == null) return null;
+
+            var min = new Vector2(float.MaxValue, float.MaxValue);
+            var max = new Vector2(float.MinValue, float.MinValue);
+            var corners = new Vector3[4];
+            foreach (var graphic in portrait.GetComponentsInChildren<Graphic>(false))
+            {
+                if (graphic.color.a < 0.05f) continue;
+
+                graphic.rectTransform.GetWorldCorners(corners);
+                foreach (var corner in corners)
+                {
+                    var local = (Vector2)space.InverseTransformPoint(corner);
+                    min = Vector2.Min(min, local);
+                    max = Vector2.Max(max, local);
+                }
+            }
+
+            return max.x > min.x ? Rect.MinMaxRect(min.x, min.y, max.x, max.y) : (Rect?)null;
         }
 
         /// <summary>
