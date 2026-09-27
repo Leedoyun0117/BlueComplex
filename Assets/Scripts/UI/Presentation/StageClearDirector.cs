@@ -26,8 +26,8 @@ namespace BlueComplex.UI.Presentation
         /// <summary>자물쇠 줄 중심의 세로 위치(화면 비율). 심박수 모니터·포스트잇(위쪽)과 클리어 대사(0.4~0.6) 사이의 빈 높이다.</summary>
         private const float LockRowHeight = 0.68f;
 
-        /// <summary>두 초상화를 못 찾았을 때 쓰는 빈 자리의 가로 범위(화면 비율) — 유키 오른쪽 끝과 나츠 왼쪽 끝 사이.</summary>
-        private static readonly Vector2 FallbackSpan = new Vector2(0.36f, 0.57f);
+        /// <summary>두 초상화를 못 찾았을 때 쓰는 빈 자리의 가로 범위(화면 비율) — 화면 중앙 기준 대칭.</summary>
+        private static readonly Vector2 FallbackSpan = new Vector2(0.395f, 0.605f);
 
         private Transform _canvasRoot;
         private ScreenCurtain _curtain;
@@ -69,11 +69,14 @@ namespace BlueComplex.UI.Presentation
         /// 자물쇠가 들어갈 빈 자리 — 두 초상화(유키/나츠) 사이의 가로 폭, <see cref="LockRowHeight"/> 높이(캔버스 로컬 좌표, 중심이 놓일 곳).
         /// 모니터·포스트잇·키 서랍·아이템 패널은 모두 이 세로 띠 밖에 있어서 초상화 사이만 재면 어느 해상도에서도 겹치지 않는다.
         /// 다른 종횡비에서도 HUD가 앵커로 움직이므로 미리 정한 좌표가 아니라 지금 위치를 잰다.
+        /// 유키·나츠 초상화는 화면 중앙 기준으로 대칭이 아니라서(나츠 쪽이 중앙에 더 가깝다), 두 틀 사이 틈을 그대로 쓰면 자물쇠 줄이 중앙보다 왼쪽에 놓인다 —
+        /// 화면 중앙에서 더 가까운 쪽 초상화까지의 거리를 반폭으로 써서 항상 화면 중앙 기준 대칭인 자리를 만든다.
         /// </summary>
         private Rect FreeArea()
         {
             var root = (RectTransform)transform;
             var canvas = root.rect;
+            var centerX = canvas.center.x;
             var left = canvas.xMin + canvas.width * FallbackSpan.x;
             var right = canvas.xMin + canvas.width * FallbackSpan.y;
 
@@ -87,8 +90,13 @@ namespace BlueComplex.UI.Presentation
                 {
                     // 초상화 틀에 맞닿지 않게 양쪽에 살짝 여유를 둔다.
                     var pad = canvas.width * 0.01f;
-                    left = gapLeft + pad;
-                    right = gapRight - pad;
+                    gapLeft += pad;
+                    gapRight -= pad;
+
+                    // 화면 중앙에서 더 가까운 쪽 틀까지의 거리로 반폭을 정해 중앙 기준 대칭으로 만든다(먼 쪽엔 자연히 여유가 남는다).
+                    var halfWidth = Mathf.Min(centerX - gapLeft, gapRight - centerX);
+                    left = centerX - halfWidth;
+                    right = centerX + halfWidth;
                 }
             }
 

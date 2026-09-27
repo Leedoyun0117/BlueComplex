@@ -15,6 +15,8 @@ namespace BlueComplex.EditorTools
         private const string MainTowerPath = "Assets/Art/Opening/OpeningMainTower.png";
         private const string GirlSilhouettePath = "Assets/Art/girl_silhouette.png";
         private const string GirlWalkPath = "Assets/Art/girl_walk_cycle_v2.png";
+        private const string GirlNodPath = "Assets/Art/girl_nod_8frames.png";
+        private const string GirlNodRigPath = "Assets/Animation/girl_silhouette.prefab"; // 지금은 안 쓴다(8프레임으로 롤백) — 다시 시도할 때를 위해 채워만 둔다.
         private const string ClockPath = "Assets/Art/IntroClock.png";
         private const string ClockHourPath = "Assets/Art/IntroClockHour.png";
         private const string ClockMinutePath = "Assets/Art/IntroClockMinute.png";
@@ -33,6 +35,7 @@ namespace BlueComplex.EditorTools
             Import(MainTowerPath, FilterMode.Bilinear);
             Import(GirlSilhouettePath, FilterMode.Bilinear);
             Import(GirlWalkPath, FilterMode.Bilinear, 8192); // 걷기 시트는 5000px 폭이라 4096으로 줄이지 않는다.
+            Import(GirlNodPath, FilterMode.Bilinear);
 
             var art = AssetDatabase.LoadAssetAtPath<IntroCutsceneArt>(AssetPath);
             if (art == null)
@@ -53,6 +56,9 @@ namespace BlueComplex.EditorTools
             art.room = Load(RoomPath);
             art.girlSilhouette = Load(GirlSilhouettePath);
             art.girlWalk = Load(GirlWalkPath);
+            art.girlNod = Load(GirlNodPath);
+            art.girlNodRig = AssetDatabase.LoadAssetAtPath<GameObject>(GirlNodRigPath);
+            if (art.girlNodRig == null) Debug.LogWarning($"[IntroCutsceneArt] {GirlNodRigPath}를 찾지 못했다.");
 
             EditorUtility.SetDirty(art);
             AssetDatabase.SaveAssets();

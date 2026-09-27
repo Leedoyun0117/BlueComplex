@@ -9,6 +9,7 @@ using BlueComplex.UI.Background;
 using BlueComplex.UI.Debugging;
 using BlueComplex.UI.Motion;
 using BlueComplex.UI.Presentation;
+using UI.Esc;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -50,6 +51,9 @@ namespace BlueComplex.UI.Bootstrap
         public const int LastDebugStageNumber = 3;
 
         public StageSession Session { get; private set; }
+
+        /// <summary>스테이지 종료 컷신 진행 기록 — 실패는 시도마다 하나씩, 클리어는 못 본 것을 몰아서 보여 준다. 재시작·다음 스테이지로 세션이 바뀌어도 앱을 실행하는 동안 유지된다(<see cref="StageEndController"/>가 쓴다).</summary>
+        public StageCutsceneProgress CutsceneProgress { get; } = new();
 
         /// <summary>지금 돌고 있는(또는 마지막으로 시작한) 스테이지 번호.</summary>
         public int StageNumber => _stageNumber;
@@ -105,8 +109,16 @@ namespace BlueComplex.UI.Bootstrap
             _polarityTable = new DefaultEmotionPolarityTable();
             _ledger = new ClueKnowledgeLedger();
 
+            // 설정창(ESC)은 메인 화면부터 게임 끝까지 어디서든 열려야 해서 세션 캔버스에 한 번만 지어 둔다.
+            LSO_EscPanel.GetOrCreate(FindCanvasRoot());
+
             // 튜토리얼 시작 컷신(암흑 → 뉴스 → 경찰서)을 흐름의 훅에 연결한다. 정적 값이라 OnDestroy에서 되돌린다.
             StageFlowHooks.PlayTutorialIntro = PlayTutorialIntro;
+
+            // 스테이지 종료 컷신(김태호의 Timeline 컷신)도 같은 방식으로 흐름의 훅에 연결한다.
+            StageFlowHooks.PlayCutscene = PlayStageCutscene;
+            StageFlowHooks.CutsceneCovering = () => StageCutsceneHost.Find() is { Covering: true };
+            StageFlowHooks.ReleaseCutscene = () => StageCutsceneHost.Find()?.Release();
 
             // 오프닝이 켜져 있으면 세션은 메인 화면의 "취조시작"이 연다 — 그때까지 화면은 오프닝이 덮고 있다(뷰들은 SessionStarted를 기다린다).
             if (_playOpening)
@@ -138,11 +150,17 @@ namespace BlueComplex.UI.Bootstrap
 
         private IEnumerator PlayTutorialIntro() => IntroCutsceneDirector.GetOrCreate(FindCanvasRoot())?.Play();
 
+        /// <summary>번호의 스테이지 종료 컷신. 프리팹이 없는 번호는 null(건너뜀).</summary>
+        private static IEnumerator PlayStageCutscene(int number) => StageCutsceneHost.GetOrCreate().Play(number);
+
         private void OnDestroy()
         {
             _logger?.Dispose();
             UiSoundHooks.StopAmbient();
             StageFlowHooks.PlayTutorialIntro = null;
+            StageFlowHooks.PlayCutscene = null;
+            StageFlowHooks.CutsceneCovering = null;
+            StageFlowHooks.ReleaseCutscene = null;
         }
 
         private void Update()
@@ -221,6 +239,9 @@ namespace BlueComplex.UI.Bootstrap
             _stageNumber = stageNumber;
             BeginNewSession(Environment.TickCount);
         }
+
+        /// <summary>본편(스테이지 1)을 시작한다 — 튜토리얼을 클리어한 뒤 종료 연출이 부른다. 튜토리얼 상태는 <see cref="StartStage"/>가 걷는다.</summary>
+        public void StartMainGame() => StartStage(1);
 
         /// <summary>튜토리얼을 시작한다(새 시드, 새 튜토리얼 장부). 스테이지 번호 흐름과 무관하다 — 클리어해도 다음 스테이지로 이어지지 않는다(<see cref="TutorialCompleted"/>).
         /// 시작 컷신은 <see cref="StageFlowHooks.PlayTutorialIntro"/> 훅으로 걸린다. 임시 디버그 시작은 F4.</summary>
@@ -339,6 +360,7 @@ namespace BlueComplex.UI.Bootstrap
             IntroCutsceneDirector.Find(canvasRoot)?.ResetNow(); // 시작 컷신 도중이었으면 막을 치우고 나츠를 되돌린다.
             if (!_startingFromOpening) IntroSequencePlayer.Current?.ResetNow(); // 오프닝 도중에 디버그로 스테이지를 시작했으면 오프닝을 끊는다(오프닝이 직접 연 세션이면 오프닝이 스스로 걷는다).
             EndingCutsceneDirector.Find(canvasRoot)?.ResetNow(); // 엔딩 도중이었으면 막을 치운다.
+            StageCutsceneHost.Find()?.Release(); // 스테이지 종료 컷신 도중이었으면 컷신 카메라를 걷는다.
 
             // 상시 배경음은 스테이지(재시작 포함)가 시작될 때 처음부터 — 시작 대화 재생 중에도 이미 깔려 있다.
             var ambient = StageSounds.For(config).Ambient;
@@ -447,6 +469,8 @@ namespace BlueComplex.UI.Bootstrap
         {
             foreach (var canvas in FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.InstanceID))
             {
+                if (StageCutsceneHost.IsCutsceneObject(canvas.gameObject)) continue; // 컷신 캔버스는 게임 캔버스가 아니다(방금 끝난 컷신이 프레임 끝까지 남아 있을 수 있다).
+
                 var parent = canvas.transform.parent;
                 if (parent == null || parent.GetComponentInParent<Canvas>(true) == null) return canvas.transform;
             }
@@ -461,7 +485,7 @@ namespace BlueComplex.UI.Bootstrap
             Transform firstActive = null;
             foreach (var canvas in FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.InstanceID))
             {
-                if (!canvas.enabled) continue;
+                if (!canvas.enabled || StageCutsceneHost.IsCutsceneObject(canvas.gameObject)) continue;
 
                 var parent = canvas.transform.parent;
                 if (parent != null && parent.GetComponentInParent<Canvas>() != null) continue;

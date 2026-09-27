@@ -42,6 +42,7 @@ namespace BlueComplex.UI.Layout
         private Outline _flapEdge;
 
         private Vector2 _pinRest;
+        private bool _showPin = true;
         private bool _built;
         private Sequence _motion;
         private Sequence _pinMotion;
@@ -124,6 +125,16 @@ namespace BlueComplex.UI.Layout
             EnsureBuilt();
             _curl.Flat = flat;
             MarkGraphicsDirty();
+        }
+
+        /// <summary>압정(과 압정 그림자)을 그릴지 정한다(기본 true). 끄면 붙는 모션은 그대로지만 압정이 보이지 않고 압정 소리도 나지 않는다 — 오프닝 몽타주의 포스트잇이 쓴다.</summary>
+        public void SetShowPin(bool show)
+        {
+            _showPin = show;
+            if (!_built) return;
+
+            _pin.gameObject.SetActive(show);
+            _pinShadowGroup.gameObject.SetActive(show);
         }
 
         /// <summary><see cref="Content"/> 아래의 모든 글자를 손글씨로 바꾼다. 내용을 다 넣은 뒤 한 번 부른다(이미 손글씨인 글자는 건너뛴다).</summary>
@@ -304,7 +315,7 @@ namespace BlueComplex.UI.Layout
             sequence.Join(_pin.DOLocalRotate(Vector3.zero, drop).SetEase(Ease.InQuad));
             sequence.Join(_pinShadowGroup.DOFade(1f, drop).SetEase(Ease.InQuad));
 
-            if (sound) sequence.AppendCallback(() => UiSoundHooks.Play(UiSoundCue.Pin));
+            if (sound && _showPin) sequence.AppendCallback(() => UiSoundHooks.Play(UiSoundCue.Pin));
             sequence.Append(_pin.DOScale(1.3f, bounce * 0.4f).SetEase(Ease.OutQuad));
             sequence.Append(_pin.DOScale(1f, bounce * 0.6f).SetEase(Ease.InQuad));
             return sequence;
@@ -391,6 +402,7 @@ namespace BlueComplex.UI.Layout
 
             _overlay = RuntimeUi.CreateStretched(_sheet, "Overlay");
             BuildPin();
+            if (!_showPin) SetShowPin(false);
 
             _graphics = new[] { dropShadow, paper, curlShadow, flap };
             _curl.Changed += MarkGraphicsDirty;

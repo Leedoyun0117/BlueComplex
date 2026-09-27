@@ -44,6 +44,12 @@ namespace BlueComplex.UI.Presentation
         [Tooltip("girl_walk_cycle_v2.png(소녀 걷기 8프레임 가로 시트, 5000×733, 알파 채널 — 프레임 좌표는 IntroGirlView에 하드코딩) — 실루엣이 화면을 가로질러 걷고 위로 빠져나간다. 원본은 오른쪽을 본다.")]
         public Texture2D girlWalk;
 
+        [Tooltip("girl_nod_8frames.png(소녀 고개 숙임 8프레임 가로 시트, 4000×450, 알파 채널 — 프레임 좌표는 IntroGirlView에 하드코딩) — 7단계, 정지 실루엣 자리에서 한 번(0→7) 재생되고 마지막 프레임에서 멈춘다.")]
+        public Texture2D girlNod;
+
+        [Tooltip("Assets/Animation/girl_silhouette.prefab — girl_silhouette.psb를 리깅한 스켈레톤(Body+Head, Animator 포함). 지금은 쓰지 않는다(8프레임 시트로 롤백, 다시 시도할 때 IntroGirlRig와 함께 쓴다).")]
+        public GameObject girlNodRig;
+
         [Header("튜토리얼 시작 컷신")]
         [Tooltip("InterrogationRoom.png — 뉴스 뒤에 드러나는 경찰서(취조실). 주황빛 하늘의 창, 나츠가 앉아 있다.")]
         public Texture2D room;

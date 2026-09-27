@@ -23,6 +23,7 @@ namespace BlueComplex.UI.Presentation
         private static readonly Color PlayerInk = new Color32(214, 178, 128, 255);
         private static readonly Color ChiefInk = new Color32(150, 190, 160, 255);
         private static readonly Color LineInk = new Color32(238, 240, 246, 255);
+        private static readonly Color ChoiceInk = new Color32(170, 170, 180, 255);
 
         // 대사는 화면 하단 띠에 놓는다(게임 화면의 유키 대사창 자리와 같은 하단부). 이름표가 그 위, 대사 줄이 아래, "다음" 표시가 맨 아래.
         private static readonly Vector2 SpeakerMin = new Vector2(0.2f, 0.215f);
@@ -352,7 +353,7 @@ namespace BlueComplex.UI.Presentation
             gameObject.SetActive(false);
         }
 
-        /// <summary>선택지 줄에 쓰는 버튼(평소엔 꺼져 있다). 대사 줄 자리에 놓이고, 어두운 판 + 플레이어 색 테두리 + 그 색의 글자다.</summary>
+        /// <summary>선택지 줄에 쓰는 버튼(평소엔 꺼져 있다). 대사 줄 자리에 놓이고, 어두운 판 + 회색 테두리 + 그 색의 글자다.</summary>
         private void BuildChoiceButton(Transform parent, TMP_FontAsset font)
         {
             _choiceButton = new GameObject("Choice", typeof(RectTransform), typeof(Image), typeof(Button)) { layer = gameObject.layer };
@@ -370,7 +371,7 @@ namespace BlueComplex.UI.Presentation
             image.color = new Color(0.09f, 0.11f, 0.17f, 0.92f);
 
             var outline = _choiceButton.AddComponent<Outline>();
-            outline.effectColor = PlayerInk;
+            outline.effectColor = ChoiceInk;
             outline.effectDistance = new Vector2(2f, -2f);
 
             var button = _choiceButton.GetComponent<Button>();
@@ -382,7 +383,7 @@ namespace BlueComplex.UI.Presentation
             button.colors = colors;
             button.onClick.AddListener(OnChoiceClicked);
 
-            _choiceLabel = CreateText(rect, "Label", font, 34f, PlayerInk, Vector2.zero, Vector2.one);
+            _choiceLabel = CreateText(rect, "Label", font, 34f, ChoiceInk, Vector2.zero, Vector2.one);
             _choiceLabel.margin = new Vector4(24f, 6f, 24f, 6f);
 
             _choiceButton.SetActive(false);

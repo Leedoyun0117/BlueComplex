@@ -131,3 +131,19 @@ MonoBehaviour:
     dedicatedVoices: 0
     minInterval: 0
     maxSeconds: 0
+  - cue: 26
+    clips:
+    - {fileID: 8300000, guid: be9def596f0415541bb969b7e0dd80c2, type: 3}
+    volume: 0.5
+    pitchRange: {x: 1, y: 1}
+    dedicatedVoices: 0
+    minInterval: 0
+    maxSeconds: 0
+  - cue: 27
+    clips:
+    - {fileID: 8300000, guid: 53a0ead349f90a9439f521aee905bfd8, type: 3}
+    volume: 1
+    pitchRange: {x: 0.97, y: 1.03}
+    dedicatedVoices: 1
+    minInterval: 0.05
+    maxSeconds: 0

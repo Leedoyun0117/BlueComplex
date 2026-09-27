@@ -12,9 +12,16 @@ namespace BlueComplex.UI.Presentation
     public static class StageFlowHooks
     {
         /// <summary>스테이지 종료 컷신 하나를 번호로 재생한다(번호·순서는 <see cref="BlueComplex.Core.Stage.StageCutscenePlan"/>, 시퀀서는 <see cref="BlueComplex.Core.Stage.CutsceneSequencer"/>).
-        /// 재생할 컷신이 아직 없는 번호는 null을 돌려주면 건너뛴다. 훅 자체가 null이면 전부 건너뛴다. 화면은 밝은 상태에서 시작하고, 끝나면 밝은 상태로 돌려준다(다음 어두워짐은 이 연출이 한다).
+        /// 재생할 컷신이 아직 없는 번호는 null을 돌려주면 건너뛴다. 훅 자체가 null이면 전부 건너뛴다. 컷신은 게임 화면을 스스로 검게 덮고 시작하며, 끝난 뒤에도 덮은 채로 남는다(<see cref="CutsceneCovering"/>·<see cref="ReleaseCutscene"/>).
         /// 컷신이 끝났음을 알려 줄 수 있어야 한다(코루틴이 끝날 때까지 yield) — 끝을 알려 주지 않으면 흐름이 거기서 멈춘다.</summary>
         public static Func<int, IEnumerator> PlayCutscene { get; set; }
+
+        /// <summary>컷신이 화면을 덮고 있는가(컷신 재생 중이거나 통합 컷신 사이). 컷신들이 끝난 뒤 종료 연출이 <see cref="ReleaseCutscene"/> 전에 묻는다 —
+        /// 덮고 있다면 게임 화면 위에 검은 막을 먼저 깔고 컷신을 걷어야 밝은 프레임이 비치지 않는다. 훅이 없으면 null(덮은 적 없음).</summary>
+        public static Func<bool> CutsceneCovering { get; set; }
+
+        /// <summary>컷신이 덮고 있던 화면을 걷어 게임 화면으로 돌아온다. 컷신 사이(통합 컷신 6+7 같은)에는 부르지 않는다 — 스테이지 종료 연출이 컷신을 다 재생한 뒤 한 번 부른다.</summary>
+        public static Action ReleaseCutscene { get; set; }
 
         /// <summary>실패한 스테이지에서 완전한 암전 뒤 시작 화면으로 돌아간다. 화면은 완전히 어두운 상태에서 시작한다. 연결이 없으면(null) 결과 패널을 보여 준다.</summary>
         public static Func<IEnumerator> ReturnToStart { get; set; }

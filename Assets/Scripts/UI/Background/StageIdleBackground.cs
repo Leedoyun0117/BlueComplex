@@ -1,5 +1,6 @@
 using System;
 using BlueComplex.Core.Stage;
+using BlueComplex.UI.Motion;
 using BlueComplex.UI.Presentation;
 using UnityEngine;
 
@@ -16,6 +17,10 @@ namespace BlueComplex.UI.Background
     /// 켜 둔 동안(<see cref="_replaceLegacyRig"/>) 기존 다층 배경 리그(Background Rig)는 비활성화한다 — 새 아트에는 시계·램프·김이 이미 그려져 있다.
     /// 이 컴포넌트를 끄거나 없애면 리그가 원래대로 돌아온다.
     /// 씬에 배치하지 않아도 Play가 시작되면 스스로 만들어진다(<see cref="EnsureExists"/>).
+    ///
+    /// 램프 깜빡임 소리(<see cref="UiSoundCue.LampFlicker"/>)는 8~15초의 임의 간격으로 재생된다 — 이 아트에는 깜빡이는 전용 프레임이 없어서(픽셀
+    /// 단위로 프레임 간 차이를 확인했다) 시각 효과 없이 소리만 낸다. 기존 3D 리그의 <see cref="LampLightDriver"/> 배선은 리그가 꺼져 있어 죽은
+    /// 경로로 남아 있고(의도된 상태), 이 타이머가 지금 실제로 보이는 배경 쪽의 새 트리거다.
     /// </summary>
     public sealed class StageIdleBackground : SessionBoundView
     {
@@ -48,6 +53,11 @@ namespace BlueComplex.UI.Background
         [Tooltip("켜면 기존 Background Rig(정적 다층 배경·조명·시계·컵 김)를 비활성화하고 이 애니메이션이 대신한다.")]
         [SerializeField] private bool _replaceLegacyRig = true;
 
+        [Header("램프 깜빡임 소리")]
+        [Tooltip("이 구간(초) 안 임의 시점마다 LampFlicker 소리를 한 번 낸다. 이 아트에는 깜빡이는 전용 프레임이 없어 소리만 낸다.")]
+        [SerializeField] private float _lampFlickerIntervalMin = 8f;
+        [SerializeField] private float _lampFlickerIntervalMax = 15f;
+
         private BackgroundLayerRig _rig;
         private Renderer _renderer;
         private Material _material;
@@ -57,6 +67,7 @@ namespace BlueComplex.UI.Background
         private SheetData _data;
         private int _frame;
         private float _frameElapsedMs;
+        private float _lampFlickerTimer;
 
         // 스테이지별로 한 번만 읽는다(시트 텍스처는 Resources 에셋이라 재시작마다 다시 로드해도 같은 인스턴스지만 JSON 파싱은 아낀다).
         private readonly Texture2D[] _sheets = new Texture2D[LastStage + 1];
@@ -81,6 +92,7 @@ namespace BlueComplex.UI.Background
 
             // 세션이 열리기 전(오프닝 등)에도 배경이 비어 있지 않게 기본 스테이지를 먼저 보여 준다. 이후 세션 시작(Render)이 스테이지를 다시 고른다.
             ShowStage(1);
+            _lampFlickerTimer = UnityEngine.Random.Range(_lampFlickerIntervalMin, _lampFlickerIntervalMax);
             base.Awake();
         }
 
@@ -101,6 +113,8 @@ namespace BlueComplex.UI.Background
 
         private void Update()
         {
+            TickLampFlicker(Time.deltaTime);
+
             if (_data == null || _data.frameCount <= 1) return;
 
             _frameElapsedMs += Time.deltaTime * 1000f * _playbackSpeed;
@@ -114,6 +128,16 @@ namespace BlueComplex.UI.Background
             }
 
             if (advanced) ApplyFrame();
+        }
+
+        /// <summary>게임 세션과 무관하게 항상 돈다(옛 LampLightDriver의 방 분위기와 같은 성격) — 8~15초마다 한 번, 소리만 낸다.</summary>
+        private void TickLampFlicker(float deltaTime)
+        {
+            _lampFlickerTimer -= deltaTime;
+            if (_lampFlickerTimer > 0f) return;
+
+            UiSoundHooks.Play(UiSoundCue.LampFlicker);
+            _lampFlickerTimer = UnityEngine.Random.Range(_lampFlickerIntervalMin, _lampFlickerIntervalMax);
         }
 
         private int FrameMs(int frame)

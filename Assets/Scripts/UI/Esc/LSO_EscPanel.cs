@@ -19,6 +19,30 @@ namespace UI.Esc
     /// </summary>
     public class LSO_EscPanel : MonoBehaviour
     {
+        private const string ResourcePath = "UI/Esc";
+
+        /// <summary>씬에 이미 있으면 그것을, 없으면 <see cref="ResourcePath"/> 프리팹을 <paramref name="canvasRoot"/> 아래에 지어서 돌려준다.
+        /// 게임 화면 어디서든(메인 화면 포함) ESC로 열려야 하므로 세션 캔버스에 한 번만 만들어 두고 계속 쓴다.</summary>
+        public static LSO_EscPanel GetOrCreate(Transform canvasRoot)
+        {
+            if (canvasRoot == null) return null;
+
+            var existing = canvasRoot.GetComponentInChildren<LSO_EscPanel>(true);
+            if (existing != null) return existing;
+
+            var prefab = Resources.Load<GameObject>(ResourcePath);
+            if (prefab == null)
+            {
+                Debug.LogWarning($"[LSO_EscPanel] 설정창 프리팹을 찾을 수 없다: Resources/{ResourcePath}.prefab");
+                return null;
+            }
+
+            var instance = Instantiate(prefab, canvasRoot, false);
+            instance.name = prefab.name;
+            instance.transform.SetAsLastSibling();
+            return instance.GetComponent<LSO_EscPanel>();
+        }
+
         [Header("설정")]
         [Tooltip("위에서 내려오는 창. 이 컴포넌트가 붙은 오브젝트가 아니라 그 안의 창을 물린다.")]
         [SerializeField] private RectTransform content;

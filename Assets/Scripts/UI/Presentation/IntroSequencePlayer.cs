@@ -18,9 +18,9 @@ namespace BlueComplex.UI.Presentation
     ///  1 유키 방(창문·벽시계·화분·노을빛) → 2 그 위에 "Yuki?" 포스트잇 → 3 암전 → 4 흰 포스트잇 4장(Car. Natsu. B. ?.)이 흩어진 자리에 하나씩 붙고 곧바로 2×2 창문 모양으로 미끄러져 정렬 →
     ///  5 4장이 주황으로 바뀌며 글씨가 Death. By. Complex. ?.로(배경은 어두운 채) → 6 창문 안에 소녀 실루엣 → 7 화면이 주황빛으로 → 8 소녀가 왼쪽에서 걸어 들어와 오른쪽으로 걷다 C에서 사라짐 →
     ///  9 종이색으로 바뀌며 포스트잇 바탕이 사라지고 글씨만 남음 → 10 그 종이색 화면 오른쪽 위에 거꾸로 선 소녀가 정지 이미지로 잠깐 → 11 글씨가 한 줄 "Death. By. Complex. ?."로 모여 타이핑되듯 나타남 →
-    ///  12 암전 → 13 뉴스 → 14 타이틀 → 15 메인 화면. (시계 장면은 뺐다.)
+    ///  12 암전 → 14 타이틀 → 15 메인 화면(뉴스는 "취조시작" 뒤 시작 컷신에서만 나온다). (시계 장면은 뺐다.)
     ///
-    /// 메인 화면(<see cref="IntroMainMenuView"/>)의 "취조시작"이 <see cref="Begin"/>에 넘긴 콜백을 부르고 — 그것이 게임 시작(StageBootstrapper)이다 — 막을 걷는다.
+    /// 메인 화면(<see cref="MainMenuView"/>)의 "취조시작"이 <see cref="Begin"/>에 넘긴 콜백을 부르고 — 그것이 게임 시작(StageBootstrapper)이다 — 막을 걷는다.
     /// 메인 화면 전까지는 Space로 통째로 건너뛰어 곧장 메인 화면으로 갈 수 있다(긴 연출을 매번 다 볼 필요는 없다). 건너뛴 뒤에는 메인 화면의 버튼만 눌린다.
     /// 장면 조각은 단계마다 새로 지어 지우고, 시간 값은 <see cref="UiMotionSettings"/>의 "오프닝 시퀀스"에, 그림은 <see cref="IntroCutsceneArt"/>에 있다.
     /// </summary>
@@ -70,7 +70,7 @@ namespace BlueComplex.UI.Presentation
         private TMP_FontAsset _font;
         private Coroutine _routine;
         private Action _startGame;
-        private IntroMainMenuView _menu;
+        private MainMenuView _menu;
         private bool _skippable;
 
         public static IntroSequencePlayer GetOrCreate(Transform canvasRoot)
@@ -198,7 +198,7 @@ namespace BlueComplex.UI.Presentation
             _skippable = false;
             if (_routine != null) StopCoroutine(_routine);
             DOTween.Kill(this);
-            UiSoundHooks.Stop(UiSoundCue.LightGlow); // 빛 번지는 소리가 건너뛴 메인 화면까지 이어지지 않게(뉴스 잡음은 뉴스 조각이 지워지며 스스로 끈다).
+            UiSoundHooks.Stop(UiSoundCue.LightGlow); // 빛 번지는 소리가 건너뛴 메인 화면까지 이어지지 않게.
             _routine = StartCoroutine(SkipRoutine());
         }
 
@@ -225,8 +225,7 @@ namespace BlueComplex.UI.Presentation
             // 13 암전.
             yield return Blackout(s, Color.black);
 
-            // 14~16 뉴스.
-            yield return News(s);
+            // 뉴스는 여기서 틀지 않는다 — "취조시작" 뒤 시작 컷신(IntroCutsceneDirector)이 정식 노출 지점이다. 이미 검은 화면이라 곧장 타이틀로 이어진다.
 
             // 17 타이틀.
             yield return Title(s);
@@ -331,17 +330,17 @@ namespace BlueComplex.UI.Presentation
             yield return recolor.WaitForCompletion(true);
             yield return Wait(0.5f);
 
-            // 7: 창문 안에 소녀가 정지 자세의 실루엣으로 나타나 잠깐 머문다.
+            // 7: 창문 안에 소녀가 나타나 고개를 숙이는 8프레임을 한 번(0→7) 재생하고 마지막(고개 숙인) 자세로 머문다.
             var girl = IntroGirlView.Create(_slide, step, _art);
             if (girl != null)
             {
-                yield return girl.FadeInStill(Mathf.Max(0.1f, s.seqGirlAppear)).SetUpdate(true).SetTarget(this).WaitForCompletion(true);
-                yield return Wait(s.seqWindowHold);
+                yield return girl.FadeInNod(Mathf.Max(0.1f, s.seqGirlAppear)).SetUpdate(true).SetTarget(this).WaitForCompletion(true);
+                yield return GirlNod(s, girl);
             }
 
-            // 8: 화면 전체가 즉시(컷 전환) 주황빛으로 바뀌고(실루엣은 사라진다) 스위치 소리(LightGlow 큐)가 난다.
+            // 8: 화면 전체가 즉시(컷 전환) 주황빛으로 바뀌고(그림은 사라진다) 스위치 소리(LightGlow 큐)가 난다.
             UiSoundHooks.Play(UiSoundCue.LightGlow);
-            girl?.HideStill();
+            girl?.HideNod();
             _backdrop.color = Orange;
 
             // 9: 소녀가 왼쪽에서 걸어 들어와 오른쪽으로 걷다가 C에서 사라진다.
@@ -364,6 +363,19 @@ namespace BlueComplex.UI.Presentation
             // 12: 글씨가 재배열되며 한 줄로 합쳐지고, 타이핑되듯 나타난다.
             yield return GatherAndType(s, step, notes, wordSize);
             yield return Wait(s.seqTextHold);
+        }
+
+        /// <summary>고개 숙임 8프레임(1~7)을 기존 정지 실루엣 노출 시간(<see cref="UiMotionSettings.seqWindowHold"/>) 안에 고르게 나눠 재생하고, 끝나면 그 시간을 다 채운다 —
+        /// 화면이 주황으로 바뀌는 8단계까지 마지막(고개 숙인) 자세로 자연스럽게 이어진다.</summary>
+        private IEnumerator GirlNod(UiMotionSettings s, IntroGirlView girl)
+        {
+            var hold = Mathf.Max(0.1f, s.seqWindowHold);
+            var perFrame = hold / 7f;
+            for (var f = 1; f < 8; f++)
+            {
+                yield return Wait(perFrame);
+                girl.SetNodFrame(f);
+            }
         }
 
         // PPT 8~11번 장표의 소녀 키프레임(그림 한 칸 왼쪽 위, 화면 비율): A 왼쪽 가장자리 → B 화면 아래를 따라 → C 오른쪽. D는 C에서 사라진 뒤 거꾸로(상하·좌우 반전) 화면 오른쪽 바깥에서 걸어 들어와 서는 자리.
@@ -514,21 +526,8 @@ namespace BlueComplex.UI.Presentation
         }
 
         // ------------------------------------------------------------------
-        // 뉴스, 타이틀
+        // 타이틀
         // ------------------------------------------------------------------
-
-        private IEnumerator News(UiMotionSettings s)
-        {
-            yield return FadeVeil(1f, s.seqFade);
-            ClearLayer();
-            _backdrop.color = Color.black;
-
-            // 화면 전체(막 전체)를 덮는 뉴스 조각 — 검은 화면에서 흘러들어오고, 줄이 바뀔 때마다 지직거리는 소리(UiSoundCue.TvStatic)가 난다.
-            var news = IntroNewsView.Create(_layer, _canvasSize, _font);
-            yield return FadeVeil(0f, 0.05f);
-            yield return news.Play(IntroCutsceneContent.NewsLines, s.introNewsFadeIn, s.introNewsLine, s.introNewsStatic);
-            news.Hide();
-        }
 
         private IEnumerator Title(UiMotionSettings s)
         {
@@ -573,13 +572,13 @@ namespace BlueComplex.UI.Presentation
             _skippable = false;
             HideHint();
 
-            // 타이틀이 끝났다 — 오프닝 배경곡이 메인 화면으로 넘어가는 동안 서서히 사라진다(건너뛰기로 온 경우도 같다). 게임 배경음은 "취조시작"으로 스테이지가 열릴 때 올라온다.
-            UiSoundHooks.StopTheme(s.seqThemeFadeOut);
+            // 타이틀이 끝났다 — 오프닝 배경곡이 메인 화면 배경음(같은 채널)으로 넘어가며 크로스페이드된다(건너뛰기로 온 경우도 같다). 게임 배경음은 "취조시작"으로 스테이지가 열릴 때 올라온다.
+            UiSoundHooks.StartTheme(UiSoundCue.MainScreenAmbient, s.seqThemeFadeIn);
 
             if (fadeOutFirst) yield return FadeVeil(1f, s.seqFade * 0.5f);
             ClearLayer();
             _backdrop.color = Color.black;
-            _menu = IntroMainMenuView.Create(_slide, _art, _font, OnStartPressed, OnNotesPressed, OnQuitPressed);
+            _menu = MainMenuView.Create(_slide.Root, _font, OnStartPressed, OnNotesPressed, OnQuitPressed);
             yield return FadeVeil(0f, s.seqMenuFade);
         }
 
@@ -595,6 +594,7 @@ namespace BlueComplex.UI.Presentation
         private IEnumerator StartGameRoutine()
         {
             var s = UiMotion.Settings;
+            UiSoundHooks.StopTheme(s.seqThemeFadeOut); // 메인 화면 배경음이 게임 배경음과 겹치지 않게 여기서 끈다.
             yield return FadeVeil(1f, s.seqStartFade);
 
             _startGame?.Invoke();

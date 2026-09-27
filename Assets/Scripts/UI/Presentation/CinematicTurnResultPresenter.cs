@@ -40,8 +40,9 @@ namespace BlueComplex.UI.Presentation
         [SerializeField] private ItemController _items;
         [SerializeField] private NatsuPortraitView _natsu;
 
-        /// <summary>컴플렉스 이벤트 대사가 다 나온 뒤 다음 컴플렉스로 넘어가기 전의 짧은 쉼(초).</summary>
-        [SerializeField] private float _eventLinePause = 0.25f;
+        /// <summary>유키의 대사 한 줄이 다 나온 뒤 다음 줄로 넘어가기 전의 짧은 쉼(초) — 이게 없으면 타이핑이 끝나자마자
+        /// 다음 줄이 덮어써서 읽을 틈 없이 대사가 넘어간다.</summary>
+        [SerializeField] private float _eventLinePause = 0.45f;
 
         /// <summary>키 턴(쿼터의 마지막 턴)에 들어갈 때 나츠가 하는 독백. 화면이 어두워진 동안 나온다.</summary>
         [SerializeField] private string _keyTurnMonologue = "이번 대화에서 키를 얻어야 해.";
@@ -337,7 +338,11 @@ namespace BlueComplex.UI.Presentation
 
             // "대화 루프": 결과 → 결과 대사. 표에 맞는 조합이 없으면(태그 없음, 침체/흥분 혼합 등) 조용히 건너뛴다.
             var resultTagLine = TurnSummaryFormatter.BuildResultTagLine(report);
-            if (resultTagLine != null) yield return PlayDialogue(resultTagLine);
+            if (resultTagLine != null)
+            {
+                yield return new WaitForSeconds(_eventLinePause);
+                yield return PlayDialogue(resultTagLine);
+            }
 
             if (tags.Count == 0 && traitNames.Count == 0) yield break;
 

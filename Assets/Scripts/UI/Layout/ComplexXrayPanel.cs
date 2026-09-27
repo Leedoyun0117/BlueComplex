@@ -16,7 +16,7 @@ namespace BlueComplex.UI.Layout
     ///
     /// 작동 조건 두 가지(UI 디자인 가이드):
     /// 1. 판넬을 마우스로 끌어 유키 위에 놓기 — 이 컴포넌트가 IBeginDrag/IDrag/IEndDrag를 직접 구현한다(판넬·손잡이를 잡으면 이벤트가 이 루트까지 올라온다).
-    ///    끄는 동안 관절 팔이 판넬을 따라 늘어나고, 실제 Open() 트리거는 PortraitView.OnDrop("Yuki Portrait" 인스턴스만)이 쥔다. 놓은 곳이 유키가 아니면 제자리(접힘)로 돌아간다.
+    ///    끄는 동안 관절 팔이 판넬을 따라 늘어나고, 실제 Open() 트리거는 PortraitView.OnDrop("Yuki Portrait" 인스턴스만)이 쥔다. 놓은 곳이 유키가 아니어도 <see cref="OpenDragDistance"/> 이상 끌었으면 펼친다 — 그보다 짧게 끌었으면(스침) 제자리(접힘)로 돌아간다.
     /// 2. 단서를 집어 드래그 시작 — ClueCardTray의 각 카드 ClueCardDragHandler.DragStarted를 구독한다.
     ///
     /// 반응이 끝나면 Close() — 턴 연출이 재생되는 동안은 CinematicTurnResultPresenter가 접는 시점을 쥔다.
@@ -52,6 +52,11 @@ namespace BlueComplex.UI.Layout
         /// <summary>손목과 판넬 왼쪽 가장자리 사이의 경첩 간격.</summary>
         private const float HingeGap = 6f;
 
+        /// <summary>유키 위가 아니어도, 접힌 판넬을 이만큼(참조 픽셀) 이상 끌었다 놓으면 펼쳐진다. 예전엔 유키 초상화(접힌 자리에서 가장 가까운 모서리까지도
+        /// 약 150px, 머리까지는 약 480px)까지 끌어 놓아야만 열려서 "많이 당겨야 열린다"는 지적이 있었다. 접힌 태블릿 폭(110px)보다 짧게 끈 것은
+        /// 스친 것으로 보고 무시한다(EventSystem의 기본 드래그 시작 거리는 10px뿐이라 이 값이 의도적 드래그와 스침을 가른다).</summary>
+        private const float OpenDragDistance = 80f;
+
         [SerializeField] private RectTransform _tablet;
         [SerializeField] private RectTransform _basePlate;
         [SerializeField] private RectTransform _handleTag;
@@ -73,6 +78,7 @@ namespace BlueComplex.UI.Layout
         private float _dragBlend;
         private Vector2 _dragCenter;
         private Vector2 _dragGrabOffset;
+        private Vector2 _dragStartPoint;
         private bool _dragging;
 
         private Tween _foldTween;
@@ -336,6 +342,7 @@ namespace BlueComplex.UI.Layout
             }
 
             _dragging = true;
+            _dragStartPoint = point;
             _dragTween?.Kill();
 
             // 잡은 자리를 유지한 채 끈다 — 판넬이 커서 밑으로 튀지 않는다.
@@ -368,8 +375,14 @@ namespace BlueComplex.UI.Layout
         public void OnEndDrag(PointerEventData eventData)
         {
             // 드롭이 유키 위에서 성공했으면 PortraitView.OnDrop이 이미 Open()을 불렀다 — 펼친 자리로, 아니면 접힌 자리로 돌아간다(팔이 다시 접힌다).
+            // 유키 위가 아니어도 충분히 끌었다면(OpenDragDistance) 의도적인 당김으로 보고 펼친다.
+            var wasDragging = _dragging;
             _dragging = false;
             _tabletGroup.blocksRaycasts = true;
+
+            if (wasDragging && !IsOpen && !IsTurnPresenting && TryGetContainerPoint(eventData, out var endPoint)
+                && (endPoint - _dragStartPoint).magnitude >= OpenDragDistance)
+                Open();
 
             _dragTween?.Kill();
             _dragTween = DOTween.To(() => _dragBlend, v =>

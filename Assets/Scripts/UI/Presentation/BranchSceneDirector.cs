@@ -27,8 +27,8 @@ namespace BlueComplex.UI.Presentation
         /// <summary>덮는 순서 그대로다(유키가 먼저, 나츠가 나중). MainHud의 초상화 오브젝트 이름.</summary>
         private static readonly (string Object, string Label, float Tilt)[] Portraits =
         {
-            ("Yuki Portrait", "유키", -2.5f),
-            ("Natsu Portrait", "나츠", 2.5f),
+            ("Yuki Portrait", "Yuki", -2.5f),
+            ("Natsu Portrait", "Natsu", 2.5f),
         };
 
         /// <summary>포스트잇이 초상화 사각형보다 이만큼(비율) 더 크다 — 기울어도 모서리로 초상화가 삐져나오지 않게.</summary>
@@ -167,14 +167,13 @@ namespace BlueComplex.UI.Presentation
             }
         }
 
-        /// <summary>초상화 위에 이름 포스트잇을 짓는다. 초상화의 자식이라 초상화와 함께 움직인다.</summary>
+        /// <summary>초상화 위에 이름 포스트잇을 짓는다(정사각형 — 초상화가 직사각형이라 그대로 늘리면 포스트잇도 직사각형이 된다). 초상화의 자식이라 초상화와 함께 움직인다.</summary>
         private void AttachPostit(Cover cover)
         {
-            var canvas = (RectTransform)_canvasRoot;
-            var pad = new Vector2(cover.Bounds.width, cover.Bounds.height) * CoverPadding * (canvas.lossyScale.x / cover.Portrait.lossyScale.x);
-            var root = RuntimeUi.CreateStretched(cover.Portrait, "Branch Cover");
-            root.offsetMin = -pad;
-            root.offsetMax = pad;
+            var side = Mathf.Max(cover.Portrait.rect.width, cover.Portrait.rect.height) * (1f + CoverPadding * 2f);
+            var root = RuntimeUi.CreateRect(cover.Portrait, "Branch Cover", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            root.sizeDelta = new Vector2(side, side);
+            root.anchoredPosition = Vector2.zero;
 
             var postit = Postit.Attach(root.gameObject);
             postit.SetRestTilt(cover.Tilt);

@@ -52,6 +52,7 @@ namespace BlueComplex.Audio
 
         private AudioSource[] _pool;
         private int _next;
+        private bool _suppressed;
 
         /// <summary>배경음 전용 소스 둘 — 하나가 사라지는 동안 다른 하나가 올라온다.</summary>
         private AudioSource[] _bedSources;
@@ -137,6 +138,9 @@ namespace BlueComplex.Audio
             UiSoundHooks.ThemeStarted += StartTheme;
             UiSoundHooks.ThemeStopped += StopTheme;
             if (UiSoundHooks.CurrentTheme.HasValue && !_theme.IsActive) StartTheme(UiSoundHooks.CurrentTheme.Value, 0.5f);
+
+            UiSoundHooks.GameSoundsSuppressedChanged += SetSuppressed;
+            SetSuppressed(UiSoundHooks.GameSoundsSuppressed);
         }
 
         private void OnDisable()
@@ -148,6 +152,7 @@ namespace BlueComplex.Audio
             UiSoundHooks.AmbientStopped -= StopAmbient;
             UiSoundHooks.ThemeStarted -= StartTheme;
             UiSoundHooks.ThemeStopped -= StopTheme;
+            UiSoundHooks.GameSoundsSuppressedChanged -= SetSuppressed;
         }
 
         private void Update()
@@ -220,8 +225,18 @@ namespace BlueComplex.Audio
 
         public void StopTheme(float fadeOut) => _theme.End(fadeOut);
 
+        /// <summary>게임 소리를 통째로 음소거하거나 되돌린다(스테이지 종료 컷신 동안). 재생 상태는 그대로 두고 소리만 끈다 — 컷신이 끝나면 이어서 들린다.
+        /// 켜져 있는 동안 새로 요청된 효과음은 아예 울리지 않는다(지나간 소리가 컷신이 끝난 뒤 늦게 들리지 않게).</summary>
+        private void SetSuppressed(bool suppressed)
+        {
+            _suppressed = suppressed;
+            foreach (var source in GetComponents<AudioSource>()) source.mute = suppressed;
+        }
+
         public void Play(UiSoundCue cue)
         {
+            if (_suppressed) return;
+
             var now = Time.unscaledTime;
 
             var library = Library;
@@ -321,6 +336,7 @@ namespace BlueComplex.Audio
                     source.outputAudioMixerGroup = _sfxGroup;
                     source.playOnAwake = false;
                     source.spatialBlend = 0f;
+                    source.mute = _suppressed;
                     voices[i] = source;
                 }
 
