@@ -12,9 +12,13 @@ namespace BlueComplex.EditorTools
     {
         public const string Folder = "Assets/Art/UI/Brain/";
 
+        /// <summary>기획서 도트 뇌 4장(평상시 + 좌/중/우 발현)과 거기서 뽑은 영역 오버레이(<see cref="BrainOverlayBuilder"/>)가 사는 폴더. 640×640 원본이라 256으로 줄이지 않는다.</summary>
+        public const string ArtFolder = "Assets/Art/Brain/";
+
         private void OnPreprocessTexture()
         {
-            if (!assetPath.StartsWith(Folder)) return;
+            var isArt = assetPath.StartsWith(ArtFolder);
+            if (!isArt && !assetPath.StartsWith(Folder)) return;
 
             var importer = (TextureImporter)assetImporter;
             importer.textureType = TextureImporterType.Sprite;
@@ -26,7 +30,7 @@ namespace BlueComplex.EditorTools
             importer.alphaIsTransparency = true;
             importer.isReadable = true;
             importer.textureCompression = TextureImporterCompression.Uncompressed;
-            importer.maxTextureSize = 256;
+            importer.maxTextureSize = isArt ? 1024 : 256;
         }
     }
 }

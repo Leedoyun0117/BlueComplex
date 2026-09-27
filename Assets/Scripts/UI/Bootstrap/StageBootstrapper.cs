@@ -43,8 +43,8 @@ namespace BlueComplex.UI.Bootstrap
         [SerializeField] private bool _playOpening = true;
 
         /// <summary>진행 흐름상 마지막 스테이지 번호 — 클리어 뒤 이어질 다음 스테이지가 있는지 가리는 기준이다.
-        /// 스테이지 3은 데이터(<see cref="Stage3Content"/>)만 있고 시작·클리어 대사와 연출이 아직 없어 진행 흐름에는 잇지 않았다(디버그 시작으로만 들어간다).</summary>
-        public const int LastStageNumber = 2;
+        /// 스테이지 3까지 이어 붙였다: 스테이지 2 종료 컷신 뒤 스테이지 3이 시작되고, 스테이지 3 클리어는 컷신 → 엔딩, 실패는 재시도(<see cref="StageEndRoute"/>).</summary>
+        public const int LastStageNumber = 3;
 
         /// <summary>디버그로 시작할 수 있는 마지막 스테이지 번호(F1~F3, <see cref="StartStage"/>).</summary>
         public const int LastDebugStageNumber = 3;
@@ -56,6 +56,9 @@ namespace BlueComplex.UI.Bootstrap
 
         /// <summary>클리어하면 이어서 시작할 다음 스테이지가 있는가. 튜토리얼은 스테이지 번호 흐름 밖이라 없다.</summary>
         public bool HasNextStage => !_isTutorial && _stageNumber < LastStageNumber;
+
+        /// <summary>지금 돌고 있는 것이 진행 흐름상 마지막 스테이지인가 — 클리어는 엔딩으로, 실패는 같은 스테이지 재시도로 이어진다.</summary>
+        public bool IsFinalStage => !_isTutorial && _stageNumber == LastStageNumber;
 
         /// <summary>지금 돌고 있는 것이 튜토리얼인가(<see cref="TutorialContent.StageId"/>). 스테이지 번호(<see cref="StageNumber"/>)는 마지막으로 시작한 본편 스테이지 그대로다.</summary>
         public bool IsTutorial => _isTutorial;
@@ -122,11 +125,12 @@ namespace BlueComplex.UI.Bootstrap
             BeginNewSession(_seed);
         }
 
-        /// <summary>오프닝 메인 화면의 "취조시작": 예전 Start()가 하던 그대로 첫 세션을 연다. 오프닝 막은 이 호출을 부른 쪽이 스스로 걷는다.</summary>
+        /// <summary>오프닝 메인 화면의 "취조시작": 튜토리얼(시작 컷신 → 오프닝 대화 → 첫 턴)로 이어진다. 오프닝 막은 이 호출을 부른 쪽이 스스로 걷는다.
+        /// 튜토리얼 시드는 <see cref="_seed"/>를 쓰지 않고 F4(<see cref="StartTutorial"/>)와 같이 새로 뽑는다.</summary>
         private void StartGameFromOpening()
         {
             _startingFromOpening = true;
-            try { BeginNewSession(_seed); }
+            try { StartTutorial(); }
             finally { _startingFromOpening = false; }
         }
 
@@ -229,7 +233,7 @@ namespace BlueComplex.UI.Bootstrap
         [ContextMenu("Start Tutorial")]
         private void StartTutorialFromInspector() => StartTutorial();
 
-        /// <summary>엔딩(컷신 9 → 에필로그 → 크레딧)을 지금 화면 위에서 바로 재생한다. 정식 진행 흐름(스테이지 3 이후)에는 아직 안 이어져 있고 임시 디버그 재생은 F5.
+        /// <summary>엔딩(컷신 9 → 에필로그 → 크레딧)을 지금 화면 위에서 바로 재생한다. 정식 진행에서는 스테이지 3 클리어 컷신 뒤에 스테이지 종료 연출이 이어 붙이고, 임시 디버그 재생은 F5.
         /// 재생 중 다시 부르면 처음부터 다시, F1~F4로 세션을 바꾸면 끊긴다. 끝나면 게임 화면으로 돌아온다.</summary>
         public void PlayEnding()
         {
@@ -242,13 +246,19 @@ namespace BlueComplex.UI.Bootstrap
 
         private IEnumerator RunEnding()
         {
+            yield return PlayEndingSequence();
+            _endingRoutine = null;
+        }
+
+        /// <summary>엔딩을 재생하는 코루틴 — 스테이지 종료 연출(<see cref="StageEndController"/>)이 스테이지 3 클리어 컷신 뒤에 이어 붙여 기다린다. 입력은 재생 동안만 잠근다.</summary>
+        public IEnumerator PlayEndingSequence()
+        {
             var director = EndingCutsceneDirector.GetOrCreate(FindCanvasRoot());
             if (director == null) yield break;
 
             InputBlocked = true;
             yield return director.Play();
             InputBlocked = false;
-            _endingRoutine = null;
         }
 
         /// <summary>다음 스테이지를 새 무작위 시드로 시작한다(스테이지 클리어 연출이 컷신 뒤에 부른다). 다음 스테이지가 없으면 아무 일도 안 한다.</summary>

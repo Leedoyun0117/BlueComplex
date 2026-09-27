@@ -41,7 +41,7 @@ namespace BlueComplex.UI.Presentation
         [Tooltip("girl_silhouette.png — 7~10단계: 주황 창문 앞에 정지 자세로 나타나는 소녀 실루엣(반신, 투명 배경).")]
         public Texture2D girlSilhouette;
 
-        [Tooltip("content.png(소녀 걷기 8프레임 가로 시트, 2146×733, 투명 배경) — 실루엣이 화면을 가로질러 걷고 위로 빠져나간다. 원본은 오른쪽을 본다.")]
+        [Tooltip("girl_walk_cycle_v2.png(소녀 걷기 8프레임 가로 시트, 5000×733, 알파 채널 — 프레임 좌표는 IntroGirlView에 하드코딩) — 실루엣이 화면을 가로질러 걷고 위로 빠져나간다. 원본은 오른쪽을 본다.")]
         public Texture2D girlWalk;
 
         [Header("튜토리얼 시작 컷신")]

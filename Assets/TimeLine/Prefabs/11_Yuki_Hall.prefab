@@ -427,6 +427,8 @@ GameObject:
   - component: {fileID: 3252079501964518346}
   - component: {fileID: 3450000000000000082}
   - component: {fileID: 3450000000000000114}
+  - component: {fileID: 3511000000000000777}
+  - component: {fileID: 3804000000000000666}
   m_Layer: 0
   m_Name: Signal
   m_TagString: Untagged
@@ -564,6 +566,10 @@ MonoBehaviour:
   - "얼마 지나지 않아 흰 연기를 뚫고\n경찰이 들이닥치는 광경이 보였다."
   charInterval: 0.05
   clearOnEnable: 1
+  typingSfx: {fileID: 8300000, guid: babdb331464db794aa4a7a31388a951c, type: 3}
+  typingSfxVolume: 0.35
+  typingSfxMinInterval: 0.06
+  typingSfxPitch: {x: 0.95, y: 1.05}
 --- !u!1 &7354880001919879205
 GameObject:
   m_ObjectHideFlags: 0
@@ -884,5 +890,41 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineAudioSignal
   clip: {fileID: 8300000, guid: 1f602b12aa2e90546b1bde3f870b8067, type: 3}
+  volume: 0.29
   fadeInDuration: 3
   fadeOutDuration: 3
+--- !u!114 &3511000000000000777
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7173760710162637212}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fbac7c361c34b6e87f7d5016557a4a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineSfxReceiver
+  volume: 1
+  channel: 1
+  mixer: {fileID: 0}
+--- !u!114 &3804000000000000666
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7173760710162637212}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03c9b54310d84003ab3d95cdf3811638, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_LineSfx
+  typing: {fileID: 3252079501964518346}
+  entries:
+  - line: 6
+    timing: 1
+    clip: {fileID: 8300000, guid: dbae60ad0b60446e87f06a4368371abc, type: 3}
+    volume: 0.79
+    duration: 0
+    startAt: 0

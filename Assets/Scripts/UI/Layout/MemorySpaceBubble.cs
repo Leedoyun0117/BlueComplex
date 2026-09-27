@@ -177,8 +177,6 @@ namespace BlueComplex.UI.Layout
 
         private readonly List<RectTransform> _chips = new();
         private RectTransform _tagContainer;
-        private Canvas _tagCanvas;
-        private ClueBookPanel _book;
 
         /// <summary>지금 풍선 안에 결과 태그가 떠 있으면 true.</summary>
         public bool HasResultTags => _chips.Count > 0;
@@ -338,22 +336,10 @@ namespace BlueComplex.UI.Layout
             {
                 _tagContainer = RuntimeUi.CreateStretched(transform, "Result Tags (mood-exempt)");
                 _tagContainer.gameObject.layer = UiTagLayer.Layer;
-                _tagCanvas = _tagContainer.gameObject.AddComponent<Canvas>();
+                _tagContainer.gameObject.AddComponent<Canvas>();
             }
 
             return _tagContainer;
-        }
-
-        /// <summary>
-        /// 태그 레이어는 UI 카메라와 따로 그려져 항상 다른 UI 위에 얹힌다. 예전엔 단서 책이 열리면 칩이 책 뒤로 가려졌으니, 책이 열려 있는 동안은 칩 캔버스를 꺼서 같은 모습을 지킨다
-        /// (칩 연출은 계속 돌고, 책을 닫으면 그대로 다시 보인다). 다른 오버레이(튜토리얼 가이드·대사창 등)는 Presenter가 쉬는 동안에만 떠서 칩과 겹치지 않는다.
-        /// </summary>
-        private void LateUpdate()
-        {
-            if (_tagCanvas == null || _chips.Count == 0) return;
-
-            if (_book == null) _book = transform.root.GetComponentInChildren<ClueBookPanel>(true);
-            _tagCanvas.enabled = _book == null || !_book.gameObject.activeInHierarchy;
         }
 
         /// <summary>칩이 놓이는 영역(풍선 루트 기준 픽셀): 선 안쪽 가운데. 최종 감정 요약 글자(아래쪽 띠)와 겹치지 않게 위로 올려 잡는다.</summary>

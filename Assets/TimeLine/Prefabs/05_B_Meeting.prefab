@@ -234,6 +234,8 @@ GameObject:
   - component: {fileID: 5721460358409268056}
   - component: {fileID: 3165605425023493165}
   - component: {fileID: 6025892455585024004}
+  - component: {fileID: 3505000000000000777}
+  - component: {fileID: 3803000000000000666}
   m_Layer: 0
   m_Name: Signal
   m_TagString: Untagged
@@ -391,6 +393,10 @@ MonoBehaviour:
     \uC606\uC5D0 \uC788\uC5C8\uB2E4."
   charInterval: 0.05
   clearOnEnable: 1
+  typingSfx: {fileID: 8300000, guid: babdb331464db794aa4a7a31388a951c, type: 3}
+  typingSfxVolume: 0.35
+  typingSfxMinInterval: 0.06
+  typingSfxPitch: {x: 0.95, y: 1.05}
 --- !u!82 &3165605425023493165
 AudioSource:
   m_ObjectHideFlags: 0
@@ -501,7 +507,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineAudioSignal
   clip: {fileID: 8300000, guid: 9eede40f2bd55f3489bbbb144191a0bf, type: 3}
-  volume: 1
+  volume: 0.42
   fadeInDuration: 3
   fadeOutDuration: 3
   channel: 2
@@ -731,3 +737,38 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &3505000000000000777
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4440638838971907462}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fbac7c361c34b6e87f7d5016557a4a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_TimelineSfxReceiver
+  volume: 1
+  channel: 1
+  mixer: {fileID: 0}
+--- !u!114 &3803000000000000666
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4440638838971907462}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03c9b54310d84003ab3d95cdf3811638, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KTH.KTH_LineSfx
+  typing: {fileID: 5721460358409268056}
+  entries:
+  - line: 6
+    timing: 0
+    clip: {fileID: 8300000, guid: 144c330613b9421b98fd76c2a4b74396, type: 3}
+    volume: 0.81
+    duration: 0
+    startAt: 0
