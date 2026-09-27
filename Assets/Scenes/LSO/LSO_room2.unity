@@ -665,51 +665,6 @@ MonoBehaviour:
   _minuteHand: {fileID: 1442929761}
   _hourHand: {fileID: 1987304206}
   _secondsPerMinuteHandLap: 60
---- !u!1 &520625806
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 520625808}
-  - component: {fileID: 520625807}
-  m_Layer: 0
-  m_Name: LSO Game Settings
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &520625807
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 520625806}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe41739778fe96244b2c8e661e745867, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UI.Esc.LSO_BrightnessApplier
-  brightnessMaterial: {fileID: 2100000, guid: 4b8d2e17c0a59f34d8261bc70e5a3f18, type: 2}
---- !u!4 &520625808
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 520625806}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &557752067
 GameObject:
   m_ObjectHideFlags: 0
@@ -4901,4 +4856,3 @@ SceneRoots:
   - {fileID: 2080064225}
   - {fileID: 1940647253}
   - {fileID: 2054903985}
-  - {fileID: 520625808}
