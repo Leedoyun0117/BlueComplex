@@ -80,6 +80,12 @@ namespace BlueComplex.UI.Bootstrap
         /// <summary>새 StageSession이 만들어질 때마다(최초 시작 포함) 알린다. Ledger는 세션 간에 계속 유지된다.</summary>
         public event Action<StageSession> SessionStarted;
 
+        /// <summary>
+        /// 시작 컷신·시작 대사가 모두 끝나고 실제 메인 게임의 첫 턴을 준비한 뒤 알린다.
+        /// SessionStarted는 이보다 훨씬 이른 세션 생성 시점에 발생하므로, 전환 중 화면을 제어할 때는 이 이벤트를 쓴다.
+        /// </summary>
+        public event Action MainGameReady;
+
         private ClueKnowledgeLedger _ledger;
 
         /// <summary>튜토리얼 전용 해금 장부 — 튜토리얼을 시작할 때마다 새로 만든다. 본편 장부(<see cref="_ledger"/>)와 완전히 분리되어, 튜토리얼에서 밝혀진 단서 속성이 본편에 새어 들지 않는다.</summary>
@@ -397,6 +403,7 @@ namespace BlueComplex.UI.Bootstrap
             }
 
             Session.Runner.StartStage();
+            MainGameReady?.Invoke();
         }
 
         /// <summary>쿼터의 마지막 턴이 끝났으면(스테이지가 그대로 계속되는 경우만) 대화 재생 큐에 넣는다.
