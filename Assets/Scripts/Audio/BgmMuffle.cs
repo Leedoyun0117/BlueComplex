@@ -7,7 +7,7 @@ namespace BlueComplex.Audio
     /// <summary>
     /// 침체 시 BGM 그룹의 Lowpass Simple 컷오프를 낮춰 먹먹하게 만든다. 믹서의 exposed 파라미터 <see cref="CutoffParameter"/>만 만진다 —
     /// 채널 볼륨(<see cref="AudioSettingsController"/>의 *Volume 파라미터)과는 별개의 파라미터라 슬라이더·저장값과 겹치지 않는다.
-    /// Ambient 그룹에는 영향이 없다.
+    /// Ambient 그룹은 BGM의 자식이라 함께 먹먹해진다. 심박수 루프는 SFX 그룹으로 나가므로 영향이 없다.
     /// </summary>
     public static class BgmMuffle
     {

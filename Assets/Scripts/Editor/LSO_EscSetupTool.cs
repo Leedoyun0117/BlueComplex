@@ -14,7 +14,7 @@ namespace BlueComplex.EditorTools
     // Explicit migration only: never runs on import or regenerates MainHud.
     public static class LSO_EscSetupTool
     {
-        private const string PrefabPath = "Assets/Prefabs/UI/Esc.prefab";
+        private const string PrefabPath = "Assets/Resources/UI/Esc.prefab"; // LSO_EscPanel.GetOrCreate가 Resources에서 불러온다.
         private const string ScenePath = "Assets/Scenes/LSO/LSO_room2.unity";
         private const string MaterialPath = "Assets/Settings/LSO/LSO_ScreenBrightness.mat";
 

@@ -54,14 +54,14 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void FinalStage_ClearGoesToTheEnding_FailRetriesTheStage()
+        public void FinalStage_ClearGoesToTheEnding_FailReturnsToStartLikeTheOthers()
         {
             var clear = StageEndPlan.Create(StageOutcome.Cleared, 3, 3, hasNextStage: false, isFinalStage: true);
             Assert.AreEqual(StageEndRoute.ClearToEnding, clear.Route);
             Assert.IsTrue(clear.AllOpened);
 
             var fail = StageEndPlan.Create(StageOutcome.Failed, 3, 1, hasNextStage: false, isFinalStage: true);
-            Assert.AreEqual(StageEndRoute.FailRetry, fail.Route);
+            Assert.AreEqual(StageEndRoute.FailToStart, fail.Route);
             Assert.IsFalse(fail.AllOpened);
         }
 

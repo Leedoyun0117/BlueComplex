@@ -170,8 +170,14 @@ namespace BlueComplex.UI.Motion
         public float seqNotesRecolor = 0.45f;
         [Tooltip("5: 정렬된 4장이 왼쪽 위 → 오른쪽 위 → 왼쪽 아래 → 오른쪽 아래 순서로 색이 바뀌기 시작하는 간격. 전체 구간은 색 전환 시간에 이 값의 세 배를 더한 만큼이다.")]
         public float seqNotesRecolorStagger = 0.2f;
-        [Tooltip("7: 창문 앞에 소녀 실루엣이 나타나 정지 자세로 머무는 시간.")]
-        public float seqWindowHold = 1.2f;
+        [Tooltip("7: 소녀가 다 나타난 뒤 고개를 숙이기 시작하기 전까지 시작 자세(프레임 0)로 머무는 시간.")]
+        public float seqGirlNodStartHold = 0.4f;
+        [Tooltip("7: 고개 숙임 중간 전환 프레임(1~6) 한 장의 평균 유지 시간. 실제로는 전환의 처음·끝 장이 조금 길고 가운데가 짧게(천천히 시작해 천천히 멈추게) 나눠 쓴다.")]
+        public float seqGirlNodFrame = 0.1f;
+        [Tooltip("7: 끝 자세(프레임 7, 고개 숙인 모습)로 머물다 화면이 주황으로 바뀌기(8)까지의 시간.")]
+        public float seqGirlNodEndHold = 0.75f;
+        [Tooltip("7: 고개 숙임 프레임이 바뀌는 순간 그림을 이만큼(캔버스 px, 크기 2 이하로 자른다) 이전 자세 쪽으로 밀어 두었다가 제자리로 돌린다 — 뚝뚝 끊기는 느낌을 누그러뜨리는 미세한 흔들림. (0,0)이면 끈다.")]
+        public Vector2 seqGirlNodNudge = new Vector2(-1f, 1.2f);
         [Tooltip("7: 소녀 실루엣이 창문 앞에 나타나는(밝아지는) 시간.")]
         public float seqGirlAppear = 0.6f;
         [Tooltip("8~9: 소녀가 왼쪽 가장자리에서 오른쪽으로 걸어가는(키프레임 A→B→C) 시간.")]

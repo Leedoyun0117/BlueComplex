@@ -26,7 +26,7 @@ namespace BlueComplex.Audio
         [Tooltip("동시에 겹칠 수 있는 소리 수.")]
         [SerializeField] [Min(1)] private int _voices = 6;
 
-        [Tooltip("채널 볼륨(Master/SFX/BGM/Ambient 그룹)을 가진 믹서. 비워 두면 Resources/GameAudioMixer를 쓴다. 볼륨 슬라이더는 AudioSettingsController가 맡는다.")]
+        [Tooltip("채널 볼륨(Master/SFX/BGM, BGM 아래 Ambient 그룹)을 가진 믹서. 비워 두면 Resources/GameAudioMixer를 쓴다. 볼륨 슬라이더는 AudioSettingsController가 맡는다.")]
         [SerializeField] private AudioMixer _mixer;
 
         [Tooltip("같은 큐가 이 시간(초) 안에 다시 오면 무시한다. 서로 다른 큐끼리는 영향받지 않는다.")]
@@ -69,6 +69,7 @@ namespace BlueComplex.Audio
         private readonly List<(AudioSource source, float rate)> _fadingOut = new(); // rate: 초당 볼륨 감소량
         private readonly List<(AudioSource source, float fadeAt)> _scheduledStops = new(); // maxSeconds가 있는 항목: 이 시각(unscaled)에 페이드아웃을 시작한다.
         private AudioMixerGroup _sfxGroup;
+        private AudioMixerGroup _bgmGroup;
         private readonly Dictionary<UiSoundCue, float> _lastPitch = new();
 
         private SoundLibrary Library => _library != null ? _library : UiSoundLibrary.Current;
@@ -78,7 +79,7 @@ namespace BlueComplex.Audio
             // 믹서가 없으면(에셋 누락) 그룹이 null이라 소스가 기본 출력으로 나간다 — 소리는 나되 채널 볼륨만 안 먹는다.
             var mixer = _mixer != null ? _mixer : Resources.Load<AudioMixer>(AudioSettingsController.DefaultMixerResource);
             var sfxGroup = _sfxGroup = FindGroup(mixer, AudioSettingsController.SfxGroupPath);
-            var bgmGroup = FindGroup(mixer, AudioSettingsController.BgmGroupPath);
+            var bgmGroup = _bgmGroup = FindGroup(mixer, AudioSettingsController.BgmGroupPath);
             var ambientGroup = FindGroup(mixer, AudioSettingsController.AmbientGroupPath);
 
             _pool = new AudioSource[Mathf.Max(1, _voices)];
@@ -94,8 +95,7 @@ namespace BlueComplex.Audio
             _bedSources = new AudioSource[2];
             for (var i = 0; i < _bedSources.Length; i++)
             {
-                var source = gameObject.AddComponent<AudioSource>();
-                source.outputAudioMixerGroup = bgmGroup;
+                var source = gameObject.AddComponent<AudioSource>(); // 출력 그룹은 SetBed가 큐마다 정한다(BedGroup).
                 source.playOnAwake = false;
                 source.spatialBlend = 0f;
                 source.loop = true;
@@ -196,12 +196,20 @@ namespace BlueComplex.Audio
             // 지금 켜져 있는 소스와 다른 쪽을 새 배경음으로 쓴다.
             _bedActive = _bedActive == 0 ? 1 : 0;
             var source = _bedSources[_bedActive];
+            source.outputAudioMixerGroup = BedGroup(cue.Value);
             source.clip = clip;
             source.pitch = 1f;
             source.volume = 0f;
             _bedTargetVolume = entry.volume;
             source.Play();
         }
+
+        /// <summary>배경음 자리는 심박수 루프와 스테이지 2·3 배경곡이 번갈아 쓴다. 심박수 루프는 효과음 슬라이더를 따르도록 SFX 그룹으로,
+        /// 배경곡은 BGM 그룹(로우패스 포함)으로 보낸다. 크로스페이드 중에는 사라지는 소스가 자기 그룹을 그대로 유지한다.</summary>
+        private AudioMixerGroup BedGroup(UiSoundCue cue) => IsHeartbeatLoop(cue) ? _sfxGroup : _bgmGroup;
+
+        public static bool IsHeartbeatLoop(UiSoundCue cue) =>
+            cue is UiSoundCue.HeartbeatBase or UiSoundCue.HeartbeatDepressed or UiSoundCue.HeartbeatExcited;
 
         /// <summary>상시 배경음 레이어를 처음부터 시작한다(이미 재생 중이면 재시작). 라이브러리에 클립이 없으면 조용히 지나간다.</summary>
         public void StartAmbient(UiSoundCue cue)

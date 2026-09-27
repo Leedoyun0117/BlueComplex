@@ -129,6 +129,9 @@ namespace BlueComplex.UI.Presentation
         /// <summary>디버그: 코어 심박수를 턴 밖에서 바로 바꾼 뒤(StageBootstrapper의 Q/E) 모니터·배경음·나츠·상태 이펙트를 그 값에 맞춘다.</summary>
         public void PresentCurrentHeartbeat() => ShowBpm(Session.Heartbeat.Value, snap: false);
 
+        /// <summary>메인 화면으로 돌아갈 때: 끝난 판의 심박수 톤(화면 셰이더·방 조명 — <see cref="HeartbeatPresented"/> 구독자)을 시작값으로 바로 되돌린다. 다음 세션은 Render에서 제 값을 다시 보인다.</summary>
+        public void PresentResting() => ShowBpm(Heartbeat.DefaultStartValue, snap: true);
+
         private void OnStageEnded(StageOutcome outcome) => Hud.CloseOverview();
     }
 }

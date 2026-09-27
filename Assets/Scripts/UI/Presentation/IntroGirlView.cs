@@ -56,6 +56,7 @@ namespace BlueComplex.UI.Presentation
         private readonly RectTransform _nodRect;
         private readonly Vector2 _nodAnchor; // 고개 숙임 프레임의 피벗이 고정되는 자리(장표 중심 기준 로컬 좌표) — 프레임이 바뀌어도 이 점은 그대로다.
         private readonly float _nodPixelScale; // 시트 한 픽셀이 화면에서 차지하는 크기.
+        private Vector2 _nodOffset; // 고정 자리에서 잠깐 비켜 놓은 양(프레임 전환 흔들림).
         private readonly RectTransform _walkRect;
         private readonly RawImage _walkImage;
         private readonly Vector2 _walkSize; // 걷는 한 칸의 크기(장표 비율).
@@ -128,8 +129,19 @@ namespace BlueComplex.UI.Presentation
 
             _nodRect.sizeDelta = new Vector2(framePx * _nodPixelScale, NodSheetHeight * _nodPixelScale);
             _nodRect.pivot = new Vector2(NodShoulderX[f] / framePx, 1f - NodBottomY[f] / NodSheetHeight);
-            _nodRect.anchoredPosition = _nodAnchor;
+            _nodRect.anchoredPosition = _nodAnchor + _nodOffset;
             _nodImage.uvRect = new Rect(NodFrameLeft[f] / NodSheetWidth, 0f, framePx / NodSheetWidth, 1f);
+        }
+
+        /// <summary>고개 숙임 그림을 고정 자리(<see cref="_nodAnchor"/>)에서 이만큼(캔버스 px) 비켜 놓는다 — 프레임 전환 순간의 미세한 흔들림용. 프레임을 바꿔도 유지된다.</summary>
+        public Vector2 NodOffset
+        {
+            get => _nodOffset;
+            set
+            {
+                _nodOffset = value;
+                _nodRect.anchoredPosition = _nodAnchor + value;
+            }
         }
 
         /// <summary>걷는 소녀를 켠다/끈다(고개 숙임 그림은 <see cref="HideNod"/>로 따로 뺀다).</summary>

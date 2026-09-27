@@ -66,7 +66,7 @@ namespace BlueComplex.UI.Presentation
             ApplyToMaterial(_current);
         }
 
-        /// <summary>스테이지 세션이 만들어진 뒤, 구독할 심박수를 외부에서 넘겨준다.</summary>
+        /// <summary>스테이지 세션이 만들어진 뒤, 구독할 심박수를 외부에서 넘겨준다. null이면 구독을 끊고 안정(Neutral) 값으로 돌아간다(메인 화면 복귀).</summary>
         public void Bind(Heartbeat heartbeat)
         {
             if (_heartbeat != null) _heartbeat.Changed -= OnHeartbeatChanged;
@@ -75,6 +75,10 @@ namespace BlueComplex.UI.Presentation
             {
                 _heartbeat.Changed += OnHeartbeatChanged;
                 OnHeartbeatChanged(_heartbeat.Value, _heartbeat.Value);
+            }
+            else if (_preset != null && _crtMaterial != null)
+            {
+                TweenTo(_preset.Neutral);
             }
         }
 

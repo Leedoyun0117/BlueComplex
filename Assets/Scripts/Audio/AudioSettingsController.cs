@@ -23,7 +23,8 @@ namespace BlueComplex.Audio
         public const string DefaultMixerResource = "GameAudioMixer";
         public const string SfxGroupPath = "Master/SFX";
         public const string BgmGroupPath = "Master/BGM";
-        public const string AmbientGroupPath = "Master/Ambient";
+        // Ambient는 BGM 아래 자식 그룹이다 — BGM 슬라이더·BGM 로우패스(BgmMuffle)가 상시 배경음·컷신 앰비언트까지 함께 적용된다.
+        public const string AmbientGroupPath = "Master/BGM/Ambient";
 
         /// <summary>dB로 바꿀 때의 바닥 — 슬라이더 0(무음)은 이 값으로 잘린다.</summary>
         public const float MinDecibels = -80f;

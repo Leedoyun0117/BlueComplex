@@ -30,7 +30,11 @@ namespace UI.Esc
             if (canvasRoot == null) return null;
 
             var existing = canvasRoot.GetComponentInChildren<LSO_EscPanel>(true);
-            if (existing != null) return existing;
+            if (existing != null)
+            {
+                existing.LiftAboveGameUi();
+                return existing;
+            }
 
             var prefab = Resources.Load<GameObject>(ResourcePath);
             if (prefab == null)
@@ -42,7 +46,22 @@ namespace UI.Esc
             var instance = Instantiate(prefab, canvasRoot, false);
             instance.name = prefab.name;
             instance.transform.SetAsLastSibling();
-            return instance.GetComponent<LSO_EscPanel>();
+            var panel = instance.GetComponent<LSO_EscPanel>();
+            if (panel != null) panel.LiftAboveGameUi();
+            return panel;
+        }
+
+        /// <summary>창을 게임 UI와 따로 그린다 — 분기 대사 장면·스테이지 시작 대화는 최상위 캔버스의 CanvasGroup 알파를 0으로 내려 게임 UI를 통째로 숨기는데,
+        /// 그 캔버스에 딸린 그래픽은 알파 0이면 아예 그려지지 않는다(ignoreParentGroups만으로는 안 된다). 그래서 창이 자기 중첩 Canvas를 갖고
+        /// 부모 CanvasGroup을 무시하며, 정렬 순서를 덮어써 같은 캔버스 안의 대사 오버레이·가이드 등 무엇보다 위에 그린다.
+        /// 중첩 캔버스·정렬 순서·레이캐스터는 <see cref="ConfigureCanvas"/>가 맡는다(Start에서도 불리지만, 창이 처음 열리기 전에 대화가 먼저 시작될 수 있어 여기서 미리 한다).</summary>
+        private void LiftAboveGameUi()
+        {
+            var group = GetComponent<CanvasGroup>();
+            if (group == null) group = gameObject.AddComponent<CanvasGroup>();
+            group.ignoreParentGroups = true;
+
+            ConfigureCanvas();
         }
 
         [Header("설정")]

@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
+using BlueComplex.Core.Clues;
 using BlueComplex.Core.Stage;
+using BlueComplex.Core.Tags;
 using BlueComplex.UI.Layout;
 using BlueComplex.UI.Motion;
 using DG.Tweening;
@@ -72,6 +74,7 @@ namespace BlueComplex.UI.Presentation
         private Action _startGame;
         private MainMenuView _menu;
         private bool _skippable;
+        private bool _lightGlowPlayed; // 8단계 스위치 소리(LightGlow)를 이번 오프닝에서 이미 냈는지.
 
         public static IntroSequencePlayer GetOrCreate(Transform canvasRoot)
         {
@@ -120,6 +123,12 @@ namespace BlueComplex.UI.Presentation
         /// <summary>지금 메인 화면(14단계)이 떠 있는가.</summary>
         public bool IsAtMainMenu => _menu != null;
 
+        /// <summary>메인 화면의 "단서 노트"가 보여 줄 본편 단서 지식(세이브에서 복원된 장부). StageBootstrapper가 <see cref="Begin"/> 전에 넣는다 — 없으면 "준비 중" 안내만 뜬다.</summary>
+        public ClueKnowledgeLedger NotesLedger { get; set; }
+
+        /// <summary>지금 열려 있는 단서 노트(검증용). 닫혀 있으면 null.</summary>
+        internal ClueNoteBook OpenNotes { get; private set; }
+
         /// <summary>처음(1단계)부터 재생한다. <paramref name="startGame"/>은 메인 화면에서 "취조시작"을 눌렀을 때, 화면이 어두워진 뒤 한 번 불린다(게임 세션을 여는 일).</summary>
         public void Begin(Action startGame)
         {
@@ -136,6 +145,37 @@ namespace BlueComplex.UI.Presentation
             UiSoundHooks.StopAmbient();
             UiSoundHooks.SetBed(null);
             _routine = StartCoroutine(Run());
+        }
+
+        /// <summary>
+        /// 오프닝 없이 메인 화면만 연다 — 스테이지 실패 뒤 암전에서 돌아올 때(<see cref="StageFlowHooks.ReturnToStart"/>). 검은 막에서 시작해 메인 화면이 밝아질 때까지 기다린다.
+        /// <paramref name="startGame"/>은 <see cref="Begin"/>과 같이 "취조시작"을 눌러 화면이 어두워진 뒤 한 번 불린다.
+        /// </summary>
+        public IEnumerator ShowMenuFromBlack(Action startGame)
+        {
+            ResetNow();
+
+            Current = this;
+            _startGame = startGame;
+            _font = RuntimeUi.FindFont(_canvasRoot) ?? FindFirstObjectByType<TMP_Text>(FindObjectsInactive.Include)?.font;
+            BuildOverlay(); // 막은 완전히 검은 채로 시작한다 — 실패 암전과 그대로 이어진다.
+
+            UiSoundHooks.StopAmbient();
+            UiSoundHooks.SetBed(null); // 스테이지의 심박수 배경음이 메인 화면까지 이어지지 않게.
+
+            var routine = StartCoroutine(MenuFromBlack());
+            _routine = routine;
+            yield return routine;
+        }
+
+        private IEnumerator MenuFromBlack()
+        {
+            // Run()과 같이 캔버스 크기는 한 프레임 뒤에 잰다.
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            _canvasSize = ((RectTransform)_canvasRoot).rect.size;
+            _slide = IntroSlide.Create(_layer, _canvasSize);
+            yield return ShowMenu(fadeOutFirst: false);
         }
 
         /// <summary>진행 중인 오프닝을 멈추고 막을 치운다(디버그로 스테이지를 바로 시작할 때 등).</summary>
@@ -187,6 +227,7 @@ namespace BlueComplex.UI.Presentation
             _slide = IntroSlide.Create(_layer, _canvasSize);
 
             _skippable = true;
+            _lightGlowPlayed = false;
             UiSoundHooks.StartTheme(UiSoundCue.IntroTheme, UiMotion.Settings.seqThemeFadeIn);
             yield return Opening();
             yield return ShowMenu(fadeOutFirst: true);
@@ -339,7 +380,12 @@ namespace BlueComplex.UI.Presentation
             }
 
             // 8: 화면 전체가 즉시(컷 전환) 주황빛으로 바뀌고(그림은 사라진다) 스위치 소리(LightGlow 큐)가 난다.
-            UiSoundHooks.Play(UiSoundCue.LightGlow);
+            if (!_lightGlowPlayed)
+            {
+                _lightGlowPlayed = true; // 오프닝 한 번에 한 번만 — 전용 보이스 1개라 다시 부르면 처음부터 다시 울린다.
+                UiSoundHooks.Play(UiSoundCue.LightGlow);
+            }
+
             girl?.HideNod();
             _backdrop.color = Orange;
 
@@ -365,17 +411,35 @@ namespace BlueComplex.UI.Presentation
             yield return Wait(s.seqTextHold);
         }
 
-        /// <summary>고개 숙임 8프레임(1~7)을 기존 정지 실루엣 노출 시간(<see cref="UiMotionSettings.seqWindowHold"/>) 안에 고르게 나눠 재생하고, 끝나면 그 시간을 다 채운다 —
-        /// 화면이 주황으로 바뀌는 8단계까지 마지막(고개 숙인) 자세로 자연스럽게 이어진다.</summary>
+        // 고개 숙임 중간 전환 프레임 1~6의 상대 유지 시간 — 처음·끝 장이 길고 가운데가 짧아 천천히 숙이기 시작해 천천히 멈춘다(평균 1).
+        private static readonly float[] NodFrameWeights = { 1.3f, 1f, 0.7f, 0.7f, 1f, 1.3f };
+        private const float NodNudgeMax = 2f; // 프레임 전환 흔들림의 최대 크기(캔버스 px).
+
+        /// <summary>고개 숙임 8프레임을 불균등하게 재생한다: 시작 자세(0)로 <see cref="UiMotionSettings.seqGirlNodStartHold"/> 머문 뒤, 전환 프레임 1~6을
+        /// 짧게(<see cref="UiMotionSettings.seqGirlNodFrame"/> 평균, 처음·끝이 조금 길게) 넘기고, 끝 자세(7)로 <see cref="UiMotionSettings.seqGirlNodEndHold"/> 머물다
+        /// 화면이 주황으로 바뀌는 8단계로 이어진다. 크로스페이드 없이, 프레임이 바뀌는 순간마다 1~2px 흔들림을 얹는다.</summary>
         private IEnumerator GirlNod(UiMotionSettings s, IntroGirlView girl)
         {
-            var hold = Mathf.Max(0.1f, s.seqWindowHold);
-            var perFrame = hold / 7f;
+            yield return Wait(s.seqGirlNodStartHold);
+
+            var frameTime = Mathf.Max(0.02f, s.seqGirlNodFrame);
             for (var f = 1; f < 8; f++)
             {
-                yield return Wait(perFrame);
+                var hold = f < 7 ? frameTime * NodFrameWeights[f - 1] : Mathf.Max(0.1f, s.seqGirlNodEndHold);
                 girl.SetNodFrame(f);
+                NudgeNod(girl, s.seqGirlNodNudge, Mathf.Min(0.08f, frameTime * 0.8f));
+                yield return Wait(hold);
             }
+        }
+
+        /// <summary>그림을 이전 자세 쪽으로 살짝(최대 <see cref="NodNudgeMax"/>px) 밀어 두었다가 <paramref name="settle"/>초 동안 제자리로 돌린다.</summary>
+        private void NudgeNod(IntroGirlView girl, Vector2 nudge, float settle)
+        {
+            DOTween.Kill(girl);
+            girl.NodOffset = Vector2.ClampMagnitude(nudge, NodNudgeMax);
+            if (girl.NodOffset == Vector2.zero) return;
+
+            DOTween.To(() => girl.NodOffset, v => girl.NodOffset = v, Vector2.zero, settle).SetEase(Ease.OutSine).SetUpdate(true).SetTarget(this).SetId(girl); // 건너뛰기의 DOTween.Kill(this)에도 같이 멈춘다.
         }
 
         // PPT 8~11번 장표의 소녀 키프레임(그림 한 칸 왼쪽 위, 화면 비율): A 왼쪽 가장자리 → B 화면 아래를 따라 → C 오른쪽. D는 C에서 사라진 뒤 거꾸로(상하·좌우 반전) 화면 오른쪽 바깥에서 걸어 들어와 서는 자리.
@@ -608,7 +672,20 @@ namespace BlueComplex.UI.Presentation
             ResetNow();
         }
 
-        private void OnNotesPressed() => _menu?.ShowToast("단서 노트는 준비 중입니다.");
+        /// <summary>메인 화면의 "단서 노트": 지금까지 본 단서의 노트를 메인 화면 위에 연다. 메인 화면이 치워지면(시작·재설정) 함께 사라진다.</summary>
+        private void OnNotesPressed()
+        {
+            if (_menu == null) return;
+            if (NotesLedger == null)
+            {
+                _menu.ShowToast("단서 노트는 준비 중입니다.");
+                return;
+            }
+
+            if (OpenNotes != null) return;
+            OpenNotes = ClueNoteBook.Open((RectTransform)_menu.transform, _font,
+                ClueCatalog.MainStory(new DefaultEmotionPolarityTable()), NotesLedger);
+        }
 
         private static void OnQuitPressed()
         {

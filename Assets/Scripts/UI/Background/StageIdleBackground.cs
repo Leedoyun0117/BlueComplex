@@ -136,8 +136,12 @@ namespace BlueComplex.UI.Background
             _lampFlickerTimer -= deltaTime;
             if (_lampFlickerTimer > 0f) return;
 
-            UiSoundHooks.Play(UiSoundCue.LampFlicker);
             _lampFlickerTimer = UnityEngine.Random.Range(_lampFlickerIntervalMin, _lampFlickerIntervalMax);
+
+            // 오프닝(메인 화면 포함)이 화면을 덮고 있는 동안엔 뒤의 방이 안 보인다 — 전구 소리가 오프닝 위로 8~15초마다 반복되어 스위치 소리가 계속 나는 것처럼 들렸다.
+            if (IntroSequencePlayer.Current != null && IntroSequencePlayer.Current.IsActive) return;
+
+            UiSoundHooks.Play(UiSoundCue.LampFlicker);
         }
 
         private int FrameMs(int frame)

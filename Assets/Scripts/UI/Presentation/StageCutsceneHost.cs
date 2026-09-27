@@ -1,10 +1,15 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using BlueComplex.UI.Motion;
 using BlueComplex.UI.Rendering;
+using DG.Tweening;
 using KTH;
+using TMPro;
+using UI.Esc;
 using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Playables;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
@@ -19,6 +24,8 @@ namespace BlueComplex.UI.Presentation
     ///  · 카메라는 UI 카메라와 같은 렌더러(CRT·기분 효과가 없는 Base_Renderer)를 쓴다 — 메인 카메라의 CRT 패스는 RT_UI(HUD)를 위에 덧그리기 때문이다.
     ///  · 컷신이 화면을 덮는 동안 게임 소리(배경음·효과음)는 꺼진다(<see cref="UiSoundHooks.SuppressGameSounds"/>) — 컷신 자체의 소리만 들린다.
     ///  · 컷신이 하나 끝나도 카메라(검은 배경)는 남는다 — 번호가 이어지는 통합 컷신(6+7, 10+11) 사이에 게임 화면이 비치지 않게. 스테이지 종료 연출이 <see cref="Release"/>로 걷는다.
+    ///  · 재생 중 Space로 건너뛴다(오프닝과 같은 "Space  건너뛰기" 안내가 우측 하단에 뜬다). 건너뛰면 재생 중이던 타임라인을 멈추고 프리팹·컷신 효과음을 즉시 치운 뒤
+    ///    코루틴이 정상적으로 끝난다 — 이어지던 번호(통합 컷신 6+7 등, 클리어 때 몰아 보는 나머지)도 이번 컷신 묶음이 끝날 때까지(<see cref="Release"/>) 함께 건너뛴다.
     ///
     /// 컷신이 끝났음은 <see cref="KTH_TimeLinePlay.Finished"/>로 안다.
     /// </summary>
@@ -45,6 +52,16 @@ namespace BlueComplex.UI.Presentation
         private Camera _camera;
         private GameObject _instance;
 
+        /// <summary>지금 컷신 코루틴이 도는 중인가(막이 덮이는 동안 포함) — 이때만 Space가 먹는다.</summary>
+        private bool _running;
+
+        /// <summary>Space로 건너뛰었다. 이번 컷신 묶음이 끝나 <see cref="Release"/>될 때까지 남은 번호도 재생하지 않는다.</summary>
+        private bool _skipped;
+
+        private TMP_Text _hint;
+        private Tween _hintTween;
+        private LSO_EscPanel _escPanel;
+
         /// <summary>컷신 카메라가 화면을 덮고 있는가(컷신 재생 중이거나 재생 사이).</summary>
         public bool Covering => _camera != null;
 
@@ -70,6 +87,12 @@ namespace BlueComplex.UI.Presentation
                 return null;
             }
 
+            if (_skipped)
+            {
+                Debug.Log($"[StageCutsceneHost] 컷신 #{number} — 건너뛰기 중이라 재생하지 않는다.");
+                return null;
+            }
+
             var prefab = catalog.Find(number);
             return prefab != null ? Run(number, prefab) : null;
         }
@@ -79,6 +102,11 @@ namespace BlueComplex.UI.Presentation
         {
             if (_instance != null) Destroy(_instance);
             _instance = null;
+            _running = false;
+            _skipped = false;
+            HideHint();
+            if (_pausedForEsc) ResumeFromEsc();
+            ReturnEsc(); // 설정창을 게임 캔버스로 되돌린다(열려 있으면 열린 채로).
 
             if (_camera != null) Destroy(_camera.gameObject);
             _camera = null;
@@ -92,10 +120,177 @@ namespace BlueComplex.UI.Presentation
             Release();
         }
 
+        private void Update()
+        {
+            if (_escPanel == null) _escPanel = FindFirstObjectByType<LSO_EscPanel>(FindObjectsInactive.Include);
+            var escOpen = _escPanel != null && _escPanel.IsOpen;
+
+            // 컷신 위에서 설정창이 열려 있는 동안 컷신(타임라인·소리)도 멈춘다. 건너뛰기 안내도 창 위에 겹치지 않게 감춘다.
+            var pause = escOpen && Covering;
+            if (pause != _pausedForEsc)
+            {
+                if (pause) PauseForEsc();
+                else ResumeFromEsc();
+            }
+
+            if (_hint != null) _hint.enabled = !escOpen;
+
+            if (!_running || _skipped) return;
+            if (Keyboard.current == null || !Keyboard.current.spaceKey.wasPressedThisFrame) return;
+
+            // 설정창(ESC)이 열려 있으면 그 창의 입력이다 — 컷신을 건너뛰지 않는다.
+            if (escOpen) return;
+
+            Skip();
+        }
+
+        // ── 컷신 위의 설정창 ─────────────────────────────────────────────────
+        //
+        // 설정창은 게임 캔버스(MainHud, UI 카메라 → RT_UI → CRT 합성) 안에 있어 정렬 순서를 아무리 올려도 컷신 카메라(depth 100, 화면 전체) 밑에 깔린다.
+        // 그래서 컷신 카메라가 화면을 덮는 동안만 설정창을 이 호스트의 오버레이 캔버스(카메라와 무관하게 맨 마지막에 그려짐)로 옮겼다가, 걷힐 때 제자리로 돌린다.
+        // 컷신 카메라는 CRT 없이 그리므로 그 위의 설정창도 CRT 없이 평평하게 그려지는 게 맞고, 클릭 보정(CRT 곡률)도 그동안 끈다.
+        // 창 크기는 게임 캔버스와 같은 기준 해상도(1920×1080, 너비·높이 0.5)로 맞춰 둔 오버레이라 그대로다.
+
+        private Transform _escHome;
+        private int _escHomeIndex;
+        private Material _escCrtMaterial;
+        private bool _pausedForEsc;
+        private PlayableDirector _pausedDirector;
+        private readonly List<AudioSource> _pausedAudio = new();
+        private readonly List<LSO_EscSilhouette> _silhouettes = new();
+
+        private void LiftEscOverCutscene()
+        {
+            if (_escPanel == null) _escPanel = FindFirstObjectByType<LSO_EscPanel>(FindObjectsInactive.Include);
+            if (_escPanel == null || _escHome != null) return;
+
+            var panel = _escPanel.transform;
+            _escHome = panel.parent;
+            _escHomeIndex = panel.GetSiblingIndex();
+            panel.SetParent(Overlay, false);
+            panel.SetAsLastSibling();
+
+            var raycaster = _escPanel.GetComponent<DistortionCorrectedGraphicRaycaster>();
+            if (raycaster != null)
+            {
+                _escCrtMaterial = raycaster.CrtMaterial;
+                raycaster.SetCrtMaterial(null); // 곡률 0 → 보정 없는 일반 레이캐스트
+            }
+
+            // 창 뒤 실루엣(LSO_EscSilhouette)은 게임 UI(RT_UI)를 떠서 비추는데, 컷신 동안 창 뒤에 있는 건 게임 UI가 아니라 컷신이다 —
+            // 게임 HUD 실루엣이 컷신 위에 뜨지 않게 그동안 끈다(창 자체의 어두운 배경만 남는다).
+            _silhouettes.Clear();
+            foreach (var silhouette in _escPanel.GetComponentsInChildren<LSO_EscSilhouette>(true))
+            {
+                if (!silhouette.enabled) continue;
+                silhouette.enabled = false;
+                var image = silhouette.GetComponent<RawImage>();
+                if (image != null) image.enabled = false;
+                _silhouettes.Add(silhouette);
+            }
+        }
+
+        private void ReturnEsc()
+        {
+            if (_escHome == null) return;
+
+            if (_escPanel != null)
+            {
+                var panel = _escPanel.transform;
+                panel.SetParent(_escHome, false);
+                panel.SetSiblingIndex(Mathf.Min(_escHomeIndex, _escHome.childCount - 1));
+                _escPanel.GetComponent<DistortionCorrectedGraphicRaycaster>()?.SetCrtMaterial(_escCrtMaterial);
+            }
+
+            foreach (var silhouette in _silhouettes)
+                if (silhouette != null) silhouette.enabled = true; // 다음에 열릴 때부터 다시 게임 UI 실루엣을 뜬다.
+            _silhouettes.Clear();
+
+            _escHome = null;
+            _escCrtMaterial = null;
+        }
+
+        /// <summary>설정창이 열리면 컷신을 멈춘다. 타임라인은 게임 시간으로 돌아 설정창의 시간 정지(timeScale 0)로도 멈추지만, 컷신 소리(KTH_TimelineAudioSignal의 AudioSource,
+        /// KTH_Sfx의 공용 소스)는 timeScale과 무관하게 계속 나서 따로 일시정지한다. 설정창 정지 옵션을 꺼도 멈추도록 타임라인도 직접 Pause한다.</summary>
+        private void PauseForEsc()
+        {
+            _pausedForEsc = true;
+            _pausedAudio.Clear();
+
+            if (_instance != null)
+            {
+                var director = _instance.GetComponentInChildren<PlayableDirector>(true);
+                if (director != null && director.state == PlayState.Playing)
+                {
+                    director.Pause();
+                    _pausedDirector = director;
+                }
+
+                foreach (var source in _instance.GetComponentsInChildren<AudioSource>(true)) PauseAudio(source);
+            }
+
+            var sfx = GameObject.Find("[KTH_Sfx]");
+            if (sfx != null)
+                foreach (var source in sfx.GetComponents<AudioSource>()) PauseAudio(source);
+        }
+
+        private void PauseAudio(AudioSource source)
+        {
+            if (source == null || !source.isPlaying) return;
+            source.Pause();
+            _pausedAudio.Add(source);
+        }
+
+        private void ResumeFromEsc()
+        {
+            _pausedForEsc = false;
+
+            if (_pausedDirector != null && _pausedDirector.state == PlayState.Paused) _pausedDirector.Resume();
+            _pausedDirector = null;
+
+            foreach (var source in _pausedAudio)
+                if (source != null) source.UnPause();
+            _pausedAudio.Clear();
+        }
+
+        /// <summary>Space: 재생 중인 타임라인을 멈추고 프리팹과 컷신 효과음을 바로 치운다. 기다리던 코루틴(<see cref="Run"/>)은 다음 프레임에 정상적으로 끝난다.
+        /// 카메라(검은 배경)는 남겨 둔다 — 이어지는 게임 흐름(스테이지 종료 연출)이 평소처럼 막을 깔고 <see cref="Release"/>한다.</summary>
+        private void Skip()
+        {
+            _skipped = true;
+            HideHint();
+            Debug.Log("[StageCutsceneHost] Space — 컷신을 건너뛴다.");
+
+            if (_instance != null)
+            {
+                var director = _instance.GetComponentInChildren<PlayableDirector>(true);
+                if (director != null && director.state == PlayState.Playing) director.Stop(); // KTH_TimeLinePlay.Finished가 온다.
+                Destroy(_instance);
+                _instance = null;
+            }
+
+            KTH_Sfx.StopAll(); // 컷신 효과음은 프리팹 밖의 공용 소스에서 나서 프리팹을 지워도 남는다.
+        }
+
         private IEnumerator Run(int number, GameObject prefab)
         {
-            if (_camera == null) yield return CoverIn();
+            _running = true;
+            ShowHint();
+            try
+            {
+                if (_camera == null) yield return CoverIn();
+                if (_skipped) yield break; // 막이 덮이는 사이에 건너뛰었다 — 카메라(검은 화면)만 선 채로 끝난다.
 
+                yield return PlayInstance(number, prefab);
+            }
+            finally
+            {
+                _running = false;
+            }
+        }
+
+        private IEnumerator PlayInstance(int number, GameObject prefab)
+        {
             var instance = Instantiate(prefab, StageOrigin, Quaternion.identity);
             instance.name = prefab.name;
             instance.SetActive(true); // 09_B_Training처럼 프리팹 루트가 꺼진 채 저장된 것이 있다 — 꺼져 있으면 재생기(KTH_TimeLinePlay)가 요청을 못 받는다.
@@ -130,6 +325,79 @@ namespace BlueComplex.UI.Presentation
             KTH_TimeLinePlay.Finished -= OnFinished;
             if (instance != null) Destroy(instance);
             if (_instance == instance) _instance = null;
+        }
+
+        /// <summary>오프닝의 건너뛰기 안내와 같은 모양(우측 하단, 흐린 흰 글자, 잠시 뒤 서서히)으로 컷신 위에 띄운다. 컷신 카메라보다 위에 그려지도록 오버레이 캔버스에 둔다.</summary>
+        private void ShowHint()
+        {
+            if (_skipped) return;
+            if (_hint == null) BuildHint();
+            if (_hintTween != null && _hintTween.IsActive()) return; // 통합 컷신의 다음 번호 — 이미 떠 있거나 뜨는 중이다.
+            if (_hint.alpha > 0f) return;
+
+            _hintTween = DOTween.To(() => _hint.alpha, v => _hint.alpha = v, 1f, 0.8f).SetDelay(1.2f).SetUpdate(true).SetTarget(this);
+        }
+
+        private void HideHint()
+        {
+            _hintTween?.Kill();
+            _hintTween = null;
+            if (_hint != null) _hint.alpha = 0f;
+        }
+
+        private RectTransform _overlay;
+
+        /// <summary>컷신 위에 그리는 오버레이 캔버스(건너뛰기 안내, 컷신 동안의 설정창). 게임 캔버스(MainHud)와 같은 기준 해상도로 스케일한다.</summary>
+        private RectTransform Overlay
+        {
+            get
+            {
+                if (_overlay != null) return _overlay;
+
+                // 컷신 레이어에 둔다 — 최상위 캔버스라 게임의 "캔버스 루트 찾기"(IsCutsceneObject로 거른다)에 잡히면 안 된다. 오버레이 캔버스는 레이어와 무관하게 그려진다.
+                var go = new GameObject("Cutscene Overlay", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler)) { layer = CutsceneLayer };
+                go.transform.SetParent(transform, false);
+                var canvas = go.GetComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = short.MaxValue - 1; // 막(CoverIn)보다는 아래, 컷신·게임 화면보다는 위.
+
+                var scaler = go.GetComponent<CanvasScaler>();
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1920, 1080);
+                scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+                scaler.matchWidthOrHeight = 0.5f;
+
+                return _overlay = (RectTransform)go.transform;
+            }
+        }
+
+        private void BuildHint()
+        {
+            var text = new GameObject("Skip Hint", typeof(RectTransform)) { layer = CutsceneLayer };
+            text.transform.SetParent(Overlay, false);
+            var rect = (RectTransform)text.transform;
+            rect.anchorMin = new Vector2(0.55f, 0.02f);
+            rect.anchorMax = new Vector2(0.98f, 0.07f);
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+
+            _hint = text.AddComponent<TextMeshProUGUI>();
+            var font = FindGameFont();
+            if (font != null) _hint.font = font;
+            _hint.text = "Space  건너뛰기";
+            _hint.fontSize = 22f;
+            _hint.color = new Color(1f, 1f, 1f, 0.45f);
+            _hint.alignment = TextAlignmentOptions.MidlineRight;
+            _hint.raycastTarget = false;
+            _hint.alpha = 0f;
+        }
+
+        /// <summary>한글이 들어 있는 게임 글꼴을 씬의 글자에서 빌린다(컷신 프리팹의 글자는 곧 지워지니 건너뛴다).</summary>
+        private static TMP_FontAsset FindGameFont()
+        {
+            foreach (var text in FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (text.font != null && !IsCutsceneObject(text.gameObject)) return text.font;
+
+            return null;
         }
 
         /// <summary>시네머신 트랙이 있는 컷신(08)은 트랙이 움직일 카메라(브레인)가 프리팹 밖 씬 오브젝트라 프리팹에 저장돼 있지 않다 — 전용 카메라의 브레인을 물려 준다.</summary>
@@ -197,6 +465,7 @@ namespace BlueComplex.UI.Presentation
             UseUiCameraRenderer(data);
 
             _camera = cam;
+            LiftEscOverCutscene(); // 이제부터 화면은 컷신 카메라 차지 — 설정창은 그 위 오버레이로.
 
             // 컷신이 화면을 덮는 동안 게임 소리는 끈다 — 컷신 자체의 소리(타임라인 오디오)만 들린다. Release가 되돌린다.
             UiSoundHooks.SuppressGameSounds(true);
