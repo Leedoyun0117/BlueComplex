@@ -11,6 +11,9 @@ namespace BlueComplex.EditorTools
     /// 단서 정보 책(<see cref="ClueBookPanel"/>)을 Resources/UI/ClueBookPanel.prefab으로 처음 굽는다. 이미 프리팹이 있으면
     /// 아무것도 안 한다 — 그 뒤로는 프리팹을 인스펙터에서 직접 고치는 게 원본이라, 다시 구우면 손 작업을 날린다.
     /// 다시 굽고 싶으면 프리팹을 지운 뒤 실행한다.
+    ///
+    /// 주의: 이 도구가 굽는 건 회색 자리표시 UI다. 지금 프리팹은 Art/Note 노트 그림 위에 다시 짜여 있어(Frame/Art/Clip, 그림 탭,
+    /// 포스트잇 글자 자리) 이 도구로 되돌리면 그 구조와 ClueBookPanel의 노트·탭 스프라이트 필드 배선이 사라진다.
     /// </summary>
     public static class ClueBookPanelPrefabTool
     {

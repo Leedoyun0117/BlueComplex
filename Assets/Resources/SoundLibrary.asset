@@ -123,3 +123,11 @@ MonoBehaviour:
     dedicatedVoices: 3
     minInterval: 0
     maxSeconds: 0
+  - cue: 25
+    clips:
+    - {fileID: 8300000, guid: 0ef7ecf716df0b34ea3d21dbbd94b809, type: 3}
+    volume: 0.5
+    pitchRange: {x: 1, y: 1}
+    dedicatedVoices: 0
+    minInterval: 0
+    maxSeconds: 0

@@ -7,7 +7,7 @@ namespace BlueComplex.UI.Presentation
 {
     /// <summary>
     /// 오프닝의 소녀. 주황 창문 앞에 정지 실루엣(<see cref="IntroCutsceneArt.girlSilhouette"/>)으로 나타났다가, 걷기 8프레임 시트(<see cref="IntroCutsceneArt.girlWalk"/>)로
-    /// 화면을 걸어 가고, 사라진 뒤 화면 오른쪽 위에 거꾸로 선 모습으로 잠깐 나타난다. 위치는 PPT 장표 비율(가로·세로 0~1, 세로는 위에서부터)의 그림 왼쪽 위 모서리다 —
+    /// 화면을 걸어 가고, 사라진 뒤 거꾸로(상하·좌우 반전) 화면 오른쪽 바깥에서 걸어 들어와 선다. 위치는 PPT 장표 비율(가로·세로 0~1, 세로는 위에서부터)의 그림 왼쪽 위 모서리다 —
     /// 그림 한 칸(투명 여백 포함)의 왼쪽 위. 움직임은 <see cref="IntroSequencePlayer"/>가 정하고 이 조각은 자세만 받는다.
     /// </summary>
     internal sealed class IntroGirlView
@@ -21,16 +21,18 @@ namespace BlueComplex.UI.Presentation
         /// <summary>걷는 소녀 한 칸의 높이(화면 높이 비율, PPT 8~11번 장표).</summary>
         public const float WalkHeight = 0.607f;
 
-        // 시트(2146×733)를 8칸으로 자르는 왼쪽 픽셀. 칸 너비는 2146/8이지만 둘째 프레임의 앞발·치맛자락이 6픽셀 다음 칸으로 넘어가 그 칸만 275로 민다.
+        // 시트(girl_walk_cycle_v2.png, 5000×733, 알파 채널)의 8프레임. 알파>10 기준으로 자동 검출한 왼쪽·오른쪽 끝 픽셀(포함)과, 프레임 안에서 잰 상체 중심의 x(왼쪽 끝에서부터).
+        // 세로는 8프레임 모두 발끝이 y=621(위에서부터)로 같아 시트 전체 높이를 그대로 쓰면 바닥선이 맞는다.
+        // 가로는 프레임 전체 상자의 중심이 아니라 상체 중심을 앵커로 삼는다 — 다리가 벌어지며 상자 폭이 달라져도 몸통은 한 자리에 있고, 상체 중심 자체의 자연스러운 좌우 진동만 남는다.
         private const int FrameCount = 8;
-        private const float SheetWidth = 2146f;
+        private const float SheetWidth = 5000f;
         private const float SheetHeight = 733f;
-        private const float FrameWidth = SheetWidth / FrameCount;
-        private static readonly float[] FrameLeft = { 0f, 275f, 544f, 806f, 1078f, 1341.5f, 1609.75f, 1877.75f };
+        private static readonly float[] FrameLeft = { 189f, 502f, 786f, 1060f, 1391f, 1704f, 1988f, 2262f };
+        private static readonly float[] FrameRight = { 423f, 706f, 980f, 1310f, 1625f, 1908f, 2182f, 2512f };
+        private static readonly float[] FrameBodyX = { 142.5f, 110.5f, 115f, 115f, 142.5f, 110.5f, 115f, 115f };
 
-        // 시트의 프레임마다 몸이 칸 안에서 제멋대로 흔들린다(머리·몸통 중심이 칸 안 122~170px로 오간다 — 걷는 동안 몸이 뒤로 밀리다 한 바퀴 돌 때 튄다).
-        // 몸통이 늘 같은 자리에 있도록 프레임마다 그림을 옮길 픽셀(시트 기준, 오른쪽이 +). 머리와 몸통 중심의 평균으로 쟀다.
-        private static readonly float[] FrameShift = { -29.5f, -16.5f, 7.4f, 13.2f, 8.2f, 15.1f, 9.4f, -7.2f };
+        // 한 칸(자리)의 가로 폭 기준: 장표 좌표 topLeft가 가리키는 칸의 폭. 앵커(상체 중심)는 이 칸의 가로 중심에 놓인다 — 지난 시트(균등 8칸 2146/8)와 같은 크기다.
+        private const float SlotWidthPx = 2146f / FrameCount;
 
         private readonly IntroSlide _slide;
         private readonly RectTransform _root;
@@ -72,7 +74,7 @@ namespace BlueComplex.UI.Presentation
             stillImage.raycastTarget = false;
             stillImage.color = new Color(1f, 1f, 1f, 0f);
 
-            var walkSize = new Vector2(WalkHeight * (FrameWidth / SheetHeight) * slide.Size.y / slide.Size.x, WalkHeight);
+            var walkSize = new Vector2(WalkHeight * (SlotWidthPx / SheetHeight) * slide.Size.y / slide.Size.x, WalkHeight);
             var walk = slide.Place(root, "Walk", 0f, 0f, walkSize.x, walkSize.y);
             var walkImage = walk.gameObject.AddComponent<RawImage>();
             walkImage.texture = art.girlWalk;
@@ -84,9 +86,10 @@ namespace BlueComplex.UI.Presentation
 
         public Tween FadeInStill(float seconds) => _stillImage.DOFade(1f, seconds).SetEase(Ease.InOutSine);
 
-        public Tween FadeOutStill(float seconds) => _stillImage.DOFade(0f, seconds).SetEase(Ease.InOutSine);
+        /// <summary>정지 실루엣을 즉시 지운다(컷 전환).</summary>
+        public void HideStill() => _stillImage.color = new Color(1f, 1f, 1f, 0f);
 
-        /// <summary>걷는 소녀를 켠다/끈다(정지 실루엣은 <see cref="FadeOutStill"/>로 따로 뺀다).</summary>
+        /// <summary>걷는 소녀를 켠다/끈다(정지 실루엣은 <see cref="HideStill"/>로 따로 뺀다).</summary>
         public void ShowWalker(bool visible) => _walkRect.gameObject.SetActive(visible);
 
         /// <summary>
@@ -98,11 +101,15 @@ namespace BlueComplex.UI.Presentation
             var slot = _slide.Slot(topLeft.x, topLeft.y, _walkSize.x, _walkSize.y);
             var f = ((frame % FrameCount) + FrameCount) % FrameCount;
 
-            // 몸통 위치를 프레임 사이에 고정한다(반전했으면 화면에서의 방향도 뒤집힌다).
-            var shift = FrameShift[f] * slot.size.y / SheetHeight * (flipX ? -1f : 1f);
-            _walkRect.anchoredPosition = slot.position + new Vector2(shift, 0f);
+            // 프레임 한 장을 알파 경계 그대로 잘라(폭이 프레임마다 다르다) 상체 중심을 피벗으로 삼아 칸의 가로 중심에 놓는다.
+            // 피벗이 상체 중심이라 반전(localScale -1)해도 몸통은 제자리에 남고 그림만 뒤집힌다.
+            var framePx = FrameRight[f] - FrameLeft[f] + 1f;
+            var k = slot.size.y / SheetHeight;
+            _walkRect.sizeDelta = new Vector2(framePx * k, slot.size.y);
+            _walkRect.pivot = new Vector2(FrameBodyX[f] / framePx, 0.5f);
+            _walkRect.anchoredPosition = slot.position;
             _walkRect.localScale = new Vector3(flipX ? -1f : 1f, flipY ? -1f : 1f, 1f);
-            _walkImage.uvRect = new Rect(FrameLeft[f] / SheetWidth, 0f, FrameWidth / SheetWidth, 1f);
+            _walkImage.uvRect = new Rect(FrameLeft[f] / SheetWidth, 0f, framePx / SheetWidth, 1f);
         }
 
         public void Destroy() => Object.Destroy(_root.gameObject);

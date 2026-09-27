@@ -1,6 +1,6 @@
 # DLJ 침체·흥분 화면 연출
 
-기준: [Notion UI 연출](https://app.notion.com/p/UI-3e2f2999e1d7809fa7e0c39b9b94c1ea). BGM 처리 없음.
+기준: [Notion UI 연출](https://app.notion.com/p/UI-3e2f2999e1d7809fa7e0c39b9b94c1ea). BGM은 침체 시 로우패스로만 먹먹해짐(아래 "BGM 먹먹함").
 
 ## 실행
 
@@ -180,3 +180,22 @@ D3D11 실제 오프스크린 렌더 검사 통과: 이전 Soft Bands의 네 변�
 상태 검사는 `Tools > BlueComplex > DLJ > Validate Mood State Transitions`로 재실행 가능.
 C# 빌드 성공(경고/오류 0개), 상태 회귀 검사 59개 통과. Unity Play 및 실제 화면 품질 검증은 미실행.
 색수차 종료 후 핑크 톤의 밝기와 전환 느낌은 실제 화면에서 확인 필요.
+
+## 기존 CrtEffectDriver와의 역할 분리
+
+컨트롤러가 화면 셰이더를 잡으면(런타임 머티리얼 사용 중) 같은 씬의 `CrtEffectDriver.SetReactionSuppressed(true)`를 호출해, 심박수에 따른 스캔라인·색수차·노이즈·플리커·틴트·파스텔·밝기·흔들림 반응을 끈다. 드라이버는 프리셋의 안정(Neutral) 값과 곡률만 유지하고, 흥분/침체 톤은 이 컨트롤러가 전담한다. 비활성화하면 드라이버 반응이 복구된다.
+
+## 감정 태그 UI는 무드 효과 제외
+
+결과 태그 칩(감정 칩·특성 태그, `MemorySpaceBubble`)은 색으로 구분되는 라벨이라 침체 파랑/흥분 핑크 톤이나 글리치가 입혀지면 읽기 어렵다. 그래서 컨트롤러가 원본 UI 합성 패스를 잡고 있는 동안(`_originalMaterial != null`) 칩만 별도 레이어로 뺀다.
+
+- `UiTagLayer`(`Assets/Scripts/UI/Rendering`): 컨트롤러가 `OnEnable`에서 만든다. 매 프레임 UI 카메라를 컬링 마스크 = 레이어 6 `UITag`, 타깃 = `RT_UITag`로 바꿔 한 번 더 그린다. 주 카메라 등 UI 레이어를 안 그리는 카메라의 컬링 마스크에서도 이 레이어를 뺀다.
+- `MemorySpaceBubble`: `UiTagLayer.Current`가 있으면 칩을 풍선 전체를 덮는 중첩 캔버스(레이어 `UITag`)에 붙인다 → UI 카메라(RT_UI)에는 안 들어간다. 컨테이너가 풍선과 같은 사각형이라 칩 좌표·연출은 그대로. 없으면 예전처럼 풍선에 직접 붙는다(무드 컨트롤러가 없는 씬은 동작 변화 없음).
+- 셰이더 `_TagTex`/`_TagEnabled`: 파스텔·침체 색조가 끝난 **뒤에** 태그 픽셀로 덮는다. 글리치 변위와 블룸·색수차 샘플링은 태그를 건드리지 않는다. 그 뒤의 스캔라인·섀도우 마스크·비네트·밝기는 화면 전체 CRT 질감이라 그대로 적용된다. 배경과 다른 UI(카드, HUD 등)는 기존처럼 효과를 받는다.
+- 열쇠 아이콘(`KeyStatusPanel`, 못 얻음 회색 / 얻음 파랑)도 같은 레이어로 뺀다: 칸 안의 열쇠 그림(`KeyGlyph.Root`)에 중첩 캔버스를 얹고 레이어만 `UITag`로 바꾼다(제자리라 카드 기울기·서랍 이동·찍히는 연출은 그대로). 칸 종이·카드·테이프는 톤을 받는다. 서랍 `RectMask2D` 클리핑은 태그 패스에서도 적용돼 접힌 동안 열쇠는 보이지 않는다.
+- 태그 레이어는 UI 카메라와 따로 그려져 항상 다른 UI 위에 얹힌다. 그래서 예전에 태그를 가리던 오버레이가 떠 있으면 `UiTagLayer.IsCovered()`가 태그 레이어째 숨긴다(마스크 0으로 그려 비움): 단서 책(`ClueBookPanel`), 키 턴 암전 막(`KeyTurnOverlay`), 스테이지 시작 대사창(`StageDialogueOverlay`), 전체 개요(`StageOverviewOverlay`). **이 목록에 없는 새 오버레이는 칩·열쇠를 못 가린다** — 새로 만들면 목록에 추가할 것. 엑스레이 판넬과 칩은 분리 전과 같은 겹침. 튜토리얼 가이드는 Presenter가 쉬는 동안에만 떠서 칩과 겹치지 않는다.
+- 컨트롤러가 꺼지면 `UiTagLayer`와 `RT_UITag`도 함께 정리된다. `UiTagLayer`는 새 카메라를 복제하지 않고 UI 카메라를 마스크/타깃만 바꿔 매 프레임 한 번 더 그린다(스크린스페이스-카메라 캔버스는 자기 카메라로만 그려지므로).
+
+## BGM 먹먹함
+
+`_state.Depressed`(0~1, 일반 침체 0.75 / 매우 침체 1.0)로 `GameAudioMixer`의 BGM 그룹 Lowpass Simple 컷오프(exposed `BGMLowpassCutoff`)를 22000Hz(정상)→600Hz(최대)로 지수 보간한다(`BgmMuffle`). 전환 시간은 화면 톤과 같다. Ambient 그룹과 `*Volume` 파라미터는 건드리지 않는다.

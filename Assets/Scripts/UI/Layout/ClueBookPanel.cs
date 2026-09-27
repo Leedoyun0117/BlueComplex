@@ -15,6 +15,10 @@ namespace BlueComplex.UI.Layout
     /// "단서" 탭(번호·이름·스토리)과 "메뉴얼" 탭(감정·시간대·인물 분류표, 고정 내용) 사이를 오간다.
     /// 배경이나 "돌아가기"를 누르면 닫힌다. 사진은 클릭을 받지 않는 장식이다 — 확대는 기획에서 빠졌다.
     ///
+    /// 모양은 Art/Note의 노트 그림(Note2nc)이 깐다 — 3200x1800 한 장이라 프리팹의 Frame(16:9 고정)이 그 픽셀 좌표를
+    /// 앵커 비율로 옮겨 글자를 얹는다. 탭은 켜진/꺼진 그림이 따로 있어 스프라이트를 바꾸고(순서 교체는 하지 않는다 —
+    /// 그림 탭이 페이지와 겹치지 않는다), 클립은 사진 위에 얹히는 맨 위 레이어다.
+    ///
     /// 모양은 Resources/UI/ClueBookPanel.prefab에 있다 — MainHud.prefab은 이미 손으로 다듬어진 상태라 그 안에 넣지 않고,
     /// 처음 필요할 때 이 프리팹을 루트 캔버스 아래에 인스턴스화한다(GetOrCreate). 클릭은 프리팹 안 Button의 onClick에
     /// 이 클래스의 Hide/ShowClueTab/ShowManualTab이 연결돼 있다. 프리팹은 ClueBookPanelPrefabTool로 처음 구웠다.
@@ -38,12 +42,21 @@ namespace BlueComplex.UI.Layout
         [SerializeField] private TMP_Text _clueNumberText;
         [SerializeField] private TMP_Text _titleText;
         [SerializeField] private TMP_Text _storyText;
+        [Tooltip("단서 탭의 분홍 포스트잇 / 보라 포스트잇 / 위쪽 가로 띠 — 아래쪽 가로 띠(_storyText)와 함께 노트 아트의 네 자리다.")]
+        [SerializeField] private TMP_Text _timeNoteText;
+        [SerializeField] private TMP_Text _personNoteText;
+        [SerializeField] private TMP_Text _emotionNoteText;
 
         [Header("Tab buttons")]
         [SerializeField] private Image _clueTabButton;
         [SerializeField] private Image _manualTabButton;
-        [SerializeField] private Color _tabIdle = new Color32(150, 150, 154, 255);
-        [SerializeField] private Color _tabActive = new Color32(116, 116, 120, 255);
+        [SerializeField] private Color _tabIdle = Color.white;
+        [SerializeField] private Color _tabActive = Color.white;
+        [Tooltip("탭 그림은 켜진/꺼진 모양이 따로 그려져 있다. 비워 두면 색(_tabIdle/_tabActive)만 바꾼다.")]
+        [SerializeField] private Sprite _clueTabOn;
+        [SerializeField] private Sprite _clueTabOff;
+        [SerializeField] private Sprite _manualTabOn;
+        [SerializeField] private Sprite _manualTabOff;
 
         [Header("Page turn")]
         [Tooltip("탭을 바꿀 때 오른쪽 페이지가 책등을 축으로 넘어가는 시간(초).")]
@@ -99,6 +112,10 @@ namespace BlueComplex.UI.Layout
             _personCardText.text = $"인물\n{string.Join(", ", vm.PersonTexts)}";
             _emotionCardText.text = $"감정\n{string.Join(", ", vm.EmotionTexts)}";
 
+            _timeNoteText.text = _timeCardText.text;
+            _personNoteText.text = _personCardText.text;
+            _emotionNoteText.text = _emotionCardText.text;
+
             _storyText.text = vm.StoryText;
 
             // 책이 막 열리는 참이라 넘김 연출 없이 "단서" 탭인 상태로 시작한다(아직 꺼져 있어 트윈도 못 돈다).
@@ -141,8 +158,10 @@ namespace BlueComplex.UI.Layout
 
             _clueTabButton.color = showClue ? _tabActive : _tabIdle;
             _manualTabButton.color = showClue ? _tabIdle : _tabActive;
-            BringTabToFront(showClue ? _clueTabButton : _manualTabButton,
-                showClue ? _manualTabButton : _clueTabButton);
+            if (_clueTabOn != null && _clueTabOff != null)
+                _clueTabButton.sprite = showClue ? _clueTabOn : _clueTabOff;
+            if (_manualTabOn != null && _manualTabOff != null)
+                _manualTabButton.sprite = showClue ? _manualTabOff : _manualTabOn;
 
             KillPageTurn();
 
@@ -228,16 +247,6 @@ namespace BlueComplex.UI.Layout
 
             _pageTurnEffect = LSO_PageTurnEffect.Create(_rightPage);
             return _pageTurnEffect;
-        }
-
-        /// <summary>고른 탭이 페이지를 덮고, 나머지는 페이지 뒤로 들어간다(기획서 — 탭은 색만 바뀌는 게 아니라 순서도 바뀐다).
-        /// 탭 둘과 페이지(Spread)가 모두 Backdrop의 형제라, 형제 순서가 곧 그리는 순서다 — 맨 앞으로 보내면 페이지를 덮고
-        /// 맨 뒤로 보내면 페이지에 가려진다. 탭 오른쪽이 페이지 왼쪽 가장자리를 파고들어 있어(겹치는 띠가 있어) 차이가 보인다.
-        /// 겹치는 띠가 없어지면 이 순서 교체는 아무 효과도 내지 않으니, 탭이나 페이지의 가로 앵커를 바꿀 땐 겹침을 유지할 것.</summary>
-        private static void BringTabToFront(Image front, Image back)
-        {
-            front.transform.SetAsLastSibling();
-            back.transform.SetAsFirstSibling();
         }
 
         private static void SetLayerRecursively(GameObject go, int layer)

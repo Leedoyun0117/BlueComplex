@@ -62,6 +62,9 @@ namespace BlueComplex.EditorTools
 
             // 포스트잇이 붙는 소리 — 기존 포스트잇 클립(떼는 소리와 같은 파일)을 피치를 달리해 쓴다. 새로 받은 파일이 생기면 이 줄만 바꾼다.
             ("포스트 잇 사운드_[cut_1sec] (mp3cut.net).mp3", UiSoundCue.PostitStick, new Vector2(0.85f, 1.25f), 1f),
+
+            // 오프닝 컷신 전용 배경곡(약 15.6초 — 컷신보다 짧아 SoundManager가 이음매를 겹쳐 이어 돌린다). BGM 그룹으로 나간다.
+            ("FinalDetection.mp3", UiSoundCue.IntroTheme, BedPitchRange, BedVolume),
         };
 
         /// <summary>큐별 재생 방식(SoundEntry.dedicatedVoices / minInterval). 여기 없는 큐는 공용 보이스·기본 간격(0 / 0)이다.

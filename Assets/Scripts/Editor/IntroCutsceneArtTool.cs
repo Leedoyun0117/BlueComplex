@@ -14,7 +14,7 @@ namespace BlueComplex.EditorTools
         private const string MainCoffeePath = "Assets/Art/Opening/OpeningMainCoffee.png";
         private const string MainTowerPath = "Assets/Art/Opening/OpeningMainTower.png";
         private const string GirlSilhouettePath = "Assets/Art/girl_silhouette.png";
-        private const string GirlWalkPath = "Assets/Art/content.png";
+        private const string GirlWalkPath = "Assets/Art/girl_walk_cycle_v2.png";
         private const string ClockPath = "Assets/Art/IntroClock.png";
         private const string ClockHourPath = "Assets/Art/IntroClockHour.png";
         private const string ClockMinutePath = "Assets/Art/IntroClockMinute.png";
@@ -32,7 +32,7 @@ namespace BlueComplex.EditorTools
             Import(MainCoffeePath, FilterMode.Bilinear);
             Import(MainTowerPath, FilterMode.Bilinear);
             Import(GirlSilhouettePath, FilterMode.Bilinear);
-            // GirlWalkPath(content.png)는 건드리지 않는다 — 스프라이트 시트로 잘라 둔 설정(Sprite, 8칸)을 Import가 Default로 되돌리지 않게.
+            Import(GirlWalkPath, FilterMode.Bilinear, 8192); // 걷기 시트는 5000px 폭이라 4096으로 줄이지 않는다.
 
             var art = AssetDatabase.LoadAssetAtPath<IntroCutsceneArt>(AssetPath);
             if (art == null)
@@ -59,7 +59,7 @@ namespace BlueComplex.EditorTools
             Debug.Log("[IntroCutsceneArt] 시작 컷신·오프닝 그림 표를 다시 만들었다.");
         }
 
-        private static void Import(string path, FilterMode filter)
+        private static void Import(string path, FilterMode filter, int maxSize = 4096)
         {
             var importer = AssetImporter.GetAtPath(path) as TextureImporter;
             if (importer == null) return;
@@ -68,6 +68,7 @@ namespace BlueComplex.EditorTools
                           || importer.filterMode != filter
                           || importer.mipmapEnabled
                           || importer.textureCompression != TextureImporterCompression.Uncompressed
+                          || importer.maxTextureSize != maxSize
                           || !importer.alphaIsTransparency;
             if (!changed) return;
 
@@ -76,7 +77,7 @@ namespace BlueComplex.EditorTools
             importer.mipmapEnabled = false;
             importer.alphaIsTransparency = true;
             importer.textureCompression = TextureImporterCompression.Uncompressed;
-            importer.maxTextureSize = 4096;
+            importer.maxTextureSize = maxSize;
             importer.SaveAndReimport();
         }
 

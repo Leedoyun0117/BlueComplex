@@ -1,9 +1,11 @@
 using System.Collections.Generic;
+using BlueComplex.Audio;
 using BlueComplex.Core.Stage;
 using BlueComplex.Core.Stability;
 using BlueComplex.Core.Turn;
 using BlueComplex.UI.Bootstrap;
 using BlueComplex.UI.Presentation;
+using BlueComplex.UI.Rendering;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
@@ -11,7 +13,8 @@ namespace BlueComplex.UI.Effects.DLJ
 {
     /// <summary>
     /// UI 연출 기획의 침체(파란 색감/흰 광원/수중 번짐), 흥분(진입 색수차 후 핑크 단색/2초 글리치).
-    /// 기존 CRT 패스의 런타임 머티리얼만 교체한다. BGM과 게임 심박수는 변경하지 않는다.
+    /// 기존 CRT 패스의 런타임 머티리얼을 교체하고, 그동안 기존 <see cref="CrtEffectDriver"/>의 심박수 반응은 끈다.
+    /// 침체 정도(<c>_state.Depressed</c>)로 BGM 그룹의 로우패스 컷오프도 함께 구동한다(<see cref="BgmMuffle"/>). 게임 심박수는 변경하지 않는다.
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("BlueComplex/DLJ/Heartbeat Mood Effects")]
@@ -399,6 +402,8 @@ namespace BlueComplex.UI.Effects.DLJ
         private readonly DLJ_HeartbeatMoodEffectState _state = new();
         private Material _originalMaterial;
         private Material _runtimeMaterial;
+        private CrtEffectDriver _crtDriver;
+        private UiTagLayer _tagLayer;
         private StageSession _session;
         private float _clock;
         private int _lastPresentedValue = Heartbeat.DefaultStartValue;
@@ -433,6 +438,12 @@ namespace BlueComplex.UI.Effects.DLJ
             if (_bootstrapper == null) _bootstrapper = FindInScene<StageBootstrapper>();
             if (_heartRate == null) _heartRate = FindInScene<HeartRateController>();
             if (!AcquireMaterial()) return;
+            // 이 컨트롤러가 화면 톤을 맡는 동안 기존 드라이버는 안정 기본값만 유지한다.
+            if (_runtimeMaterial != null)
+            {
+                _crtDriver = FindInScene<CrtEffectDriver>();
+                if (_crtDriver != null) _crtDriver.SetReactionSuppressed(true);
+            }
             CaptureLights();
             if (_sceneCamera == null)
             {
@@ -443,7 +454,8 @@ namespace BlueComplex.UI.Effects.DLJ
                         break;
                     }
             }
-            _subscribedToHeartRate = _heartRate != null && _heartRate.isActiveAndEnabled;
+            // isActiveAndEnabled는 그 컴포넌트의 OnEnable이 아직 안 돌았으면(씬 로드 순서) false라 구독을 놓친다 — 오브젝트가 켜져 있으면 구독한다.
+            _subscribedToHeartRate = _heartRate != null && _heartRate.gameObject.activeInHierarchy;
             if (_subscribedToHeartRate) _heartRate.HeartbeatPresented += OnPresented;
             if (_bootstrapper != null)
             {
@@ -498,6 +510,13 @@ namespace BlueComplex.UI.Effects.DLJ
             _runtimeMaterial.SetFloat("_TintR", 0f);
             _runtimeMaterial.SetFloat("_Pastel", 0f);
             _runtimeMaterial.SetFloat("_Brightness", p.Brightness);
+            // 감정 태그 칩은 색조/글리치를 받지 않는다: UI를 합성하는 원본 패스일 때만 별도 태그 레이어(RT_UITag)를 만들어 셰이더가 그 뒤에 얹게 한다.
+            if (_originalMaterial != null)
+            {
+                _tagLayer = UiTagLayer.Create(_originalMaterial.GetTexture("_UITex") as RenderTexture);
+                if (_tagLayer == null)
+                    Debug.LogWarning("[DLJ Mood] UI 카메라(RT_UI)를 못 찾아 태그 UI를 무드 효과에서 분리하지 못했어. 태그도 함께 색조/글리치를 받아.", this);
+            }
             _crtFeature.passMaterial = _runtimeMaterial;
             return true;
         }
@@ -567,12 +586,16 @@ namespace BlueComplex.UI.Effects.DLJ
         {
             var settings = GetSettings();
             ConfigureState(settings);
+            BgmMuffle.Apply(_state.Depressed);
             if (_runtimeMaterial != null)
             {
                 // 기존 클릭 보정기가 원본 머티리얼에서 읽는 곡률을 그대로 따라간다.
                 if (_originalMaterial != null)
                     _runtimeMaterial.SetFloat("_Curvature", _originalMaterial.GetFloat("_Curvature"));
                 _runtimeMaterial.SetFloat("_MoodTime", _clock);
+                var tagTexture = _tagLayer != null ? _tagLayer.Texture : null;
+                _runtimeMaterial.SetFloat("_TagEnabled", tagTexture != null ? 1f : 0f);
+                if (tagTexture != null) _runtimeMaterial.SetTexture("_TagTex", tagTexture);
                 _runtimeMaterial.SetFloat("_DepressedAmount", _state.Depressed);
                 _runtimeMaterial.SetColor("_DepressedTint", settings.DepressedTint);
                 _runtimeMaterial.SetFloat("_BlueTintStrength", settings.BlueTintStrength);
@@ -798,10 +821,15 @@ namespace BlueComplex.UI.Effects.DLJ
             RestoreLights();
             _clockFaceBrightness.Restore();
             _clockGlowBrightness.Restore();
+            BgmMuffle.Apply(0f);
+            if (_crtDriver != null) _crtDriver.SetReactionSuppressed(false);
+            _crtDriver = null;
             if (_crtFeature != null && _runtimeMaterial != null && _crtFeature.passMaterial == _runtimeMaterial)
                 _crtFeature.passMaterial = _originalMaterial;
             if (_runtimeMaterial != null) Destroy(_runtimeMaterial);
             _runtimeMaterial = null;
+            if (_tagLayer != null) Destroy(_tagLayer.gameObject);
+            _tagLayer = null;
             _originalMaterial = null;
             _preview = false;
             _state.Reset();

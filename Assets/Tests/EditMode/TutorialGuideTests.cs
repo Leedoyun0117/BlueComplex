@@ -198,6 +198,8 @@ namespace BlueComplex.Core.Tests
             Assert.IsTrue(flow.Notify(GuideAdvance.Read));
             Assert.IsTrue(flow.Notify(GuideAdvance.BookClosed));
             Assert.IsTrue(flow.Notify(GuideAdvance.Read));
+            Assert.AreEqual("emotion_ten", flow.Current.Id);
+            Assert.IsTrue(flow.Notify(GuideAdvance.Read));
             Assert.AreEqual("drag_clue", flow.Current.Id);
 
             // 턴 1: 달력. 턴 1·2가 연달아 결산되고 턴 2에서 넘어간다.
