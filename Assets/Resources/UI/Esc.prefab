@@ -1072,6 +1072,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5110268441380185639}
   - component: {fileID: 7379243659309551095}
+  - component: {fileID: 5127199096238201039}
   m_Layer: 5
   m_Name: Slider
   m_TagString: Untagged
@@ -1671,6 +1672,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8498327169871426137}
   - component: {fileID: 1667095668988075384}
+  - component: {fileID: 9115312274556381519}
   m_Layer: 5
   m_Name: Slider
   m_TagString: Untagged
@@ -3406,6 +3408,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6676194011794520165}
   - component: {fileID: 2715256870245134884}
+  - component: {fileID: 4635570209177776036}
   m_Layer: 5
   m_Name: Slider
   m_TagString: Untagged
@@ -4308,3 +4311,51 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: -20, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &5127199096238201039
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2044960607643374515}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27275f881ab4b9640be6f29bb69264d6, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::UI.Esc.LSO_VolumeSlider
+  channel: 0
+  slider: {fileID: 0}
+  controller: {fileID: 0}
+  valueLabel: {fileID: 0}
+--- !u!114 &4635570209177776036
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7369568038473342073}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27275f881ab4b9640be6f29bb69264d6, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::UI.Esc.LSO_VolumeSlider
+  channel: 1
+  slider: {fileID: 0}
+  controller: {fileID: 0}
+  valueLabel: {fileID: 0}
+--- !u!114 &9115312274556381519
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3290277761586204905}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27275f881ab4b9640be6f29bb69264d6, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::UI.Esc.LSO_VolumeSlider
+  channel: 2
+  slider: {fileID: 0}
+  controller: {fileID: 0}
+  valueLabel: {fileID: 0}

@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3c4e205df65c4ee478faf5ac3d7d026d, type: 3}
+  m_Name: StageCutsceneCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.StageCutsceneCatalog
+  _entries:
+  - number: 1
+    prefab: {fileID: 7497769178154624059, guid: ed4587af29b6fa94bbbe797e859f4da9, type: 3}
+  - number: 2
+    prefab: {fileID: 5288428421390610523, guid: 65abaabdaab29ea4683e79bb21502a7d, type: 3}
+  - number: 3
+    prefab: {fileID: 460404370873778746, guid: cc0e7067c7011544ca2560b568ddc664, type: 3}
+  - number: 4
+    prefab: {fileID: 8017661961497819141, guid: 2ede5f82ce9138346b7f8ca45e80ca79, type: 3}
+  - number: 5
+    prefab: {fileID: 5271925303450793920, guid: bd02f05f94765464db4054a1e6397564, type: 3}
+  - number: 6
+    prefab: {fileID: 3064344917608957515, guid: 5241027b8fe82144d857553d6fa1db1d, type: 3}
+  - number: 7
+    prefab: {fileID: 7174061885062299238, guid: bc76cd14b2d0d7546a45b79206a60197, type: 3}
+  - number: 8
+    prefab: {fileID: 8158347141415322601, guid: 474a17630c45ed144a10fc5af97a9de6, type: 3}
+  - number: 9
+    prefab: {fileID: 5661183970222659482, guid: cf57241b29b487d4fa45eac73717bbb6, type: 3}
+  - number: 10
+    prefab: {fileID: 4555678659569987949, guid: e4246a96f8dfe404c8e98a81df7c1a7d, type: 3}
+  - number: 11
+    prefab: {fileID: 7831212182520400496, guid: 3d8ce79345682fb4b860a7027fc6ac3b, type: 3}

@@ -1,5 +1,6 @@
 using System.Collections;
 using BlueComplex.Core.Stability;
+using BlueComplex.UI.Motion;
 using BlueComplex.UI.Presentation;
 using DG.Tweening;
 using UnityEngine;
@@ -225,6 +226,7 @@ namespace BlueComplex.UI.Background
 
         private IEnumerator FlickerOnce()
         {
+            UiSoundHooks.Play(UiSoundCue.LampFlicker);
             _dipTween?.Kill();
             var half = _flickerDipDuration * 0.5f;
             var seq = DOTween.Sequence()

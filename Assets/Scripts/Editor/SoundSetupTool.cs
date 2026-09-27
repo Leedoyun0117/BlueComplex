@@ -65,6 +65,12 @@ namespace BlueComplex.EditorTools
 
             // 오프닝 컷신 전용 배경곡(약 15.6초 — 컷신보다 짧아 SoundManager가 이음매를 겹쳐 이어 돌린다). BGM 그룹으로 나간다.
             ("FinalDetection.mp3", UiSoundCue.IntroTheme, BedPitchRange, BedVolume),
+
+            // 메인 화면(취조시작·단서노트·나가기) 배경음 — 오프닝 배경곡과 같은 채널(StartTheme)을 이어 쓴다.
+            ("메인 화면.mp3", UiSoundCue.MainScreenAmbient, BedPitchRange, BedVolume),
+
+            // 천장 램프가 깜빡이는 순간의 효과음(LampLightDriver의 방 분위기 깜빡임).
+            ("전구 깜박임.mp3", UiSoundCue.LampFlicker, DefaultPitchRange, 1f),
         };
 
         /// <summary>큐별 재생 방식(SoundEntry.dedicatedVoices / minInterval). 여기 없는 큐는 공용 보이스·기본 간격(0 / 0)이다.
@@ -77,6 +83,8 @@ namespace BlueComplex.EditorTools
             [UiSoundCue.TvStatic] = (1, 0f, 0f),
             [UiSoundCue.LightGlow] = (1, 0f, 0f),
             [UiSoundCue.PostitStick] = (3, 0f, 0f),
+            // 램프 깜빡임: 이중 플리커의 두 번째 다이핑이 최소 0.08초 간격이라, 기본 쿨다운(0.09초)보다 짧게 잡아 둘 다 울리게 한다. 전용 보이스 1개로 겹쳐 쌓이지 않는다.
+            [UiSoundCue.LampFlicker] = (1, 0.05f, 0f),
         };
 
         [MenuItem("BlueComplex/Audio/Ensure Sound Library")]

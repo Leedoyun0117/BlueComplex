@@ -90,6 +90,12 @@ namespace BlueComplex.UI.Motion
 
         /// <summary>오프닝 컷신(유키 방 → 타이틀) 전용 배경곡(FinalDetection). <see cref="UiSoundHooks.StartTheme"/>/<see cref="UiSoundHooks.StopTheme"/>로만 켜고 끈다 — 심박수 배경음·상시 배경음과 별개 채널.</summary>
         IntroTheme,
+
+        /// <summary>메인 화면(취조시작·단서노트·나가기 화면) 배경음. 오프닝 배경곡과 같은 채널(<see cref="UiSoundHooks.StartTheme"/>)을 이어 쓴다 — 메인 화면에 들어서며 갈아타고, "취조시작"을 누르면 꺼진다.</summary>
+        MainScreenAmbient,
+
+        /// <summary>천장 램프가 깜빡이는 순간의 효과음(<see cref="BlueComplex.UI.Background.LampLightDriver"/>의 방 분위기 깜빡임).</summary>
+        LampFlicker,
     }
 
     /// <summary>
@@ -164,6 +170,22 @@ namespace BlueComplex.UI.Motion
 
             CurrentTheme = null;
             ThemeStopped?.Invoke(fadeOut);
+        }
+
+        // ── 스테이지 종료 컷신 동안 게임 소리를 끈다 — 컷신 자체의 소리(KTH 타임라인 오디오)는 SoundManager 밖이라 그대로 난다. ──
+
+        /// <summary>게임 소리(배경음·상시 배경음·효과음)를 끄거나 되돌린다는 요청. SoundManager가 자기 소스를 음소거하고, 켜져 있는 동안 새 큐는 울리지 않는다.</summary>
+        public static event Action<bool> GameSoundsSuppressedChanged;
+
+        /// <summary>지금 게임 소리가 꺼져 있어야 하는가. SoundManager가 요청 뒤에 켜져도 이 값으로 따라잡는다.</summary>
+        public static bool GameSoundsSuppressed { get; private set; }
+
+        public static void SuppressGameSounds(bool suppressed)
+        {
+            if (GameSoundsSuppressed == suppressed) return;
+
+            GameSoundsSuppressed = suppressed;
+            GameSoundsSuppressedChanged?.Invoke(suppressed);
         }
 
         /// <summary>배경음을 이 큐로 바꾼다. 이미 그 큐면 아무 일도 없다.</summary>

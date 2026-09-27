@@ -166,8 +166,10 @@ namespace BlueComplex.UI.Layout
             backdrop.raycastTarget = true;
 
             // 심박수 모니터(맨 위)는 판넬 밑으로 흐리게라도 보이도록 띠 위로 비워 둔다 — 목표 숫자를 현재 심박수와 견줘볼 수 있다.
-            // 판넬 위로 올라오는 아이템(우측 열)·키 카드(x 0.61~0.85, y 0.29~0.44)·단서(y 0.05~0.26)와 겹치지 않도록 왼쪽 가운데에 둔다.
-            var content = RuntimeUi.CreateRect(transform, "Content", new Vector2(0.14f, 0.46f), new Vector2(0.58f, 0.80f),
+            // 키 카드(y 0.29~0.44)·단서(y 0.05~0.26)는 이 세로 띠(y 0.46~0.80)보다 아래라 겹치지 않는다 — 실제로 막아야 하는 건
+            // 판넬 위로 올라오는 우측 아이템 열(x 0.87~)뿐이다. 화면 중앙 기준 대칭으로 두고 그 열 앞에서만 멈춘다
+            // (예전엔 왼쪽으로 치우쳐 있었다 — 분기점 블록이 화면 왼쪽 절반에만 몰려 있었다).
+            var content = RuntimeUi.CreateRect(transform, "Content", new Vector2(0.20f, 0.46f), new Vector2(0.80f, 0.80f),
                 Vector2.zero, Vector2.zero);
             var layout = content.gameObject.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 12f;

@@ -1,3 +1,4 @@
+using BlueComplex.UI.Motion;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -31,6 +32,9 @@ namespace BlueComplex.Audio
         /// <summary>먹먹함(0=정상, 1=최대)을 믹서에 적용한다. 값이 바뀌지 않으면 아무것도 하지 않는다.</summary>
         public static void Apply(float amount)
         {
+            // 게임 소리가 꺼진 동안(스테이지 종료 컷신)은 컷신 BGM도 같은 BGM 그룹을 타므로 먹먹하게 만들지 않는다.
+            if (UiSoundHooks.GameSoundsSuppressed) amount = 0f;
+
             var hz = CutoffFor(amount);
             if (Mathf.Abs(hz - _lastHz) < 0.5f) return;
 

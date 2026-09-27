@@ -208,7 +208,10 @@ KTH_TimeLinePlay.Request(timelineAsset); // 어디서든 호출 가능 (static)
 
 ## 9. 아직 구현되지 않은 것 (다음 작업자 참고)
 
-- **컷씬 종료 콜백**: 컷씬이 끝났을 때 게임 흐름(플레이어 조작 복구, 다음 스테이지 진입 등)에 알려주는 방법이 없다. 현재 `Request`는 테스트 스크립트에서만 호출된다.
-  → `KTH_TimeLinePlay`의 `OnStopped`에서 static 이벤트나 콜백을 호출하는 방식을 추천한다.
+- ~~컷씬 종료 콜백~~ → **구현됨**: `KTH_TimeLinePlay.Finished`(static 이벤트, 인자 = 끝난 타임라인 에셋)가 끝날 때 불리고, `Request`는 실제로 재생을 시작했는지 `bool`을 돌려준다.
+  게임은 `StageCutsceneHost`(`Assets/Scripts/UI/Presentation/`)가 컷신 프리팹을 **재생할 때마다 새로 생성**해서(씬에 미리 배치하지 않는다) 전용 카메라로 전체 화면에 재생하고, `Finished`로 끝을 안다.
+  번호 → 프리팹 표는 `Resources/StageCutsceneCatalog.asset`(프리팹 이름 앞 두 자리가 번호). 프리팹을 추가·교체하면 메뉴 `BlueComplex/Cutscene/Rebuild Cutscene Catalog`.
+  - 프리팹은 루트가 **켜진 채로** 저장돼 있어야 안전하다(09_B_Training은 꺼져 있어 호스트가 생성 직후 켠다).
+  - 프리팹은 월드 스페이스 캔버스 + 원점에서 +z를 보는 카메라(fov 63.3) 기준이어야 한다 — 호스트가 그 조건의 카메라를 세운다.
 - **스킵 기능**: 없음.
 - **`ITimeLinePlayer`**: 인터페이스만 있고 사용하는 곳이 없다.

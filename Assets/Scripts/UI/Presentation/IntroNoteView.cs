@@ -37,6 +37,7 @@ namespace BlueComplex.UI.Presentation
             postit.SetRestTilt(tilt);
             postit.SetFlat(true); // 오프닝의 포스트잇은 모서리가 말리지 않은 평평한 사각형이다.
             postit.SetPaperColor(paper);
+            postit.SetShowPin(false); // 오프닝 몽타주의 포스트잇에는 압정이 없다(게임 안 HUD 포스트잇은 그대로 꽂힌다).
 
             var view = new IntroNoteView(postit, placed);
             if (!string.IsNullOrEmpty(text)) view.BuildLabel(placed, text, ink, font, fixedFontSize);
@@ -75,7 +76,7 @@ namespace BlueComplex.UI.Presentation
         /// <summary>종이 색을 바꾼다(색이 서서히 변하는 연출에서 매 프레임 부른다).</summary>
         public void SetPaper(Color paper) => _postit.SetPaperColor(paper);
 
-        /// <summary>붙인다 — <see cref="Postit.Stick"/> 그대로(위에서 내려와 눌리고 압정이 꽂힌다). 끝나면 자리에 붙어 있다.</summary>
+        /// <summary>붙인다 — <see cref="Postit.Stick"/> 그대로(위에서 내려와 눌린다 — 압정은 없다). 끝나면 자리에 붙어 있다.</summary>
         public Sequence Stick(bool sound = true) => _postit.Stick(sound);
 
         /// <summary>글씨를 종이에서 빼내 <paramref name="newParent"/> 밑으로 옮긴다. 화면에서 보이는 자리와 크기는 그대로다(PPT 10단계: 종이가 사라져도 글씨는 남는다).</summary>
@@ -92,7 +93,7 @@ namespace BlueComplex.UI.Presentation
             label.position = keep;
         }
 
-        /// <summary>종이(판·그림자·압정 전부)를 서서히 지운다. 글씨를 <see cref="ReleaseLabel"/>로 먼저 빼 두었으면 글씨만 남는다.</summary>
+        /// <summary>종이(판·그림자 전부)를 서서히 지운다. 글씨를 <see cref="ReleaseLabel"/>로 먼저 빼 두었으면 글씨만 남는다.</summary>
         public Tween FadeOutPaper(float seconds) => _sheetGroup.DOFade(0f, seconds);
     }
 }

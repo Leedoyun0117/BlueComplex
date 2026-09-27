@@ -15,9 +15,13 @@ namespace BlueComplex.UI.Layout
     /// "단서" 탭(번호·이름·스토리)과 "메뉴얼" 탭(감정·시간대·인물 분류표, 고정 내용) 사이를 오간다.
     /// 배경이나 "돌아가기"를 누르면 닫힌다. 사진은 클릭을 받지 않는 장식이다 — 확대는 기획에서 빠졌다.
     ///
-    /// 모양은 Art/Note의 노트 그림(Note2nc)이 깐다 — 3200x1800 한 장이라 프리팹의 Frame(16:9 고정)이 그 픽셀 좌표를
+    /// 모양은 Art/Note의 노트 그림이 깐다 — 3200x1800 한 장이라 프리팹의 Frame(16:9 고정)이 그 픽셀 좌표를
     /// 앵커 비율로 옮겨 글자를 얹는다. 탭은 켜진/꺼진 그림이 따로 있어 스프라이트를 바꾸고(순서 교체는 하지 않는다 —
     /// 그림 탭이 페이지와 겹치지 않는다), 클립은 사진 위에 얹히는 맨 위 레이어다.
+    ///
+    /// 배경 그림은 탭마다 다르다(<see cref="_background"/>, <see cref="SetTabContent"/>에서 바꿔 낀다) — "단서" 탭은
+    /// Note1(오른쪽 페이지가 비어 있다 — 시간/인물/감정/스토리는 카드나 포스트잇 없이 글자만 얹는다), "메뉴얼" 탭은
+    /// Note2(오른쪽 페이지에 분홍/보라 포스트잇과 띠가 그려져 있어 메뉴얼의 흥분·침체 등 칸이 그 위에 앉는다).
     ///
     /// 모양은 Resources/UI/ClueBookPanel.prefab에 있다 — MainHud.prefab은 이미 손으로 다듬어진 상태라 그 안에 넣지 않고,
     /// 처음 필요할 때 이 프리팹을 루트 캔버스 아래에 인스턴스화한다(GetOrCreate). 클릭은 프리팹 안 Button의 onClick에
@@ -37,12 +41,18 @@ namespace BlueComplex.UI.Layout
         [SerializeField] private TMP_Text _emotionCardText;
 
         [Header("Right page")]
+        [Tooltip("펼친 노트 전체 그림 — 탭마다 다르다(단서=Note1, 메뉴얼=Note2). SetTabContent가 갈아 낀다.")]
+        [SerializeField] private Image _background;
+        [SerializeField] private Sprite _clueBackground;
+        [SerializeField] private Sprite _manualBackground;
         [SerializeField] private GameObject _clueTab;
         [SerializeField] private GameObject _manualTab;
         [SerializeField] private TMP_Text _clueNumberText;
         [SerializeField] private TMP_Text _titleText;
         [SerializeField] private TMP_Text _storyText;
-        [Tooltip("단서 탭의 분홍 포스트잇 / 보라 포스트잇 / 위쪽 가로 띠 — 아래쪽 가로 띠(_storyText)와 함께 노트 아트의 네 자리다.")]
+        [Tooltip("아래쪽 띠는 좁아서 긴 스토리가 안 들어간다 — 글자를 읽을 크기로 고정하고 넘치는 만큼 휠로 넘겨 본다. 비워 두면 스크롤 없이 그대로 보여 준다.")]
+        [SerializeField] private ScrollRect _storyScroll;
+        [Tooltip("단서 탭의 시간/인물/감정 표시 — Note1의 빈 오른쪽 페이지 위에 카드나 포스트잇 없이 글자만 얹는다. 아래쪽의 _storyText와 함께 노트 아트의 네 자리다.")]
         [SerializeField] private TMP_Text _timeNoteText;
         [SerializeField] private TMP_Text _personNoteText;
         [SerializeField] private TMP_Text _emotionNoteText;
@@ -121,6 +131,14 @@ namespace BlueComplex.UI.Layout
             // 책이 막 열리는 참이라 넘김 연출 없이 "단서" 탭인 상태로 시작한다(아직 꺼져 있어 트윈도 못 돈다).
             SwitchTab(showClue: true, animate: false);
             gameObject.SetActive(true);
+
+            if (_storyScroll != null)
+            {
+                // 새 단서는 항상 첫 줄부터 — 이전 단서에서 내려 둔 위치가 남지 않게 한다(켜진 뒤라야 레이아웃이 계산된다).
+                Canvas.ForceUpdateCanvases();
+                _storyScroll.verticalNormalizedPosition = 1f;
+            }
+
             Opened?.Invoke();
         }
 
@@ -208,6 +226,8 @@ namespace BlueComplex.UI.Layout
         {
             _clueTab.SetActive(showClue);
             _manualTab.SetActive(!showClue);
+            if (_background != null)
+                _background.sprite = showClue ? _clueBackground : _manualBackground;
         }
 
         /// <summary>넘김을 멈추고 떠 둔 장을 치운다 — 중간에 끊긴 채로 화면에 남지 않게.</summary>
