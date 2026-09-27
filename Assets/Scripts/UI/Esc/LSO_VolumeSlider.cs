@@ -27,8 +27,11 @@ namespace UI.Esc
         [Tooltip("옆에 퍼센트를 띄울 때만. 비워 둬도 된다.")]
         [SerializeField] private TMP_Text valueLabel;
 
+        private LSO_EscPanel _panel;
+
         private void Awake()
         {
+            _panel = GetComponentInParent<LSO_EscPanel>();
             if (slider == null) slider = GetComponent<Slider>();
 
             if (slider == null)
@@ -54,16 +57,17 @@ namespace UI.Esc
 
         private void OnEnable()
         {
-            if (controller == null) return;
+            if (controller == null || slider == null) return;
 
             slider.onValueChanged.AddListener(OnSliderChanged);
+            if (_panel != null) _panel.Opened += Pull;
             Pull();
         }
 
         private void OnDisable()
         {
-            if (controller == null) return;
-            slider.onValueChanged.RemoveListener(OnSliderChanged);
+            if (slider != null) slider.onValueChanged.RemoveListener(OnSliderChanged);
+            if (_panel != null) _panel.Opened -= Pull;
         }
 
         /// <summary>지금 채널 볼륨을 슬라이더에 채운다.</summary>

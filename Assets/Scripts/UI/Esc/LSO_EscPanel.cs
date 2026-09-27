@@ -39,6 +39,9 @@ namespace UI.Esc
 
         public bool IsOpen => _opened;
 
+        /// <summary>위에서 내려오는 창. 화면에 고정돼야 하는 것(배경막 등)은 이 아래에 두면 같이 내려가니 주의.</summary>
+        public RectTransform Content => content;
+
         private bool _opened;
         private CanvasGroup _group;
         private LSO_GameplayLock _lock;
