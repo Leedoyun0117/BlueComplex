@@ -912,8 +912,9 @@ namespace BlueComplex.EditorTools
             SetRef(GetOrAdd<T>(rect.gameObject), "_label", label);
         }
 
-        /// <summary>턴 결과를 즉시 반영하던 2단계 Presenter를 3단계 연출 Presenter로 갈아끼운다 — 컴플렉스 발광·이벤트 대사·태그 상승·심박수 이동·아이템 카드 끼우기가 전부 이 Presenter가 잡는 순서로 돈다.
-        /// 필드 참조는 Presenter가 같은 HUD 아래에서 스스로 찾는다(CinematicTurnResultPresenter.ResolveReferences). 이미 갈아끼워져 있으면 아무것도 안 한다(멱등).</summary>
+        /// <summary>MainHud의 "Turn Result Presenter"에 3단계 연출 Presenter가 붙어 있는지 보장한다 — 컴플렉스 발광·이벤트 대사·태그 상승·심박수 이동·아이템 카드
+        /// 끼우기가 전부 이 Presenter가 잡는 순서로 돈다. 필드 참조는 Presenter가 같은 HUD 아래에서 스스로 찾는다(CinematicTurnResultPresenter.ResolveReferences).
+        /// 이미 붙어 있으면 아무것도 안 한다(멱등). (예전엔 즉시 반영하던 2단계 Presenter를 여기서 갈아끼웠는데, 그 구현체는 삭제됐다.)</summary>
         private static void UseCinematicPresenter(Transform hud)
         {
             var holder = hud.Find("Turn Result Presenter");
@@ -923,8 +924,6 @@ namespace BlueComplex.EditorTools
                 return;
             }
 
-            var immediate = holder.GetComponent<ImmediateTurnResultPresenter>();
-            if (immediate != null) Object.DestroyImmediate(immediate);
             GetOrAdd<CinematicTurnResultPresenter>(holder.gameObject);
         }
 

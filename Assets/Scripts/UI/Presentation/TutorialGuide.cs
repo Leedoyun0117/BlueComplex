@@ -228,7 +228,7 @@ namespace BlueComplex.UI.Presentation
 
             if (step.Effect == GuideEffect.HypnosisConnect) UiSoundHooks.Play(UiSoundCue.HypnosisConnect); // 원문 "(효과음)"
 
-            ShowLine(step.Line, ResolveTargetRect(step.Target), step.Advance == GuideAdvance.Read);
+            ShowLine(step.Line, ResolveTargetRect(step.Target), step.Advance == GuideAdvance.Read, BubbleOffset(step.Target));
 
             if (step.Advance == GuideAdvance.Read) _readRoutine = StartCoroutine(AutoAdvanceRead(step));
         }
@@ -384,13 +384,13 @@ namespace BlueComplex.UI.Presentation
             if (line == null) return false;
 
             StopTypingAndRead();
-            ShowLine(line, ResolveTargetRect(_flow.Current.Target), clickToAdvance: false);
+            ShowLine(line, ResolveTargetRect(_flow.Current.Target), clickToAdvance: false, BubbleOffset(_flow.Current.Target));
             return true;
         }
 
         // ── 말풍선 ───────────────────────────────────────────────────────────────
 
-        private void ShowLine(string line, RectTransform target, bool clickToAdvance)
+        private void ShowLine(string line, RectTransform target, bool clickToAdvance, Vector2 offset = default)
         {
             _currentLine = line;
             _bubble.gameObject.SetActive(true);
@@ -402,7 +402,7 @@ namespace BlueComplex.UI.Presentation
             var preferred = _bubbleText.GetPreferredValues(line, textWidth, 0f);
             var height = Mathf.Ceil(preferred.y) + BubbleMargin * 2f + 14f;
             _bubble.sizeDelta = new Vector2(BubbleWidth, height);
-            PlaceBubble(target, new Vector2(BubbleWidth, height));
+            PlaceBubble(target, new Vector2(BubbleWidth, height), offset);
 
             // 행동을 기다리는 단계에서는 말풍선이 클릭을 받지 않는다(밑의 요소를 가리지 않게).
             _bubbleImage.raycastTarget = clickToAdvance;
@@ -480,8 +480,12 @@ namespace BlueComplex.UI.Presentation
             }
         }
 
+        /// <summary>아이템 슬롯처럼 화면 세로로 긴 대상은 옆자리가 화면 위쪽 HUD(심박수·포스트잇)와 겹치므로, 그 대상일 때만 말풍선을 조금 아래로 내린다.</summary>
+        private static Vector2 BubbleOffset(GuideTarget target) =>
+            target == GuideTarget.Items ? new Vector2(0f, -110f) : Vector2.zero;
+
         /// <summary>대상 옆(위 → 아래 → 왼쪽 → 오른쪽 중 화면 안에 들어오는 첫 자리)에 붙이고, 대상이 없으면 위쪽 가운데의 기본 자리에 둔다.</summary>
-        private void PlaceBubble(RectTransform target, Vector2 size)
+        private void PlaceBubble(RectTransform target, Vector2 size, Vector2 offset = default)
         {
             var bounds = _canvasRect.rect;
             var half = size * 0.5f;
@@ -517,6 +521,7 @@ namespace BlueComplex.UI.Presentation
                 if (center == default) center = candidates[0];
             }
 
+            center += offset;
             center.x = Mathf.Clamp(center.x, bounds.xMin + ScreenMargin + half.x, bounds.xMax - ScreenMargin - half.x);
             center.y = Mathf.Clamp(center.y, bounds.yMin + ScreenMargin + half.y, bounds.yMax - ScreenMargin - half.y);
             _bubble.position = _canvasRect.TransformPoint(center);

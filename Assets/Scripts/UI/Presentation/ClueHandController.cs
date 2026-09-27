@@ -7,7 +7,7 @@ namespace BlueComplex.UI.Presentation
 {
     /// <summary>
     /// 손패 트레이를 코어에 연결한다. 손패는 "턴 밖에서도 변하는" 요소라 코어 이벤트를
-    /// 직접 구독한다(Presenter를 거치지 않음) — 다만 ImmediateTurnResultPresenter도 턴 결과 후
+    /// 직접 구독한다(Presenter를 거치지 않음) — 다만 CinematicTurnResultPresenter도 턴 결과 후
     /// 같은 RefreshAll을 호출해, 낸 카드가 손에 남았을 때 새로 해금된 속성을 반영한다.
     /// </summary>
     public sealed class ClueHandController : SessionBoundView
