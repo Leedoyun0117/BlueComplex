@@ -1,21 +1,18 @@
-using BlueComplex.Core.Stage;
 using BlueComplex.UI.Bootstrap;
 using UnityEngine;
 
 namespace BlueComplex.UI.Background
 {
     /// <summary>
-    /// 오프닝·메인 화면 동안 <see cref="StageIdleBackground"/>를 꺼 두고, 게임 세션이 열릴 때 되켠다.
+    /// 오프닝·인트로 전환 동안 <see cref="StageIdleBackground"/>를 꺼 두고, 실제 메인 게임이 준비되면 되켠다.
     ///
     /// ─── 왜 필요한가 ──────────────────────────────────────────────────────
     /// 배경은 씬에 없다 — <see cref="StageIdleBackground"/>의 EnsureExists가 Play 시작마다 스스로 만들고,
     /// Awake에서 곧바로 ShowStage(1)까지 한다. 그래서 오프닝과 메인 화면 뒤에 이미 스테이지 1 배경이 깔려 있다.
     ///
-    /// ─── "세션이 열릴 때"가 기준이다 ──────────────────────────────────────
-    /// 오프닝이 끝나는 시점을 밖에서 구독할 방법이 없다(IntroSequencePlayer는 코루틴 순서대로 직접 호출한다).
-    /// 대신 메인 화면의 "취조시작"이 결국 <c>BeginNewSession</c>을 부르고 그게
-    /// <see cref="StageBootstrapper.SessionStarted"/>를 쏜다 — 게임 HUD가 뜨는 시점과 같다. 그걸 기준으로 삼는다.
-    /// 오프닝을 끄고 바로 시작하는 설정이면 세션이 이미 열려 있어 아무것도 끄지 않는다.
+    /// ─── 실제 게임 준비 완료가 기준이다 ────────────────────────────────────
+    /// SessionStarted는 세션만 만든 직후라 시작 컷신·대사·지직거림 전환이 아직 남아 있다.
+    /// <see cref="StageBootstrapper.MainGameReady"/>는 그 모든 연출 뒤 <c>TurnRunner.StartStage</c>가 끝난 직후에 온다.
     ///
     /// ─── 되켤 때 구독을 다시 붙여야 한다 ──────────────────────────────────
     /// <c>SessionBoundView.OnDisable</c>은 SessionStarted 구독을 놓지만 다시 잡는 길이 없다(OnEnable이 없다).
@@ -33,7 +30,6 @@ namespace BlueComplex.UI.Background
 
         private StageBootstrapper _bootstrapper;
         private StageIdleBackground _background;
-        private bool _sessionStarted;
         private bool _hid;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -56,8 +52,7 @@ namespace BlueComplex.UI.Background
                 return;
             }
 
-            _bootstrapper.SessionStarted += HandleSessionStarted;
-            if (_bootstrapper.Session != null) _sessionStarted = true;
+            _bootstrapper.MainGameReady += HandleMainGameReady;
         }
 
         /// <summary>
@@ -66,9 +61,6 @@ namespace BlueComplex.UI.Background
         /// </summary>
         private void Start()
         {
-            // 오프닝 없이 바로 세션이 열린 설정이면 끌 이유가 없다.
-            if (_sessionStarted) return;
-
             _background = FindFirstObjectByType<StageIdleBackground>(FindObjectsInactive.Include);
             if (_background == null)
             {
@@ -84,18 +76,17 @@ namespace BlueComplex.UI.Background
 
         private void OnDestroy()
         {
-            if (_bootstrapper != null) _bootstrapper.SessionStarted -= HandleSessionStarted;
+            if (_bootstrapper != null) _bootstrapper.MainGameReady -= HandleMainGameReady;
             // 오프닝 중에 씬이 바뀌면 배경이 꺼진 채로 남는다.
             Restore();
         }
 
-        private void HandleSessionStarted(StageSession session)
+        private void HandleMainGameReady()
         {
-            _sessionStarted = true;
             Restore();
 
             // 한 번 켜면 할 일이 끝난다 — 재시작으로 다시 쏘여도 배경은 이미 켜져 있다.
-            _bootstrapper.SessionStarted -= HandleSessionStarted;
+            _bootstrapper.MainGameReady -= HandleMainGameReady;
         }
 
         private void Restore()

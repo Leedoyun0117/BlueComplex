@@ -77,8 +77,7 @@ namespace BlueComplex.EditorTools
             backdropData.FindProperty("color").colorValue = color;
             backdropData.ApplyModifiedPropertiesWithoutUndo();
 
-            // 실루엣(LSO_EscSilhouette)은 2026-09-27 에 걷어냈다 — 배선할 대상이 없다.
-            // 다시 넣게 되면 여기서 부모를 panel 로 올리고(창을 따라 내려가지 않게) 첫 형제로 두면 된다.
+            // 실루엣은 LSO_EscPanel.Start에서 배경막 위에 자동 생성한다.
 
             foreach (var slider in panel.GetComponentsInChildren<Slider>(true))
             {

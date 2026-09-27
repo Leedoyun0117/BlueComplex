@@ -43,6 +43,8 @@ namespace UI.Esc
         private CanvasGroup _group;
         private LSO_EscPanel _panel;
 
+        internal RectTransform Surface => _backdrop != null ? _backdrop.rectTransform : null;
+
         private void Awake()
         {
             _backdrop = FindExisting() ?? Create(objectName);
