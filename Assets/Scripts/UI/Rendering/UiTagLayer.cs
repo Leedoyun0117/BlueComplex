@@ -84,7 +84,7 @@ namespace BlueComplex.UI.Rendering
         }
 
         /// <summary>
-        /// 태그 레이어(감정 칩·열쇠)를 가려야 하는 오버레이가 떠 있는지. 분리 전에는 이것들이 태그를 덮었다: 단서 책, 키 턴 암전 막, 스테이지 시작 대사창, 전체 개요.
+        /// 태그 레이어(감정 칩·열쇠)를 가려야 하는 오버레이가 떠 있는지. 분리 전에는 이것들이 태그를 덮었다: 단서 책, 키 턴 암전 막, 스테이지 시작 대사창, 전체 개요 — 그리고 스테이지 컷신.
         /// 지연 생성되는 것(책, 키 턴 막)은 처음 뜰 때 곧바로 잡히도록 못 찾은 동안 0.1초마다 다시 찾는다. 이 목록에 없는 새 오버레이는 태그를 못 가린다.
         /// </summary>
         private bool IsCovered()
@@ -98,7 +98,10 @@ namespace BlueComplex.UI.Rendering
                 if (_overview == null) _overview = FindFirstObjectByType<StageOverviewOverlay>(FindObjectsInactive.Include);
             }
 
-            return Active(_book) || Active(_keyTurn) || Active(_dialogue) || Active(_overview);
+            // 컷신(스테이지 종료 컷신, 엔딩)이 화면을 덮는 동안에도 비운다 — 컷신 호스트는 UI 카메라의 컬링 마스크를 0으로 두지만 이 레이어는 매 프레임 마스크를 바꿔 따로 그리므로,
+            // 여기서 안 막으면 열쇠 아이콘(KeyStatusPanel)·감정 칩이 컷신 카메라(같은 CRT 렌더러가 _TagTex를 얹는다) 위에 뜬다.
+            return Active(_book) || Active(_keyTurn) || Active(_dialogue) || Active(_overview)
+                   || StageCutsceneHost.Find() is { Covering: true } || EndingCutsceneDirector.AnyPlaying;
         }
 
         private static bool Active(Component overlay) => overlay != null && overlay.gameObject.activeInHierarchy;

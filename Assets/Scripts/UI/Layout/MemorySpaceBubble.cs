@@ -24,7 +24,6 @@ namespace BlueComplex.UI.Layout
 
         [SerializeField] private Image _bubbleBackground;
         [SerializeField] private TMP_FontAsset _font;
-        [SerializeField] private TMP_Text _summaryText;
 
         private ITurnResultPresenter _presenter;
         private ClueCardTray _tray;
@@ -40,14 +39,9 @@ namespace BlueComplex.UI.Layout
             BuildStroke();
             SubscribeToClueDrag();
 
-            // BuildMemorySpaceBubble(UiLayoutSetupTool.cs)은 폰트를 직렬화해서 넘기지 않는다 —
-            // 이미 구워진 프리팹을 재생성하지 않아도 되도록, 같은 MainHud 아래 이미 한글 폰트가
-            // 물려 있는 아무 텍스트(예: DialogueText)에서 빌려온다.
-            if (_font == null)
-            {
-                var anyLabel = transform.root.GetComponentInChildren<TMP_Text>(true);
-                if (anyLabel != null) _font = anyLabel.font;
-            }
+            // BuildMemorySpaceBubble(UiLayoutSetupTool.cs)은 폰트를 직렬화해서 넘기지 않는다 — 게임 글꼴을 쓴다
+            // (예전엔 MainHud 아래 아무 글자에서 빌렸는데, 포스트잇이 먼저 걸리면 손글씨체가 옮았다).
+            if (_font == null) _font = RuntimeUi.GameFont;
         }
 
         /// <summary>구워진 Bubble 이미지는 색 사각형이라 끄고, 같은 자리에 손그림 선을 런타임에 짓는다(스프라이트를 프리팹에 굽지 않는다).</summary>
@@ -87,7 +81,7 @@ namespace BlueComplex.UI.Layout
             }
         }
 
-        /// <summary>재시작용 초기화: 칩·풍선 선·요약 글자를 즉시 처음 상태로 돌린다(애니메이션 없이). 도는 칩 시퀀스도 함께 끊는다 —
+        /// <summary>재시작용 초기화: 칩·풍선 선을 즉시 처음 상태로 돌린다(애니메이션 없이). 도는 칩 시퀀스도 함께 끊는다 —
         /// 안 끊으면 옛 <see cref="RiseResultTags"/>의 OnComplete(<see cref="ClearResultTags"/>)가 재시작 뒤 새 판의 칩을 지울 수 있다.</summary>
         public void ResetNow()
         {
@@ -96,7 +90,6 @@ namespace BlueComplex.UI.Layout
 
             IsEngaged = false;
             _stroke?.Clear();
-            if (_summaryText != null) _summaryText.text = string.Empty;
         }
 
         private void SubscribeToClueDrag() => ForEachCardDragHandler(h =>
@@ -342,7 +335,7 @@ namespace BlueComplex.UI.Layout
             return _tagContainer;
         }
 
-        /// <summary>칩이 놓이는 영역(풍선 루트 기준 픽셀): 선 안쪽 가운데. 최종 감정 요약 글자(아래쪽 띠)와 겹치지 않게 위로 올려 잡는다.</summary>
+        /// <summary>칩이 놓이는 영역(풍선 루트 기준 픽셀): 선 안쪽 가운데보다 조금 위.</summary>
         private Rect ChipArea()
         {
             var rect = Root.rect;
@@ -413,14 +406,5 @@ namespace BlueComplex.UI.Layout
             text.textWrappingMode = TextWrappingModes.NoWrap;
             return text;
         }
-
-        /// <summary>마지막 턴의 최종 감정을 고정 표시한다. 결과 태그(ShowResultTags/RiseResultTags)의 상승/소멸 연출과는
-        /// 별개로 존재해서, 연출이 끝난 뒤에도 계속 보인다. 다음 턴 결과가 나오면 이 호출로 갱신된다.
-        /// 호출 시점(연출과 같은 프레임에 갱신할지 등)은 Presenter가 쥔다 — 여기선 표시만 한다.</summary>
-        public void SetPersistentSummary(string text)
-        {
-            if (_summaryText != null) _summaryText.text = text;
-        }
-
     }
 }

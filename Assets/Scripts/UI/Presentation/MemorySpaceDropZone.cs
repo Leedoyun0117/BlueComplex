@@ -11,10 +11,15 @@ namespace BlueComplex.UI.Presentation
     /// 지터(±11.5px/±4.5px)와 요청된 20px 여유를 합친 것보다 넉넉하게.
     /// 히트테스트 자체(왜곡 보정 포함)는 Canvas의 DistortionCorrectedGraphicRaycaster가 이미
     /// 처리하므로 여기서 좌표 보정을 신경 쓸 필요는 없다.
+    ///
+    /// 단, 히트테스트는 단서 카드를 끄는 동안에만 받는다(<see cref="ICanvasRaycastFilter"/>). 이 넉넉한 투명 사각형은 형제 순서상 엑스레이 판넬 위에 있어서,
+    /// 평소에도 켜 두면 펼친 엑스레이의 "접기" 버튼과 유키 초상화 오른쪽을 덮어 클릭·드롭을 가로챘다.
     /// </summary>
-    public sealed class MemorySpaceDropZone : MonoBehaviour, IDropHandler
+    public sealed class MemorySpaceDropZone : MonoBehaviour, IDropHandler, ICanvasRaycastFilter
     {
         [SerializeField] private StageBootstrapper _bootstrapper;
+
+        public bool IsRaycastLocationValid(Vector2 screenPoint, Camera eventCamera) => ClueCardDragHandler.Current != null;
 
         public void OnDrop(PointerEventData eventData)
         {
@@ -34,16 +39,9 @@ namespace BlueComplex.UI.Presentation
             var view = dragged.GetComponent<ClueCardView>();
             if (handler == null || view == null || view.IsEmpty) return;
 
-            // 게이트(튜토리얼의 오답 걸러내기)에 걸리면 받아들이지 않는다 — MarkHandled를 안 하므로 카드는 손패로 되돌아가고 턴은 진행되지 않는다.
-            var verdict = _bootstrapper.Session.CheckPlay(view.Card);
-            if (!verdict.Allowed)
-            {
-                PlayGateFeedback.Show(transform, verdict, _bootstrapper.Session.Runner.CurrentTurn);
-                return;
-            }
-
-            handler.MarkHandled();
-            _bootstrapper.Session.Runner.PlayClue(view.Card);
+            // 게이트(튜토리얼의 오답 걸러내기)는 부트스트래퍼가 거친다. 내기 전에 거절되면 MarkHandled를 안 하므로 카드는 손패로 되돌아가고 턴은 진행되지 않는다.
+            // 결과를 보여 준 뒤 되돌리는 오답(튜토리얼 턴 4)은 받아들인다 — 카드가 빨려 들어가고, 연출과 되돌리기가 끝나면 손패 제자리에 다시 그려진다.
+            if (_bootstrapper.TryPlayCard(view.Card, transform)) handler.MarkHandled();
         }
     }
 }

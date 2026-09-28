@@ -51,6 +51,8 @@ namespace BlueComplex.EditorTools
             ("flowers_in_vase", "s1_flower"),
             ("Amusement_park_ticket", "s1_amusement_ticket"),
             ("A_calendar_with_a_specific_dat", "s1_school_calendar"),
+            // 튜토리얼 "달력"도 같은 그림을 쓴다(사용자 지시) — 별도 그림이 생기면 파일 이름만 바꾼다.
+            ("A_calendar_with_a_specific_dat", "tutorial_calendar"),
             ("A_box_full_of_cookies", "s1_cookie_box"),
             ("Torn_schoolbag", "s1_torn_backpack"),
             ("Novel_with_simple_cover", "s1_horror_novel"),
@@ -93,6 +95,21 @@ namespace BlueComplex.EditorTools
             ("Soft_Icecream", "s3_soft_icecream"),
         };
 
+        /// <summary>튜토리얼 단서 그림은 Assets/Art/Clue가 아니라 <see cref="TutorialArtFolder"/>(pixellab 생성 도구가 만든 폴더)에 그대로 있다 — 옮기지 않는다.
+        /// "달력"은 이번 배치에 그림이 없어 자리표시 아이콘을 그대로 쓴다.</summary>
+        private const string TutorialArtFolder = "Assets/Art/pixellab-6-objects-2026-09-27";
+
+        private static readonly (string File, string ClueId)[] TutorialClueArt =
+        {
+            ("objects/stale_pink_donuts/rotations/stale_pink_donuts", "tutorial_stale_donut"),
+            ("objects/Horror_movie_poster/rotations/Horror_movie_poster", "tutorial_horror_poster"),
+            ("objects/empty_fish_bowl/rotations/empty_fish_bowl", "tutorial_empty_fishbowl"),
+            ("eiffel_tower_souvenir/eiffel_tower_souvenir/rotations/eiffel_tower_souvenir", "tutorial_souvenir"),
+            ("objects/telephone/rotations/telephone", "tutorial_phone_ring"),
+            ("objects/fishing_rod/rotations/fishing_rod", "tutorial_fishing_rod"),
+            ("objects/A_family_photo_of_a_blonde_dau/rotations/A_family_photo_of_a_blonde_dau", "tutorial_daughter_photo"),
+        };
+
         /// <summary>스테이지 클리어 연출의 자물쇠·열쇠 그림(Assets/Art 바로 아래) 파일 이름(확장자 제외) → 카탈로그 id. 그림은 제자리에 두고 임포트 설정만 스프라이트(Point)로 맞춘다.</summary>
         private static readonly (string File, string Id)[] StageArt =
         {
@@ -103,7 +120,8 @@ namespace BlueComplex.EditorTools
         [MenuItem("BlueComplex/UI/Rebuild Icon Catalog")]
         public static void Rebuild()
         {
-            ConfigureClueArt();
+            ConfigureClueArt(ClueArtFolder, ClueArt);
+            ConfigureClueArt(TutorialArtFolder, TutorialClueArt);
             ConfigureStageArt();
 
             // 스프라이트로 임포트되지 않은 PNG가 있으면(임포터가 생기기 전에 들어온 파일) 먼저 고친다 — GUID는 그대로다.
@@ -127,18 +145,8 @@ namespace BlueComplex.EditorTools
                 entries.Add(new UiIconCatalog.Entry { Id = Path.GetFileNameWithoutExtension(path), Sprite = sprite });
             }
 
-            foreach (var (file, clueId) in ClueArt)
-            {
-                var sprite = AssetDatabase.LoadAssetAtPath<Sprite>($"{ClueArtFolder}/{file}.png");
-                if (sprite == null)
-                {
-                    Debug.LogWarning($"[UiIconCatalogTool] 단서 그림을 스프라이트로 못 읽었다: {ClueArtFolder}/{file}.png (→ {clueId})");
-                    continue;
-                }
-
-                entries.RemoveAll(e => e.Id == clueId);
-                entries.Add(new UiIconCatalog.Entry { Id = clueId, Sprite = sprite });
-            }
+            AddClueArtEntries(entries, ClueArtFolder, ClueArt);
+            AddClueArtEntries(entries, TutorialArtFolder, TutorialClueArt);
 
             foreach (var (file, id) in StageArt)
             {
@@ -169,13 +177,29 @@ namespace BlueComplex.EditorTools
             Debug.Log($"[UiIconCatalogTool] 아이콘 {entries.Count}개를 카탈로그에 담았다: {string.Join(", ", entries.ConvertAll(e => e.Id))}");
         }
 
+        private static void AddClueArtEntries(List<UiIconCatalog.Entry> entries, string folder, (string File, string ClueId)[] table)
+        {
+            foreach (var (file, clueId) in table)
+            {
+                var sprite = AssetDatabase.LoadAssetAtPath<Sprite>($"{folder}/{file}.png");
+                if (sprite == null)
+                {
+                    Debug.LogWarning($"[UiIconCatalogTool] 단서 그림을 스프라이트로 못 읽었다: {folder}/{file}.png (→ {clueId})");
+                    continue;
+                }
+
+                entries.RemoveAll(e => e.Id == clueId);
+                entries.Add(new UiIconCatalog.Entry { Id = clueId, Sprite = sprite });
+            }
+        }
+
         /// <summary>단서 픽셀아트(64px)를 스프라이트로 만든다. 도트가 번지지 않게 Point 필터, 밉맵·압축 없음.
         /// 이미 스프라이트인 것은 건드리지 않는다 — 손으로 고친 설정을 덮어쓰지 않으려는 것이다.</summary>
-        private static void ConfigureClueArt()
+        private static void ConfigureClueArt(string folder, (string File, string ClueId)[] table)
         {
-            foreach (var (file, _) in ClueArt)
+            foreach (var (file, _) in table)
             {
-                var path = $"{ClueArtFolder}/{file}.png";
+                var path = $"{folder}/{file}.png";
                 if (!(AssetImporter.GetAtPath(path) is TextureImporter importer)) continue;
                 if (importer.textureType == TextureImporterType.Sprite && importer.spriteImportMode == SpriteImportMode.Single) continue;
 

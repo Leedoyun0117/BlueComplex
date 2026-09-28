@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using BlueComplex.Core.Items;
+using BlueComplex.Core.Traits;
 using BlueComplex.UI.Effects.DLJ;
 using BlueComplex.UI.Layout;
 using BlueComplex.UI.Motion;
@@ -45,6 +46,12 @@ namespace BlueComplex.UI.Presentation
         private bool _selected;
         private static readonly Color SelectedEdge = new Color32(255, 200, 60, 255);
 
+        /// <summary>호버 툴팁에서 부여 특성 이름을 강조하는 색(노란색). SelectedEdge와 같은 계열이라 손 UI 전체에서 "강조"가 한 색으로 통일된다.</summary>
+        private static readonly Color TraitHighlight = new Color32(255, 210, 64, 255);
+        private static readonly string TraitHighlightHex = ColorUtility.ToHtmlStringRGB(TraitHighlight);
+
+        private TraitBoard _traits;
+
         public ItemDefinition Item { get; private set; }
 
         /// <summary>슬롯 클릭을 그대로 중계한다 — TurnRunner.UseItem 호출은 컨트롤러가 한다.</summary>
@@ -58,9 +65,11 @@ namespace BlueComplex.UI.Presentation
         }
 
         /// <param name="insert">true면 카드가 빈 칸에 눌려 끼워지는 움직임을 재생한다.</param>
-        public void Render(ItemDefinition item, bool insert = false, int insertOrder = 0)
+        /// <param name="traits">호버 툴팁에서 부여 특성의 이름·설명을 찾아오는 데만 쓴다(카탈로그 조회, 지속 상태는 안 본다).</param>
+        public void Render(ItemDefinition item, TraitBoard traits, bool insert = false, int insertOrder = 0)
         {
             Item = item;
+            _traits = traits;
             gameObject.SetActive(true);
             ResetPose();
             _background.color = FilledColor;
@@ -230,7 +239,23 @@ namespace BlueComplex.UI.Presentation
         {
             yield return new WaitForSeconds(HoverDelay);
             if (Item == null || _tooltip == null) yield break;
-            _tooltip.Show(Item.DisplayName, Item.Description, transform.position);
+            _tooltip.Show(Item.DisplayName, BuildTooltipBody(), transform.position);
+        }
+
+        /// <summary>기본 아이템 설명 문장에 이미 부여 특성 이름이 들어 있으므로(예: "예민 특성을 부여합니다") 그 글자만 노란색으로
+        /// 칠하고, 그 특성 자체의 효과 설명을 한 줄 띄워 덧붙인다. 부여 특성이 없는 아이템은 원래 설명 그대로다.</summary>
+        private string BuildTooltipBody()
+        {
+            var body = Item.Description;
+            if (Item.GrantedTraitId == null) return body;
+
+            var trait = _traits?.Find(Item.GrantedTraitId);
+            if (trait == null) return body;
+
+            if (body.Contains(trait.DisplayName))
+                body = body.Replace(trait.DisplayName, $"<color=#{TraitHighlightHex}>{trait.DisplayName}</color>");
+
+            return $"{body}\n\n<color=#{TraitHighlightHex}>{trait.DisplayName}</color> — {trait.Description}";
         }
 
         private void HideTooltip()

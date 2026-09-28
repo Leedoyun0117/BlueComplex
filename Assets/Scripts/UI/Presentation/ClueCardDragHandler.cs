@@ -32,6 +32,9 @@ namespace BlueComplex.UI.Presentation
 
         public bool IsDragging { get; private set; }
 
+        /// <summary>지금 끌리고 있는 단서 카드(없으면 null). 기억 공간 DropZone은 이때만 히트테스트를 받는다(<see cref="MemorySpaceDropZone"/>).</summary>
+        public static ClueCardDragHandler Current { get; private set; }
+
         /// <summary>실제로 드래그가 시작될 때(빈 슬롯이 아닐 때)만 쏜다 — 엑스레이 판넬이 이걸 구독해서 펼친다.</summary>
         public event Action DragStarted;
 
@@ -62,6 +65,7 @@ namespace BlueComplex.UI.Presentation
             }
 
             IsDragging = true;
+            Current = this;
             _accepted = false;
             if (_canvasGroup != null) _canvasGroup.blocksRaycasts = false;
 
@@ -78,6 +82,7 @@ namespace BlueComplex.UI.Presentation
         public void OnEndDrag(PointerEventData eventData)
         {
             IsDragging = false;
+            if (Current == this) Current = null;
             // 드롭으로 낸 카드는 이미 손패에서 빠져 슬롯이 비어 있다 — 안 보이는 슬롯이 입력을 가로채지 않게 한다.
             if (_canvasGroup != null) _canvasGroup.blocksRaycasts = !_view.IsEmpty;
 
@@ -115,6 +120,13 @@ namespace BlueComplex.UI.Presentation
         {
             if (_view.IsEmpty) return;
             UiSoundHooks.Play(UiSoundCue.ClueTake);
+        }
+
+        // 끄는 도중 카드가 꺼지면(재시작 등) OnEndDrag가 안 올 수 있다 — DropZone이 계속 입력을 막지 않게 풀어 둔다.
+        private void OnDisable()
+        {
+            IsDragging = false;
+            if (Current == this) Current = null;
         }
 
         private Vector3? BubbleCenterWorld()

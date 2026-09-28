@@ -25,7 +25,7 @@ namespace BlueComplex.Editor
     /// (종료 코드 0 = 통과, 3 = 실패). 결과는 프로젝트 <c>Logs/RestartResidueCheck.txt</c>에 남는다.
     ///
     /// 시나리오
-    ///  A. 결과 태그 칩이 떠 있는 연출 도중 재시작(같은 시드) — 칩·엑스레이·풍선 선·요약 글자·대사창·장부 pending이 전부 초기화되는가.
+    ///  A. 결과 태그 칩이 떠 있는 연출 도중 재시작(같은 시드) — 칩·엑스레이·풍선 선·대사창·장부 pending이 전부 초기화되는가.
     ///  B. 칩이 위로 떠오르는 도중(RiseResultTags 진행 중) 재시작 후 새 판 첫 턴 — 옛 시퀀스의 OnComplete가 새 판 칩을 지우지 않는가.
     ///  C. 실패 확정 턴 — 결과 패널(재시작 버튼)이 연출이 끝난 뒤에야 뜨는가, 판정(해금)은 즉시 확정되는가, 그 뒤 재시작해도 잔류가 없는가.
     /// </summary>
@@ -154,7 +154,6 @@ namespace BlueComplex.Editor
 
             Check(!bubble.HasResultTags, $"{when}: 결과 태그 칩이 없다");
             Check(!bubble.IsEngaged, $"{when}: 풍선(IsEngaged)이 꺼져 있다");
-            Check(LabelText(bubble, "_summaryText") == string.Empty, $"{when}: 최종 감정 요약 글자가 비어 있다 (지금 '{LabelText(bubble, "_summaryText")}')");
             Check(!xray.IsOpen && xray.Fold == 0f, $"{when}: 엑스레이가 접혀 있다 (IsOpen={xray.IsOpen}, fold={xray.Fold:0.00})");
             Check(LabelText(dialogue, "_label") == idle, $"{when}: 대사창이 처음 화면(대기 글)이다 (지금 '{LabelText(dialogue, "_label")}')");
             Check(!_presenter.IsPresenting, $"{when}: Presenter가 연출 중이 아니다");

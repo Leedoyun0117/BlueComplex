@@ -134,6 +134,7 @@ namespace BlueComplex.UI.Presentation
             session.Runner.TurnBegan += OnTurnBegan;
             session.Runner.TurnResolved += OnTurnResolved;
             session.Items.Used += OnItemUsed;
+            session.TrialRolledBack += OnTrialRolledBack;
 
             gameObject.SetActive(true);
             _group.alpha = 1f;
@@ -149,6 +150,7 @@ namespace BlueComplex.UI.Presentation
                 _session.Runner.TurnBegan -= OnTurnBegan;
                 _session.Runner.TurnResolved -= OnTurnResolved;
                 _session.Items.Used -= OnItemUsed;
+                _session.TrialRolledBack -= OnTrialRolledBack;
                 _session = null;
             }
 
@@ -185,6 +187,9 @@ namespace BlueComplex.UI.Presentation
         private void OnTurnResolved(TurnReport report) => _pendingTurns.Enqueue(report.Turn);
 
         private void OnItemUsed(BlueComplex.Core.Items.ItemDefinition item) => _flow?.Notify(GuideAdvance.ItemUsed);
+
+        /// <summary>오답을 보여 준 뒤 아이템이 돌아왔다 — 다시 써야 하니 아이템 단계로 되돌아가 두 칸을 다시 강조한다. 청장의 "이게 아니네" 말풍선은 그 단계 문구로 바뀐다.</summary>
+        private void OnTrialRolledBack() => _flow?.Rewind("use_item");
         private void OnBookOpened() => _flow?.Notify(GuideAdvance.BookOpened);
         private void OnManualTabShown() => _flow?.Notify(GuideAdvance.ManualTabShown);
         private void OnBookClosed() => _flow?.Notify(GuideAdvance.BookClosed);
@@ -201,6 +206,29 @@ namespace BlueComplex.UI.Presentation
             {
                 var xray = UnityEngine.Object.FindFirstObjectByType<ComplexXrayPanel>(FindObjectsInactive.Include);
                 if (xray != null && xray.IsOpen) _flow.Notify(GuideAdvance.XrayOpened);
+            }
+
+            if (step != null && step.Target == GuideTarget.Items) SyncItemPulses();
+        }
+
+        /// <summary>아이템 강조는 아이템이 든 칸만 — 여러 개를 써야 하는 단계(자아비대·기억 공감)에서 하나를 쓰면 그 칸의 강조만 꺼지고 남은 칸은 계속 깜박인다.</summary>
+        private void SyncItemPulses()
+        {
+            var items = UnityEngine.Object.FindFirstObjectByType<ItemDisplayPanel>(FindObjectsInactive.Include);
+            if (items == null) return;
+
+            for (var i = 0; i < items.SlotCount; i++)
+            {
+                var slot = items.GetSlot(i);
+                if (slot == null) continue;
+
+                var want = slot.Item != null && slot.gameObject.activeInHierarchy;
+                var has = _pulsed.Contains(slot);
+                if (want == has) continue;
+
+                TargetPulse.Set(slot, want);
+                if (want) _pulsed.Add(slot);
+                else _pulsed.Remove(slot);
             }
         }
 
@@ -228,7 +256,7 @@ namespace BlueComplex.UI.Presentation
 
             if (step.Effect == GuideEffect.HypnosisConnect) UiSoundHooks.Play(UiSoundCue.HypnosisConnect); // 원문 "(효과음)"
 
-            ShowLine(step.Line, ResolveTargetRect(step.Target), step.Advance == GuideAdvance.Read);
+            ShowLine(step.Line, ResolveTargetRect(step.Target), step.Advance == GuideAdvance.Read, BubbleOffset(step.Target));
 
             if (step.Advance == GuideAdvance.Read) _readRoutine = StartCoroutine(AutoAdvanceRead(step));
         }
@@ -384,13 +412,13 @@ namespace BlueComplex.UI.Presentation
             if (line == null) return false;
 
             StopTypingAndRead();
-            ShowLine(line, ResolveTargetRect(_flow.Current.Target), clickToAdvance: false);
+            ShowLine(line, ResolveTargetRect(_flow.Current.Target), clickToAdvance: false, BubbleOffset(_flow.Current.Target));
             return true;
         }
 
         // ── 말풍선 ───────────────────────────────────────────────────────────────
 
-        private void ShowLine(string line, RectTransform target, bool clickToAdvance)
+        private void ShowLine(string line, RectTransform target, bool clickToAdvance, Vector2 offset = default)
         {
             _currentLine = line;
             _bubble.gameObject.SetActive(true);
@@ -402,7 +430,7 @@ namespace BlueComplex.UI.Presentation
             var preferred = _bubbleText.GetPreferredValues(line, textWidth, 0f);
             var height = Mathf.Ceil(preferred.y) + BubbleMargin * 2f + 14f;
             _bubble.sizeDelta = new Vector2(BubbleWidth, height);
-            PlaceBubble(target, new Vector2(BubbleWidth, height));
+            PlaceBubble(target, new Vector2(BubbleWidth, height), offset);
 
             // 행동을 기다리는 단계에서는 말풍선이 클릭을 받지 않는다(밑의 요소를 가리지 않게).
             _bubbleImage.raycastTarget = clickToAdvance;
@@ -480,8 +508,12 @@ namespace BlueComplex.UI.Presentation
             }
         }
 
+        /// <summary>아이템 슬롯처럼 화면 세로로 긴 대상은 옆자리가 화면 위쪽 HUD(심박수·포스트잇)와 겹치므로, 그 대상일 때만 말풍선을 조금 아래로 내린다.</summary>
+        private static Vector2 BubbleOffset(GuideTarget target) =>
+            target == GuideTarget.Items ? new Vector2(0f, -110f) : Vector2.zero;
+
         /// <summary>대상 옆(위 → 아래 → 왼쪽 → 오른쪽 중 화면 안에 들어오는 첫 자리)에 붙이고, 대상이 없으면 위쪽 가운데의 기본 자리에 둔다.</summary>
-        private void PlaceBubble(RectTransform target, Vector2 size)
+        private void PlaceBubble(RectTransform target, Vector2 size, Vector2 offset = default)
         {
             var bounds = _canvasRect.rect;
             var half = size * 0.5f;
@@ -517,6 +549,7 @@ namespace BlueComplex.UI.Presentation
                 if (center == default) center = candidates[0];
             }
 
+            center += offset;
             center.x = Mathf.Clamp(center.x, bounds.xMin + ScreenMargin + half.x, bounds.xMax - ScreenMargin - half.x);
             center.y = Mathf.Clamp(center.y, bounds.yMin + ScreenMargin + half.y, bounds.yMax - ScreenMargin - half.y);
             _bubble.position = _canvasRect.TransformPoint(center);
@@ -530,7 +563,7 @@ namespace BlueComplex.UI.Presentation
 
         private void Build()
         {
-            var font = RuntimeUi.FindFont(_canvasRoot);
+            var font = RuntimeUi.GameFont;
 
             // 클릭 막: 화면 전체를 덮는 투명한 그래픽. 강조/허용 사각형 안의 클릭만 뚫어 준다.
             var maskRect = RuntimeUi.CreateStretched(transform, "Click Mask");
