@@ -45,6 +45,19 @@ namespace BlueComplex.UI.Layout
         /// <summary>펼친 판의 중심(참조 픽셀) — 유키 머리 위. 판 크기(<see cref="_frameScale"/>)를 바꿔도 이 중심은 그대로고, 그에 맞춰 손목 자리가 달라진다.</summary>
         private static readonly Vector2 OpenCenter = new(462f, 437f);
 
+        /// <summary>펼친 판의 가로 중심은 유키 초상화(<see cref="_portrait"/>)의 가로 중심에 맞춘다 — 상수 <see cref="OpenCenter"/>는 초상화를 못 찾을 때의 대체값이다.</summary>
+        private float OpenCenterX()
+        {
+            if (_portrait == null || _rect == null) return OpenCenter.x;
+
+            var corners = new Vector3[4];
+            ((RectTransform)_portrait.transform).GetWorldCorners(corners);
+            var mid = _rect.InverseTransformPoint((corners[0] + corners[2]) * 0.5f);
+            var rect = _rect.rect;
+            var unit = rect.width / ReferenceSize.x;
+            return unit > 0f ? (mid.x - rect.xMin) / unit : OpenCenter.x;
+        }
+
         private const float FoldedScale = 0.26f;
         private const float OpenScale = 1f;
         private const float DragScale = 0.7f;
@@ -280,7 +293,7 @@ namespace BlueComplex.UI.Layout
             if (unit <= 0f) return;
 
             var shoulder = ShoulderPoint + Down;
-            var openWrist = new Vector2(OpenCenter.x - HalfWidth - HingeGap, OpenCenter.y);
+            var openWrist = new Vector2(OpenCenterX() - HalfWidth - HingeGap, OpenCenter.y);
             var wrist = Vector2.LerpUnclamped(FoldedWrist, openWrist, _fold) + Down;
             var scale = Mathf.LerpUnclamped(FoldedScale, OpenScale, _fold);
 
