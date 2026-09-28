@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using BlueComplex.Core.Clues;
+using BlueComplex.Core.Save;
 using BlueComplex.Core.Stage;
 using BlueComplex.Core.Tags;
 using BlueComplex.Core.Turn;
@@ -72,8 +73,12 @@ namespace BlueComplex.UI.Bootstrap
         /// <summary>튜토리얼을 클리어한 뒤 종료 연출이 끝나면 한 번 알린다. 본편 시작으로 넘어가는 연결은 이 이벤트를 구독하는 쪽이 정한다(구독이 없으면 결과 패널만 남는다).</summary>
         public event Action TutorialCompleted;
 
-        /// <summary>튜토리얼 종료 연출이 끝났음을 알린다(<see cref="StageEndController"/>가 부른다).</summary>
-        public void NotifyTutorialCompleted() => TutorialCompleted?.Invoke();
+        /// <summary>튜토리얼 종료 연출이 끝났음을 알린다(<see cref="StageEndController"/>가 부른다) — 이 시점에 진행도를 저장한다(실패·중도 이탈은 저장하지 않는다).</summary>
+        public void NotifyTutorialCompleted()
+        {
+            GameSave.MarkTutorialCleared(_ledger);
+            TutorialCompleted?.Invoke();
+        }
 
         /// <summary>지금 돌고 있는 스테이지의 저작 설정 — 스테이지 이름 표시 같은 UI가 읽는다. 세션이 바뀌면 함께 바뀐다.</summary>
         public StageConfig Config { get; private set; }
@@ -157,13 +162,22 @@ namespace BlueComplex.UI.Bootstrap
             BeginNewSession(_seed);
         }
 
-        /// <summary>오프닝 메인 화면의 "취조시작": 튜토리얼(시작 컷신 → 오프닝 대화 → 첫 턴)로 이어진다. 오프닝 막은 이 호출을 부른 쪽이 스스로 걷는다.
-        /// 튜토리얼 시드는 <see cref="_seed"/>를 쓰지 않고 F4(<see cref="StartTutorial"/>)와 같이 새로 뽑는다.</summary>
+        /// <summary>오프닝 메인 화면의 "취조시작": 저장된 진행도에서 이어할 지점(<see cref="StageProgress.ResumeStage"/>)으로 이어진다 —
+        /// 튜토리얼 미클리어면 튜토리얼(시작 컷신 → 오프닝 대화 → 첫 턴), 클리어했으면 마지막으로 클리어한 스테이지의 다음부터.
+        /// 오프닝 막은 이 호출을 부른 쪽이 스스로 걷는다. 튜토리얼/스테이지 시드는 <see cref="_seed"/>를 쓰지 않고 새로 뽑는다.</summary>
         private void StartGameFromOpening()
         {
             _startingFromOpening = true;
-            try { StartTutorial(); }
+            try { StartFromProgress(); }
             finally { _startingFromOpening = false; }
+        }
+
+        /// <summary>저장된 진행도(<see cref="GameSave"/>)에서 이어할 지점을 골라 시작한다. 실패해서 메인 화면으로 돌아온 경우는 이 경로를 타지 않는다(<see cref="RetryStageFromMenu"/>가 실패한 스테이지를 그대로 재시작한다).</summary>
+        private void StartFromProgress()
+        {
+            var resume = StageProgress.ResumeStage(GameSave.TutorialCleared, GameSave.HighestStageCleared, LastStageNumber);
+            if (resume == null) StartTutorial();
+            else StartStage(resume.Value);
         }
 
         private bool _startingFromOpening;
@@ -189,6 +203,96 @@ namespace BlueComplex.UI.Bootstrap
         {
             _startingFromOpening = true;
             try { StartStage(_stageNumber); }
+            finally { _startingFromOpening = false; }
+        }
+
+        private bool _exitingToMenu;
+
+        /// <summary>ESC 창의 "메인 메뉴로 나가기"(확인 팝업을 거친 뒤 <see cref="UI.Esc.LSO_EscExitButton"/>이 부른다):
+        /// 화면이 어두워진 뒤 지금 진행 중인 스테이지/튜토리얼/컷신/대사를 전부 정리하고 메인 화면으로 돌아간다.
+        /// 목적지는 실패 뒤 메인 화면 복귀(<see cref="ReturnToMainMenu"/>)와 같지만, 스테이지가 끝난 게 아니라 사용자가
+        /// 스스로 그만두는 것이라 이번 런의 판정(<see cref="ClueKnowledgeLedger.CommitRun"/>)은 확정하지 않는다 —
+        /// 재시작과 같은 규칙으로 미확정 관찰만 버려지고(DiscardPending), 이미 확정된 세이브(본 단서·해금)는 그대로다.</summary>
+        public void ExitToMainMenu()
+        {
+            if (_exitingToMenu) return;
+            _exitingToMenu = true;
+
+            InputBlocked = true;
+            UiSoundHooks.StopAmbient(); // 상시 배경음부터 먼저 페이드아웃 — 화면 전환과 같은 타이밍(StageEndController.OnStageEnded와 같다).
+
+            StartCoroutine(RunExitToMainMenu());
+        }
+
+        private IEnumerator RunExitToMainMenu()
+        {
+            var canvasRoot = FindCanvasRoot();
+            if (canvasRoot == null)
+            {
+                FinishExitToMainMenu(null);
+                yield break;
+            }
+
+            // 화면이 완전히 어두워질 때까지 기다린 뒤에야 컷신 카메라 등을 걷는다 — 이 막은 게임 캔버스 안에 있어
+            // 컷신 카메라·ESC 창 뒤에 가려진 채로 어두워지고, 걷을 때는 이미 새까매진 뒤라 밝은 프레임이 비치지 않는다.
+            yield return StageClearDirector.GetOrCreate(canvasRoot).FadeToBlack();
+
+            FinishExitToMainMenu(canvasRoot);
+        }
+
+        /// <summary>암전 뒤(또는 게임 캔버스가 없어 암전 없이) 실제 정리 — 재시작(<see cref="BeginNewSession"/>)이 쓰는 것과 같은 목록이다.
+        /// 새 세션을 만들지 않으므로 SessionBoundView들의 자동 정리(Render)는 타지 않는다 — 여기서 직접 부른다.</summary>
+        private void FinishExitToMainMenu(Transform canvasRoot)
+        {
+            _exitingToMenu = false;
+
+            // 이번 런은 확정하지 않고 버린다 — 재시작과 같은 규칙.
+            _ledger.DiscardPending();
+            _tutorialLedger?.DiscardPending();
+
+            _logger?.Dispose();
+            StopAllCoroutines(); // 이 메서드를 부른 코루틴(RunExitToMainMenu) 자신도 여기서 끊긴다 — 남은 건 이 메서드의 나머지 동기 코드뿐이라 문제없다.
+            _endingRoutine = null;
+            InputBlocked = false;
+            _pendingQuarterDialogue.Clear();
+            _quarterDialoguePlaying = false;
+
+            canvasRoot = canvasRoot != null ? canvasRoot : FindCanvasRoot();
+            if (canvasRoot != null)
+            {
+                StageDialoguePlayer.GetOrCreate(canvasRoot)?.ResetNow();
+                TutorialGuide.Find(canvasRoot)?.ResetNow();
+                BranchSceneDirector.GetOrCreate(canvasRoot)?.ResetNow(); // 분기 대사·스테이지 시작 대화 도중이었으면 게임 UI를 되돌린다.
+                IntroCutsceneDirector.Find(canvasRoot)?.ResetNow(); // 튜토리얼 시작 컷신 도중이었으면 막을 치우고 나츠를 되돌린다.
+                EndingCutsceneDirector.Find(canvasRoot)?.ResetNow();
+                // 스테이지 종료(자물쇠) 연출 도중이었으면 그 코루틴부터 끊는다 — 안 그러면 코루틴이 죽은 director 상태 위에서
+                // 계속 돌다가 나중에 결과 패널을 메인 화면 위로 띄우거나 다음 스테이지를 시작해 버린다.
+                canvasRoot.GetComponentInChildren<StageEndController>(true)?.CancelEnding();
+            }
+            StageCutsceneHost.Find()?.Release(); // 스테이지 종료 컷신 도중이었으면 카메라를 걷고 컷신 소리를 멈춘다.
+
+            if (_crtEffectDriver != null) _crtEffectDriver.Bind(null);
+            FindFirstObjectByType<HeartRateController>()?.PresentResting();
+
+            var root = FindOpeningCanvasRoot();
+            var menu = root != null ? IntroSequencePlayer.GetOrCreate(root) : IntroSequencePlayer.CreateStandalone();
+            if (menu == null || !menu.isActiveAndEnabled)
+            {
+                Debug.LogWarning("[StageBootstrapper] 메인 화면을 열 수 없다(켜진 캔버스를 못 찾았다) — 게임 화면에 남는다.");
+                return;
+            }
+
+            menu.NotesLedger = _ledger; // 방금 나간 런까지 확정된 장부(위에서 DiscardPending한 뒤).
+            StartCoroutine(menu.ShowMenuFromBlack(ExitRetryFromMenu));
+        }
+
+        /// <summary>메인 메뉴로 나간 뒤 메인 화면의 "취조시작": 저장된 진행도에서 이어할 지점으로 다시 시작한다(<see cref="StartFromProgress"/>) —
+        /// 실패해서 이 화면에 온 게 아니라 사용자가 스스로 나온 것이라, 앱을 껐다 켰을 때(<see cref="StartGameFromOpening"/>)와 같은 곳으로 간다.
+        /// 나가기 전 스테이지를 이미 클리어하지 않았다면 결과가 <see cref="_stageNumber"/>와 같다 — 새 시드로 처음부터다(중도 이탈은 이어하지 않는다).</summary>
+        private void ExitRetryFromMenu()
+        {
+            _startingFromOpening = true;
+            try { StartFromProgress(); }
             finally { _startingFromOpening = false; }
         }
 
@@ -278,15 +382,53 @@ namespace BlueComplex.UI.Bootstrap
                 return;
             }
 
-            var card = Session.Hand.Cards[index];
+            TryPlayCard(Session.Hand.Cards[index], FindCanvasRoot());
+        }
+
+        /// <summary>
+        /// 카드를 내는 모든 입구(드롭 영역·디버그 숫자키)가 부른다. 게이트(<see cref="StageSession.CheckPlay"/>)를 거쳐:
+        /// 허용이면 실제로 내고, 결과를 보여 주는 거절(<see cref="PlayVerdict.IsTrial"/>, 튜토리얼 턴 4 오답)이면 미리보기 결과를 끝까지 연출한 뒤 되돌리고,
+        /// 그 밖의 거절이면 안내만 띄운다. 카드가 손을 떠났으면(실제로 냈거나 시연을 시작했으면) true — 드롭 영역은 이때만 카드를 받아들인다.
+        /// </summary>
+        public bool TryPlayCard(ClueInstance card, Transform feedbackAnchor)
+        {
+            if (Session == null || Session.Runner.Outcome != StageOutcome.InProgress) return false;
+
             var verdict = Session.CheckPlay(card);
+            if (verdict.IsTrial)
+            {
+                var presenter = FindCanvasRoot()?.GetComponentInChildren<ITurnResultPresenter>(true);
+                if (presenter == null || presenter.IsPresenting) return false;
+
+                var report = Session.Runner.PreviewPlay(card);
+                InputBlocked = true;
+                presenter.PresentTrial(report, () => AfterTrialResult(verdict, feedbackAnchor));
+                return true;
+            }
+
             if (!verdict.Allowed)
             {
-                PlayGateFeedback.Show(FindCanvasRoot(), verdict, Session.Runner.CurrentTurn);
-                return;
+                PlayGateFeedback.Show(feedbackAnchor, verdict, Session.Runner.CurrentTurn);
+                return false;
             }
 
             Session.Runner.PlayClue(card);
+            return true;
+        }
+
+        /// <summary>시연 결과 연출이 끝난 뒤: 청장의 "이게 아니네. 다시 한 번 생각해 봐." → 읽을 시간 → 세션을 이 턴이 시작된 상태로 되돌린다. 화면 되돌리기는 Presenter가 이어서 한다.</summary>
+        private IEnumerator AfterTrialResult(PlayVerdict verdict, Transform feedbackAnchor)
+        {
+            var session = Session;
+            PlayGateFeedback.Show(feedbackAnchor, verdict, session.Runner.CurrentTurn);
+
+            var line = TutorialGuideContent.RejectionLine(verdict, session.Runner.CurrentTurn, KoreanLabels.Emotion) ?? string.Empty;
+            var motion = UiMotion.Settings;
+            yield return new WaitForSecondsRealtime(line.Length * motion.dialogueSecondsPerChar + motion.trialRollbackHold);
+
+            if (Session != session) yield break; // 그 사이 재시작됐다.
+            session.RollBackTrial();
+            InputBlocked = false;
         }
 
         /// <summary>스테이지 번호(1~3)를 골라 새 무작위 시드로 시작한다. 해금 지식(Ledger)은 유지된다. 임시 디버그 선택용.</summary>
@@ -339,6 +481,9 @@ namespace BlueComplex.UI.Bootstrap
         {
             var director = EndingCutsceneDirector.GetOrCreate(FindCanvasRoot());
             if (director == null) yield break;
+
+            // 엔딩(컷신9→에필로그→크레딧)은 스테이지 1 배경음으로 — 직전 턴의 심박수 배경음(흥분·침체 등)이 그대로 깔린 채 넘어가지 않게.
+            UiSoundHooks.SetBed(UiSoundCue.HeartbeatBase);
 
             InputBlocked = true;
             yield return director.Play();

@@ -199,6 +199,24 @@ namespace BlueComplex.Core.Traits
             return removed;
         }
 
+        /// <summary>
+        /// 앞서 떠 둔 목록(<see cref="Traits"/>의 사본)으로 되돌린다(튜토리얼의 오답 되돌리기). 그 뒤에 붙은 특성은 아이템이 지운 것처럼 뗀다(<see cref="Removed"/> + <see cref="Expired"/> —
+        /// 턴 결과의 "새로 발현된 특성"에서도 빠진다). 그 사이 갈아끼워져 사라진 옛 특성은 조용히 다시 붙인다(떠 둔 시점에 이미 걸려 있던 것이라 새로 발현한 게 아니다).
+        /// </summary>
+        public void RestoreTo(IReadOnlyList<TraitInstance> snapshot)
+        {
+            var removed = _traits.Where(t => !snapshot.Contains(t)).ToList();
+
+            _traits.Clear();
+            _traits.AddRange(snapshot);
+
+            foreach (var trait in removed)
+            {
+                Removed?.Invoke(trait);
+                Expired?.Invoke(trait);
+            }
+        }
+
         /// <summary>붙어 있는 특수 특성을 전부 치유한다(안정 구간에 들어서는 즉시 TurnRunner가 부른다). 치유된 특성 수를 돌려준다.</summary>
         public int CureSpecial()
         {

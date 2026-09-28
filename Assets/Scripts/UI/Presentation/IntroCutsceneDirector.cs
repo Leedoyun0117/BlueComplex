@@ -1,8 +1,8 @@
 using System.Collections;
 using BlueComplex.Core.Stage;
+using BlueComplex.UI.Layout;
 using BlueComplex.UI.Motion;
 using DG.Tweening;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -127,7 +127,7 @@ namespace BlueComplex.UI.Presentation
             backdrop.raycastTarget = false;
 
             var art = IntroCutsceneArt.Load();
-            var font = _canvasRoot.GetComponentInChildren<TMP_Text>(true)?.font;
+            var font = RuntimeUi.GameFont;
             room = BuildRoom(root.transform, art);
             news = IntroNewsView.Create(root.transform, canvasSize, font);
             return backdrop;

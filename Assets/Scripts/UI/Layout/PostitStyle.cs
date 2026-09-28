@@ -13,6 +13,10 @@ namespace BlueComplex.UI.Layout
     {
         public const string HandFontResourcePath = "Fonts/NanumPenScript-Regular";
 
+        /// <summary>런타임에 만든 손글씨 폰트의 이름 — <see cref="HandFont"/>가 붙인다. 검사 코드가 "이 TMP_Text가 포스트잇 손글씨인가"를
+        /// 폰트 asset을 새로 만들지 않고 이름만으로 가려낼 때 쓴다. 손글씨가 아닌 글자는 모두 <see cref="RuntimeUi.GameFont"/>다.</summary>
+        public const string HandFontRuntimeName = "PostitHand (runtime)";
+
         /// <summary>손글씨 폰트는 같은 크기의 고딕보다 작아 보여서 글자 크기를 키워 맞춘다.</summary>
         public const float HandSizeScale = 1.24f;
 
@@ -56,7 +60,7 @@ namespace BlueComplex.UI.Layout
                 FontEngine.InitializeFontEngine();
                 _handFont = TMP_FontAsset.CreateFontAsset(source, 90, 9, GlyphRenderMode.SDFAA, 1024, 1024,
                     AtlasPopulationMode.Dynamic, true);
-                if (_handFont != null) _handFont.name = "PostitHand (runtime)";
+                if (_handFont != null) _handFont.name = HandFontRuntimeName;
                 return _handFont;
             }
         }

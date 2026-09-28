@@ -130,7 +130,7 @@ namespace BlueComplex.UI.Presentation
             {
                 var slot = _panel.GetSlot(i);
                 if (i >= capacity) slot.Hide();
-                else if (i < held.Count) slot.Render(held[i], insert: i >= firstNew,
+                else if (i < held.Count) slot.Render(held[i], Session.Traits, insert: i >= firstNew,
                     insertOrder: i >= firstNew ? i - firstNew : 0);
                 else slot.SetEmpty();
             }

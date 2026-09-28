@@ -248,5 +248,41 @@ namespace BlueComplex.Core.Tests
             CollectionAssert.AreEqual(new[] { "second" }, data.Clues.Select(c => c.Id).ToArray());
             Assert.IsFalse(File.Exists(store.Path + ".tmp"));
         }
+
+        // ── 스테이지 진행도 ──────────────────────────────────────────────────────
+
+        [Test]
+        public void ANewSave_HasNoProgress()
+        {
+            var store = Store();
+            store.Save(new SaveData());
+
+            Assert.IsTrue(store.TryLoad(out var data, out _));
+            Assert.IsFalse(data.TutorialCleared);
+            Assert.AreEqual(0, data.HighestStageCleared);
+        }
+
+        [Test]
+        public void SaveThenLoad_RoundTripsProgress()
+        {
+            var store = Store();
+            store.Save(new SaveData { TutorialCleared = true, HighestStageCleared = 2 });
+
+            Assert.IsTrue(store.TryLoad(out var data, out _));
+            Assert.IsTrue(data.TutorialCleared);
+            Assert.AreEqual(2, data.HighestStageCleared);
+        }
+
+        [Test]
+        public void AnOldSaveWithoutProgressFields_LoadsAsNoProgress()
+        {
+            // 진행도 필드가 생기기 전의 세이브 파일 형태 그대로 — 옛 파일에는 이 필드들이 없어 JsonUtility가 기본값(false/0)으로 채운다.
+            var store = Store();
+            File.WriteAllText(store.Path, "{\"Version\":1,\"Clues\":[]}");
+
+            Assert.IsTrue(store.TryLoad(out var data, out _));
+            Assert.IsFalse(data.TutorialCleared);
+            Assert.AreEqual(0, data.HighestStageCleared);
+        }
     }
 }

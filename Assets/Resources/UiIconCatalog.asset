@@ -125,3 +125,19 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: 6cc17e69f09aed243b599bad25d02f39, type: 3}
   - Id: stage_lock
     Sprite: {fileID: 21300000, guid: 223267a2c6d95b24eb6fc9c5e8840aef, type: 3}
+  - Id: tutorial_calendar
+    Sprite: {fileID: 21300000, guid: e8ccb398177f01842a0632601db361bd, type: 3}
+  - Id: tutorial_daughter_photo
+    Sprite: {fileID: 21300000, guid: a861a18efe571bc42a9e782819e7bf73, type: 3}
+  - Id: tutorial_empty_fishbowl
+    Sprite: {fileID: 21300000, guid: 49bbda23b7dec5f469127b034f24a502, type: 3}
+  - Id: tutorial_fishing_rod
+    Sprite: {fileID: 21300000, guid: caec992eca0d41d469fa5ff050c4b77d, type: 3}
+  - Id: tutorial_horror_poster
+    Sprite: {fileID: 21300000, guid: a1156c2121c61644dac9d4223100104b, type: 3}
+  - Id: tutorial_phone_ring
+    Sprite: {fileID: 21300000, guid: 3ec576a2f8cc2f240a3a0f304eed0316, type: 3}
+  - Id: tutorial_souvenir
+    Sprite: {fileID: 21300000, guid: 4899f773c57705243839445a3422df82, type: 3}
+  - Id: tutorial_stale_donut
+    Sprite: {fileID: 21300000, guid: 62a8e35a73c3c924e924a9d507905ae7, type: 3}

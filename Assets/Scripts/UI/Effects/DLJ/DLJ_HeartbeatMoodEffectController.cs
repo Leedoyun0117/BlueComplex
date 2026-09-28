@@ -417,6 +417,10 @@ namespace BlueComplex.UI.Effects.DLJ
         public float ChromaticRemaining => _state.ChromaticRemaining;
         public int ActiveRoomIndex => _activeRoomIndex;
         public IReadOnlyList<RoomBinding> Rooms => _rooms;
+        /// <summary>스테이지 종료 컷신이 화면을 덮는 동안은 흥분/침체 화면 톤(색조·색수차·글리치·수중 빛)을 걷는다 — 컷신 카메라도 같은 CRT 패스를 지나므로,
+        /// 이때는 기본 CRT(스캔라인·비네트·곡률)만 남는다. 감정 상태 자체(<see cref="_state"/>)는 계속 흘러서, 컷신이 걷히면 그 순간의 상태로 돌아온다.</summary>
+        private static bool CutsceneCovering => StageCutsceneHost.Find() is { Covering: true };
+
         private bool UsesRooms => _rooms != null && _rooms.Count > 0;
         private RoomBinding CurrentRoom => UsesRooms && _activeRoomIndex >= 0 && _activeRoomIndex < _rooms.Count
             ? _rooms[_activeRoomIndex] : null;
@@ -596,7 +600,8 @@ namespace BlueComplex.UI.Effects.DLJ
                 var tagTexture = _tagLayer != null ? _tagLayer.Texture : null;
                 _runtimeMaterial.SetFloat("_TagEnabled", tagTexture != null ? 1f : 0f);
                 if (tagTexture != null) _runtimeMaterial.SetTexture("_TagTex", tagTexture);
-                _runtimeMaterial.SetFloat("_DepressedAmount", _state.Depressed);
+                var cutscene = CutsceneCovering;
+                _runtimeMaterial.SetFloat("_DepressedAmount", cutscene ? 0f : _state.Depressed);
                 _runtimeMaterial.SetColor("_DepressedTint", settings.DepressedTint);
                 _runtimeMaterial.SetFloat("_BlueTintStrength", settings.BlueTintStrength);
                 _runtimeMaterial.SetFloat("_DepressedContrast", settings.DepressedContrast);
@@ -631,10 +636,11 @@ namespace BlueComplex.UI.Effects.DLJ
                 _runtimeMaterial.SetFloat("_WindowShaftTopLength", Mathf.Clamp(settings.WindowShaftTopLength, 0.05f, 1.5f));
                 _runtimeMaterial.SetFloat("_WindowShaftBottomLength", Mathf.Clamp(settings.WindowShaftBottomLength, 0.05f, 1.5f));
                 _runtimeMaterial.SetFloat("_WindowShaftAmbientStrength", Mathf.Clamp(settings.WindowShaftAmbientStrength, 0f, 0.5f));
-                UpdateWaterSources();
-                _runtimeMaterial.SetFloat("_ExcitedAmount", _state.Excited);
-                _runtimeMaterial.SetFloat("_ExcitedBlend", Mathf.Clamp01(_state.Excited / Mathf.Max(0.001f, settings.NormalStateStrength)));
-                _runtimeMaterial.SetFloat("_ChromaticBurst", _state.ChromaticBurst);
+                UpdateWaterSources(cutscene);
+                var excited = cutscene ? 0f : _state.Excited;
+                _runtimeMaterial.SetFloat("_ExcitedAmount", excited);
+                _runtimeMaterial.SetFloat("_ExcitedBlend", Mathf.Clamp01(excited / Mathf.Max(0.001f, settings.NormalStateStrength)));
+                _runtimeMaterial.SetFloat("_ChromaticBurst", cutscene ? 0f : _state.ChromaticBurst);
                 _runtimeMaterial.SetFloat("_PastelSeparation", settings.PastelSeparation);
                 _runtimeMaterial.SetFloat("_PastelStrength", settings.PastelStrength);
                 // sRGB 팔레트를 셰이더에 그대로 전달한다.
@@ -644,7 +650,7 @@ namespace BlueComplex.UI.Effects.DLJ
                 _runtimeMaterial.SetFloat("_PastelSaturation", settings.PastelSaturation);
                 _runtimeMaterial.SetFloat("_PastelContrast", settings.PastelContrast);
                 _runtimeMaterial.SetFloat("_PastelGradeStrength", settings.PastelGradeStrength);
-                var glitch = Mathf.Clamp01(_state.GlitchRemaining / 0.35f);
+                var glitch = cutscene ? 0f : Mathf.Clamp01(_state.GlitchRemaining / 0.35f);
                 _runtimeMaterial.SetFloat("_GlitchAmount", glitch);
                 _runtimeMaterial.SetFloat("_GlitchDisplacement", settings.GlitchDisplacement);
             }
@@ -668,12 +674,13 @@ namespace BlueComplex.UI.Effects.DLJ
             _clockGlowBrightness.Apply(_clockGlowRenderer, depressed, _clockGlowDepressedBrightness);
         }
 
-        private void UpdateWaterSources()
+        /// <param name="none">컷신 중 — 게임 배경의 전등·창문 자리는 컷신 화면과 무관하니 빛 출발점을 하나도 넘기지 않는다.</param>
+        private void UpdateWaterSources(bool none)
         {
             var count = 0;
             var edgeCount = 0;
             var camera = SourceCamera;
-            if (camera != null && camera.isActiveAndEnabled && camera.gameObject.scene == gameObject.scene
+            if (!none && camera != null && camera.isActiveAndEnabled && camera.gameObject.scene == gameObject.scene
                 && (!UsesRooms || RoomEnabled(CurrentRoom)))
             {
                 if (UsesRooms)

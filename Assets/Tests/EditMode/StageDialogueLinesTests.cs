@@ -113,7 +113,7 @@ namespace BlueComplex.Core.Tests
                     (Player, "…"),
                     (Yuki, "뭔가 꿈 속 같기도 하고.. B씨와 친구라고 하셨었나?"),
                     (Player, "B가 평소와 다른 말을 하지 않았니?"),
-                    (Yuki, "아, 좀 전에 내일 연회장에 간다고 했었나."),
+                    (Yuki, "아, 좀 전에 내일 연회장에 간다고 했었어요."),
                     (Player, "좋아, 조금만 더 있다 가도 될까?"),
                     (Yuki, "네, 뭐. 저야 상관 없죠."))
             };
@@ -163,12 +163,26 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void Stage3_ClearDialogue_IsStillEmpty_BecauseTheTableIsEmpty()
+        public void Stage3_ClearDialogue_IsOneYukiLinePerMood_FromTheTable()
         {
             var stage3 = ParseAsset()["stage_3"];
 
-            foreach (var mood in new[] { "excited", "stable", "depressed" })
-                Assert.AreEqual(0, Pool(stage3, "clear." + mood).Count, $"clear.{mood}: 노션이 비어 있어 넣지 않는다.");
+            // 노션 "스테이지 시작 대화" 3-무제, 09/28 05:47 수정본에서 채워졌다.
+            var expected = new Dictionary<string, string>
+            {
+                ["clear.excited"] = "아저씨는, 뭔가 이상해요. 원래 내 기억에 없었던 존재 같달까.",
+                ["clear.stable"] = "아저씨가 왜 저를 찾아왔는지는 잘 모르겠지만, 같이 대화하면서 마음이 좀 편해졌어요.",
+                ["clear.depressed"] = "그래요. 사실 저에게는 아무것도 남지 않은 건지도 모르겠어요. 하지만 딱히 달라지는 게 있을 것 같지 않아서, 그래서 더 우울하네요."
+            };
+
+            foreach (var pair in expected)
+            {
+                var variants = Pool(stage3, pair.Key);
+                Assert.AreEqual(1, variants.Count, pair.Key);
+                Assert.AreEqual(1, variants[0].Count, $"{pair.Key}: 한 줄짜리 대사");
+                Assert.AreEqual(Yuki, variants[0][0].Speaker, $"{pair.Key}: 화자");
+                Assert.AreEqual(pair.Value, variants[0][0].Text, pair.Key);
+            }
         }
 
         [Test]
