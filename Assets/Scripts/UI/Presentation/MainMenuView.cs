@@ -20,7 +20,16 @@ namespace BlueComplex.UI.Presentation
         private const float ResetButtonSize = 56f;
         private const float ResetButtonMargin = 24f;
 
+        /// <summary>"단서 노트" 버튼 좌측 상단 모서리의 새 정보 표시 — 지름(px). 메뉴가 만들어지기 전에 바꿔야 적용된다.</summary>
+        public static float NoteAlertSize = 26f;
+
+        /// <summary>표시 중심을 버튼 좌측 상단 모서리에서 어긋나게 놓는 양(px, +x 오른쪽 / +y 위쪽). 0이면 중심이 모서리 위, 음수 x·양수 y면 바깥으로 걸친다.</summary>
+        public static Vector2 NoteAlertOffset = new(4f, -4f);
+
+        private static readonly Color NoteAlertColor = new Color32(222, 40, 40, 255);
+
         private CanvasGroup _group;
+        private GameObject _noteAlert;
         private TMP_Text _toast;
         private Tween _toastTween;
         private TMP_FontAsset _font;
@@ -42,7 +51,38 @@ namespace BlueComplex.UI.Presentation
             view.Wire(onStart, onNotes, onQuit);
             view.BuildToast(font);
             view.BuildResetButton(onReset);
+            view.BuildNoteAlert();
             return view;
+        }
+
+        /// <summary>단서 노트 버튼의 새 정보 표시(빨간 점)를 켜거나 끈다.</summary>
+        public void SetNoteAlert(bool visible)
+        {
+            if (_noteAlert != null) _noteAlert.SetActive(visible);
+        }
+
+        /// <summary>표시가 지금 켜져 있는가(검증용).</summary>
+        public bool NoteAlertVisible => _noteAlert != null && _noteAlert.activeSelf;
+
+        /// <summary>프리팹의 NoteBtn 자식으로 붙는 빨간 점 — 앵커가 버튼의 좌측 상단 모서리라 해상도가 달라도 모서리를 따라간다. 처음엔 꺼져 있다.</summary>
+        private void BuildNoteAlert()
+        {
+            var button = transform.Find("Buttons/NoteBtn") as RectTransform;
+            if (button == null) return;
+
+            var rect = RuntimeUi.CreateRect(button, "NoteAlert", new Vector2(0f, 1f), new Vector2(0f, 1f), Vector2.zero, Vector2.zero);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(NoteAlertSize, NoteAlertSize);
+            rect.anchoredPosition = NoteAlertOffset;
+            rect.SetAsLastSibling();
+
+            var image = rect.gameObject.AddComponent<Image>();
+            image.sprite = RuntimeUi.Circle;
+            image.color = NoteAlertColor;
+            image.raycastTarget = false;
+
+            _noteAlert = rect.gameObject;
+            _noteAlert.SetActive(false);
         }
 
         /// <summary>버튼을 잠그거나 푼다(시작을 누른 뒤 두 번 눌리지 않게).</summary>

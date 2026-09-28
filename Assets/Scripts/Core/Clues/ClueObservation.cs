@@ -17,9 +17,16 @@ namespace BlueComplex.Core.Clues
         public IReadOnlyCollection<PersonTag> RevealedPersons => _persons;
         public IReadOnlyCollection<EmotionTag> RevealedEmotions => _emotions;
 
-        public void RevealTime() => TimeRevealed = true;
-        public void RevealPerson(PersonTag person) => _persons.Add(person);
-        public void RevealEmotion(EmotionTag emotion) => _emotions.Add(emotion);
+        /// <summary>새로 밝혀졌으면 true(이미 밝혀져 있었으면 false).</summary>
+        public bool RevealTime()
+        {
+            var isNew = !TimeRevealed;
+            TimeRevealed = true;
+            return isNew;
+        }
+
+        public bool RevealPerson(PersonTag person) => _persons.Add(person);
+        public bool RevealEmotion(EmotionTag emotion) => _emotions.Add(emotion);
 
         public bool IsPersonRevealed(PersonTag person) => _persons.Contains(person);
         public bool IsEmotionRevealed(EmotionTag emotion) => _emotions.Contains(emotion);
@@ -50,7 +57,20 @@ namespace BlueComplex.Core.Clues
         public bool IsSeen(string clueId) => _seen.Contains(clueId);
 
         /// <summary>단서가 손패에 들어왔다(StageFactory가 ClueHand.CardAdded에 건다). 즉시 영구 기록이다.</summary>
-        public void MarkSeen(string clueId) => _seen.Add(clueId);
+        public void MarkSeen(string clueId)
+        {
+            if (_seen.Add(clueId)) HasNewNoteInfo = true;
+        }
+
+        /// <summary>마지막으로 단서 노트를 연 뒤에 처음 본 단서가 생겼거나, 본 단서의 "?"였던 칸이 새로 해금됐는가 —
+        /// 메인 화면 "단서 노트" 버튼의 빨간 점. 세이브에 실린다(<see cref="RestoreNoteAlert"/>). 세이브 초기화(<see cref="Clear"/>)는 끈다.</summary>
+        public bool HasNewNoteInfo { get; private set; }
+
+        /// <summary>단서 노트를 열었다 — 새 정보 표시를 끈다.</summary>
+        public void AcknowledgeNote() => HasNewNoteInfo = false;
+
+        /// <summary>세이브에서 읽은 표시 상태를 되살린다(옛 세이브엔 필드가 없어 false로 읽힌다).</summary>
+        public void RestoreNoteAlert(bool hasNew) => HasNewNoteInfo = hasNew;
 
         public ClueKnowledge GetKnowledge(string clueId)
         {
@@ -65,7 +85,7 @@ namespace BlueComplex.Core.Clues
         /// <summary>실제로 발동한 첫 컴플렉스가 참조한 태그만 관찰로 인정한다.</summary>
         public void RecordInterpretation(string clueId, InterpretationResult result)
         {
-            _seen.Add(clueId); // 낸 단서는 손패를 거쳤다 — 손패 기록이 빠진 경로(테스트 조립 등)에서도 본 것으로 친다.
+            MarkSeen(clueId); // 낸 단서는 손패를 거쳤다 — 손패 기록이 빠진 경로(테스트 조립 등)에서도 본 것으로 친다.
 
             var firstTriggered = result.Steps.FirstOrDefault(step => step.Triggered);
             if (firstTriggered.Complex == null) return;
@@ -80,9 +100,9 @@ namespace BlueComplex.Core.Clues
             {
                 var knowledge = GetKnowledge(clueId);
 
-                if (step.ObservedTime != TimeTag.None) knowledge.RevealTime();
-                foreach (var person in step.ObservedPersons) knowledge.RevealPerson(person);
-                foreach (var emotion in step.ObservedEmotions) knowledge.RevealEmotion(emotion);
+                if (step.ObservedTime != TimeTag.None && knowledge.RevealTime()) HasNewNoteInfo = true;
+                foreach (var person in step.ObservedPersons) if (knowledge.RevealPerson(person)) HasNewNoteInfo = true;
+                foreach (var emotion in step.ObservedEmotions) if (knowledge.RevealEmotion(emotion)) HasNewNoteInfo = true;
             }
 
             _pending.Clear();
@@ -99,6 +119,7 @@ namespace BlueComplex.Core.Clues
             _persistent.Clear();
             _pending.Clear();
             _seen.Clear();
+            HasNewNoteInfo = false;
         }
 
         // ── 세이브 ──────────────────────────────────────────────────────────

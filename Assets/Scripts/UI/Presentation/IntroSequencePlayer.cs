@@ -644,6 +644,7 @@ namespace BlueComplex.UI.Presentation
             ClearLayer();
             _backdrop.color = Color.black;
             _menu = MainMenuView.Create(_slide.Root, _font, OnStartPressed, OnNotesPressed, OnQuitPressed, OnResetPressed);
+            _menu.SetNoteAlert(NotesLedger is { HasNewNoteInfo: true });
             yield return FadeVeil(0f, s.seqMenuFade);
         }
 
@@ -684,7 +685,16 @@ namespace BlueComplex.UI.Presentation
             }
 
             if (OpenNotes != null) return;
-            OpenNotes = ClueNoteBook.Open((RectTransform)_menu.transform, _font,
+
+            // 열면 새 정보 표시가 꺼진다 — 저장해 두어 다시 켜도 그대로다.
+            if (NotesLedger.HasNewNoteInfo)
+            {
+                NotesLedger.AcknowledgeNote();
+                GameSave.Save(NotesLedger);
+            }
+            _menu.SetNoteAlert(false);
+
+            OpenNotes =ClueNoteBook.Open((RectTransform)_menu.transform, _font,
                 ClueCatalog.MainStory(new DefaultEmotionPolarityTable()), NotesLedger);
         }
 
@@ -707,6 +717,7 @@ namespace BlueComplex.UI.Presentation
             // 노트를 열었다 닫은 뒤(Close()가 Destroy) 이미 죽은 오브젝트에도 다시 Close()를 불러 MissingReferenceException이 난다.
             if (OpenNotes != null) OpenNotes.Close();
             GameSave.ResetAll(NotesLedger);
+            _menu.SetNoteAlert(false);
             _menu.ShowToast("세이브 데이터를 초기화했습니다.");
         }
 

@@ -23,6 +23,9 @@ namespace BlueComplex.Core.Save
 
         /// <summary>클리어한 가장 높은 스테이지 번호(0 = 아직 없음). 실패나 중도 이탈은 영향을 주지 않는다.</summary>
         public int HighestStageCleared;
+
+        /// <summary>단서 노트에 마지막으로 연 뒤의 새 정보가 있는가(메인 화면 노트 버튼의 빨간 점). 옛 세이브엔 없어 false다.</summary>
+        public bool NoteHasNewInfo;
     }
 
     /// <summary>단서 하나의 영구 지식 — 본 적 있는가, 그리고 확정된(CommitRun을 거친) 해금 태그.</summary>

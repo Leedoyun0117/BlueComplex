@@ -284,5 +284,117 @@ namespace BlueComplex.Core.Tests
             Assert.IsFalse(data.TutorialCleared);
             Assert.AreEqual(0, data.HighestStageCleared);
         }
+
+        // ── 새 정보 알림(메인 화면 노트 버튼의 빨간 점) ─────────────────────────────
+
+        [Test]
+        public void NoteAlert_IsOff_ForANewLedger()
+        {
+            Assert.IsFalse(new ClueKnowledgeLedger().HasNewNoteInfo);
+        }
+
+        [Test]
+        public void NoteAlert_TurnsOn_WhenAClueIsSeenForTheFirstTime()
+        {
+            var ledger = new ClueKnowledgeLedger();
+            ledger.MarkSeen("a");
+            Assert.IsTrue(ledger.HasNewNoteInfo);
+        }
+
+        [Test]
+        public void NoteAlert_TurnsOn_WhenAPlayedClueWasNeverInTheHand()
+        {
+            var ledger = new ClueKnowledgeLedger();
+            ledger.RecordInterpretation("a", FriendLoveViaChildhoodFriend());
+            Assert.IsTrue(ledger.HasNewNoteInfo);
+        }
+
+        [Test]
+        public void NoteAlert_TurnsOn_WhenACommitUnlocksSomethingNew_ForAnAlreadySeenClue()
+        {
+            var ledger = new ClueKnowledgeLedger();
+            ledger.MarkSeen("a");
+            ledger.AcknowledgeNote();
+
+            ledger.RecordInterpretation("a", FriendLoveViaChildhoodFriend());
+            Assert.IsFalse(ledger.HasNewNoteInfo, "확정 전엔 아직 노트에 보이지 않는다");
+            ledger.CommitRun();
+            Assert.IsTrue(ledger.HasNewNoteInfo, "?였던 시간/인물이 확정되어 열렸다");
+        }
+
+        [Test]
+        public void NoteAlert_StaysOff_ForAClueSeenAgain_AndForAnUnlockThatWasAlreadyKnown()
+        {
+            var ledger = new ClueKnowledgeLedger();
+            ledger.RecordInterpretation("a", FriendLoveViaChildhoodFriend());
+            ledger.CommitRun();
+            ledger.AcknowledgeNote();
+
+            ledger.MarkSeen("a");
+            ledger.RecordInterpretation("a", FriendLoveViaChildhoodFriend()); // 같은 컴플렉스로 같은 칸만 다시 관찰.
+            ledger.CommitRun();
+            Assert.IsFalse(ledger.HasNewNoteInfo, "이미 본 단서·이미 열린 칸은 새 정보가 아니다");
+        }
+
+        [Test]
+        public void NoteAlert_StaysOff_WhenACommitHasNothingToReveal()
+        {
+            var ledger = new ClueKnowledgeLedger();
+            ledger.CommitRun();
+            Assert.IsFalse(ledger.HasNewNoteInfo);
+        }
+
+        [Test]
+        public void NoteAlert_ClearsWhenTheNoteIsOpened_AndStaysClearedUntilSomethingNewAppears()
+        {
+            var ledger = new ClueKnowledgeLedger();
+            ledger.MarkSeen("a");
+            ledger.AcknowledgeNote();
+            Assert.IsFalse(ledger.HasNewNoteInfo);
+
+            ledger.MarkSeen("b");
+            Assert.IsTrue(ledger.HasNewNoteInfo);
+        }
+
+        [Test]
+        public void NoteAlert_ClearsOnSaveReset()
+        {
+            var ledger = new ClueKnowledgeLedger();
+            ledger.MarkSeen("a");
+            ledger.Clear();
+            Assert.IsFalse(ledger.HasNewNoteInfo);
+        }
+
+        [Test]
+        public void NoteAlert_SurvivesSaveAndLoad_AndRestoringCluesDoesNotTurnItOn()
+        {
+            var ledger = new ClueKnowledgeLedger();
+            ledger.MarkSeen("a");
+
+            var store = Store();
+            store.Save(new SaveData { Clues = ledger.ToSaveEntries(), NoteHasNewInfo = ledger.HasNewNoteInfo });
+            Assert.IsTrue(store.TryLoad(out var data, out _));
+
+            var restored = new ClueKnowledgeLedger();
+            restored.Restore(data.Clues);
+            Assert.IsFalse(restored.HasNewNoteInfo, "본 단서를 되살리는 것만으로는 새 정보가 아니다");
+            restored.RestoreNoteAlert(data.NoteHasNewInfo);
+            Assert.IsTrue(restored.HasNewNoteInfo);
+
+            restored.AcknowledgeNote();
+            store.Save(new SaveData { Clues = restored.ToSaveEntries(), NoteHasNewInfo = restored.HasNewNoteInfo });
+            Assert.IsTrue(store.TryLoad(out var reopened, out _));
+            Assert.IsFalse(reopened.NoteHasNewInfo, "열어서 끈 상태도 저장된다");
+        }
+
+        [Test]
+        public void AnOldSaveWithoutTheNoteAlertField_LoadsAsNoNewInfo()
+        {
+            var store = Store();
+            File.WriteAllText(store.Path, "{\"Version\":1,\"Clues\":[{\"Id\":\"a\",\"Seen\":true}],\"TutorialCleared\":true,\"HighestStageCleared\":1}");
+
+            Assert.IsTrue(store.TryLoad(out var data, out _));
+            Assert.IsFalse(data.NoteHasNewInfo);
+        }
     }
 }
