@@ -41,7 +41,8 @@ namespace BlueComplex.UI.Background
             public GameObject prefab;
         }
 
-        [Tooltip("스테이지별 배경 프리팹. 없는 스테이지는 StageIdleBackground가 맡는다.")]
+        [Header("Stage는 배열 순서가 아니라 진짜 스테이지 번호(1부터)")]
+        [Tooltip("스테이지별 배경 프리팹. 순서는 상관없고 비어 있는 번호는 StageIdleBackground가 맡는다.")]
         [SerializeField] private StageEntry[] backgrounds = new StageEntry[0];
 
         [Tooltip("비워 두면 씬에서 찾는다.")]
