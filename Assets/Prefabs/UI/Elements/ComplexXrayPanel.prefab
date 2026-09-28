@@ -793,8 +793,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.BrainView
   _bootstrapper: {fileID: 0}
-  _lift: 0.19
-  _sizeScale: 1.15
+  _lift: 0.17
+  _sizeScale: 1
   _shiftX: 0
   _regions:
   - {fileID: 8644288012842677649}

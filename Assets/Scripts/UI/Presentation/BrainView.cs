@@ -26,7 +26,7 @@ namespace BlueComplex.UI.Presentation
         [SerializeField, Range(0f, 0.4f), Tooltip("뇌를 위로 올리는 양(판 안쪽 높이 비율). 0 = 원래 자리. Play 중 바로 반영된다.")]
         private float _lift = DefaultLift;
 
-        public const float DefaultLift = 0.19f;
+        public const float DefaultLift = 0.17f;
 
         /// <summary>뇌 크기 배율 — 프리팹 기본 크기(BrainArea) 대비, 자기 중심 기준. 판 안 유키 머리 너비에 맞추는 값이다.</summary>
         [SerializeField, Range(0.5f, 1.5f), Tooltip("뇌 크기 배율(기본 크기 대비, 중심 기준). Play 중 바로 반영된다.")]
@@ -36,7 +36,7 @@ namespace BlueComplex.UI.Presentation
         [SerializeField, Range(-0.3f, 0.3f), Tooltip("뇌 가로 보정(판 안쪽 너비 비율, +는 오른쪽). Play 중 바로 반영된다.")]
         private float _shiftX = DefaultShiftX;
 
-        public const float DefaultSizeScale = 1.15f;
+        public const float DefaultSizeScale = 1f;
         public const float DefaultShiftX = 0f;
 
         public float SizeScale { get => _sizeScale; set { _sizeScale = value; ApplyLift(); } }
