@@ -99,7 +99,7 @@ namespace BlueComplex.Core.Tests
             Assert.AreEqual("찾았나? 그렇다면 단서를 끌어서 사용해 보게.", steps["drag_clue"].Line);
             Assert.AreEqual("아래의 정보를 읽어 보게.", steps["read_xray"].Line);
             Assert.AreEqual("잘했어! 이제 마지막이네.", steps["clear_3"].Line);
-            Assert.AreEqual("2번의 변형을 고려해서 최종 결과가 침체 쪽으로 기울게 해보게. 도움이 될 아이템을 하나 넣어 두었으니, 설명을 읽고 함께 활용해 봐.", steps["use_item"].Line);
+            Assert.AreEqual("2번의 변형을 고려해서 최종 결과가 한 번 더 침체 쪽으로 기울게 해보게. 도움이 될 아이템을 하나 넣어 두었으니, 설명을 읽고 함께 활용해 봐.", steps["use_item"].Line);
             Assert.AreEqual("아이템을 사용하면 ‘특성’이 나타나기도 한다네. 특성 위에 마우스를 올리면 정보를 확인할 수 있으니 참고하게나.", steps["trait_intro"].Line);
             StringAssert.Contains("‘컴플렉스 중첩’", steps["stack_intro"].Line);
             StringAssert.Contains("열쇠 2개가 필요하네", steps["intro_key_count"].Line);
@@ -475,7 +475,7 @@ namespace BlueComplex.Core.Tests
                 (Chief, false, "유키의 부모님이 사망하기 몇 달 전 부터 가족에게 수표로 금전적 지원을 해주고 있었거든. B는 거기에 더해서 매 주말마다 유키를 데리고 놀러가는 등, 거의 가족처럼 지냈던 모양이야."),
                 (Chief, false, "우리는 B가 주요 용의자라고 추정하고 있어. 그는 심리학에 해박했는데, 유키의 ‘기억 민감’ 특성을 악용해 범죄를 저지르게 유도했을 확률이 있거든."),
                 (Player, true, "기억 민감자를 실제로 만나는 건 처음이네요."),
-                (Chief, false, "맞아. 그 특성이 특성인 만큼 부모들은 아이가 상처 받지 않게 하려고 집 안에서만 돌보는 게 대다수니까. 일반인보다 배로 예민한 감정을 가지고 있으니까. 유키의 경우는 어떤 이유인지는 몰라도 밖에 자주 나갔던 모양이야."),
+                (Chief, false, "맞아. 그 특성이 특성인 만큼 부모들은 아이가 상처 받지 않게 하려고 집 안에서만 돌보는 게 대다수니까. 일반인보다 배로 예민한 감정이 상처로 남을 까봐 과잉 보호를 하는 경우도 적지 않지. 유키의 경우는 어떤 이유인지는 몰라도 밖에 자주 나갔던 모양이야."),
                 (Player, true, "B에 대한 더 자세한 정보가 필요합니다."),
                 (Chief, false, "음, 우리가 개인적으로 조사한 결과와 유키와 나눈 대화를 바탕으로 재구성한 정보가 있어. 확인하고 싶나?"),
                 (Player, true, "네."),
