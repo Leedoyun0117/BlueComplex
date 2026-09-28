@@ -39,16 +39,9 @@ namespace BlueComplex.UI.Presentation
             var view = dragged.GetComponent<ClueCardView>();
             if (handler == null || view == null || view.IsEmpty) return;
 
-            // 게이트(튜토리얼의 오답 걸러내기)에 걸리면 받아들이지 않는다 — MarkHandled를 안 하므로 카드는 손패로 되돌아가고 턴은 진행되지 않는다.
-            var verdict = _bootstrapper.Session.CheckPlay(view.Card);
-            if (!verdict.Allowed)
-            {
-                PlayGateFeedback.Show(transform, verdict, _bootstrapper.Session.Runner.CurrentTurn);
-                return;
-            }
-
-            handler.MarkHandled();
-            _bootstrapper.Session.Runner.PlayClue(view.Card);
+            // 게이트(튜토리얼의 오답 걸러내기)는 부트스트래퍼가 거친다. 내기 전에 거절되면 MarkHandled를 안 하므로 카드는 손패로 되돌아가고 턴은 진행되지 않는다.
+            // 결과를 보여 준 뒤 되돌리는 오답(튜토리얼 턴 4)은 받아들인다 — 카드가 빨려 들어가고, 연출과 되돌리기가 끝나면 손패 제자리에 다시 그려진다.
+            if (_bootstrapper.TryPlayCard(view.Card, transform)) handler.MarkHandled();
         }
     }
 }

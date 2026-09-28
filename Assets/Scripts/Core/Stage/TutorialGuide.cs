@@ -72,8 +72,12 @@ namespace BlueComplex.Core.Stage
         /// <summary>이 줄이 나오는 순간 함께 터지는 효과. 대부분 없음.</summary>
         public GuideEffect Effect { get; }
 
+        /// <summary>이 단계가 끝나려면 <see cref="Advance"/> 사건이 몇 번 일어나야 하는지(예: 아이템 둘을 모두 써야 넘어간다). 기본 1.</summary>
+        public int RequiredCount { get; }
+
         public TutorialGuideStep(string id, string line, GuideTarget target = GuideTarget.None,
-                                 GuideAdvance advance = GuideAdvance.Read, int waitTurn = 0, GuideEffect effect = GuideEffect.None)
+                                 GuideAdvance advance = GuideAdvance.Read, int waitTurn = 0, GuideEffect effect = GuideEffect.None,
+                                 int requiredCount = 1)
         {
             Effect = effect;
             Id = id;
@@ -81,6 +85,7 @@ namespace BlueComplex.Core.Stage
             Target = target;
             Advance = advance;
             WaitTurn = waitTurn;
+            RequiredCount = Math.Max(1, requiredCount);
         }
     }
 
@@ -92,6 +97,9 @@ namespace BlueComplex.Core.Stage
     {
         private readonly IReadOnlyList<TutorialGuideStep> _steps;
         private int _index = -1;
+
+        /// <summary>지금 단계에서 기다리던 사건이 몇 번 일어났는지(<see cref="TutorialGuideStep.RequiredCount"/>까지 센다). 단계가 바뀌면 0.</summary>
+        private int _count;
 
         public TutorialGuideFlow(IReadOnlyList<TutorialGuideStep> steps)
         {
@@ -120,14 +128,35 @@ namespace BlueComplex.Core.Stage
             Announce();
         }
 
-        /// <summary>일어난 일을 알린다. 지금 단계가 기다리던 것이면 다음 단계로 넘어가고 true. <paramref name="turn"/>은 <see cref="GuideAdvance.TurnResolved"/>일 때 결산된 턴 번호.</summary>
+        /// <summary>지금 단계가 <paramref name="stepId"/>보다 뒤라면 그 단계로 되돌아가 다시 안내한다(그 단계 이후에 걸린 상태가 되돌려졌을 때). 이미 그 단계이거나 앞이면 아무 일도 없다.</summary>
+        public bool Rewind(string stepId)
+        {
+            var target = -1;
+            for (var i = 0; i < _steps.Count; i++)
+                if (_steps[i].Id == stepId) target = i;
+
+            if (target < 0 || _index <= target) return false;
+
+            _index = target;
+            _count = 0;
+            Announce();
+            return true;
+        }
+
+        /// <summary>지금 단계가 끝나려면 기다리던 사건이 몇 번 더 일어나야 하는지. 시작 전이거나 끝났으면 0.</summary>
+        public int RemainingCount => Current == null ? 0 : Current.RequiredCount - _count;
+
+        /// <summary>일어난 일을 알린다. 지금 단계가 기다리던 것이고 필요한 횟수(<see cref="TutorialGuideStep.RequiredCount"/>)를 채웠으면 다음 단계로 넘어가고 true.
+        /// <paramref name="turn"/>은 <see cref="GuideAdvance.TurnResolved"/>일 때 결산된 턴 번호.</summary>
         public bool Notify(GuideAdvance happened, int turn = 0)
         {
             var current = Current;
             if (current == null || current.Advance != happened) return false;
             if (happened == GuideAdvance.TurnResolved && turn < current.WaitTurn) return false;
+            if (++_count < current.RequiredCount) return false;
 
             _index++;
+            _count = 0;
             Announce();
             return true;
         }
@@ -200,10 +229,11 @@ namespace BlueComplex.Core.Stage
             // 턴 4 — 중첩 + 아이템
             new TutorialGuideStep("stack_intro",
                 "대상에게 컴플렉스가 한 번 더 발현되었네. 이런 경우 변형된 결과가 다시 변형되게 돼. 우리는 이 상황을 ‘컴플렉스 중첩’이라고 부르지."),
-            // ▣ 이미지 자리 ⑦ "…설명을 읽고 함께 활용해 봐." 뒤: 아이템(자아 비대) 슬롯/설명 그림.
+            // ▣ 이미지 자리 ⑦ "…설명을 읽고 함께 활용해 봐." 뒤: 아이템(자아 비대·기억 공감) 슬롯/설명 그림.
+            // 원문은 "아이템을 하나 넣어 두었으니"지만 2026-09-28 개정으로 아이템이 둘(자아비대·기억 공감)이다 — 문구는 원문 그대로 두고, 두 칸을 모두 강조하고 둘 다 써야 넘어간다(기획 확인 대상).
             new TutorialGuideStep("use_item",
                 "2번의 변형을 고려해서 최종 결과가 침체 쪽으로 기울게 해보게. 도움이 될 아이템을 하나 넣어 두었으니, 설명을 읽고 함께 활용해 봐.",
-                GuideTarget.Items, GuideAdvance.ItemUsed),
+                GuideTarget.Items, GuideAdvance.ItemUsed, requiredCount: 2),
             new TutorialGuideStep("trait_intro",
                 "아이템을 사용하면 ‘특성’이 나타나기도 한다네. 특성 위에 마우스를 올리면 정보를 확인할 수 있으니 참고하게나."),
             new TutorialGuideStep("branch_reminder",
@@ -213,7 +243,7 @@ namespace BlueComplex.Core.Stage
 
         /// <summary>
         /// 게이트가 카드를 돌려보냈을 때 청장이 하는 말. 턴 1은 원문의 "이 감정은 ‘○○’였네"(카드의 감정을 알려 준다), 이후 턴은 "이게 아니네", 아이템이 필요하면 원문의 아이템 안내.
-        /// 사유가 안내할 게 없으면 null.
+        /// 결과를 끝까지 보여 준 오답(턴 4, <see cref="PlayRejection.KeyMissed"/>)도 "이게 아니네" — 연출이 끝난 뒤, 되돌리기 전에 나온다. 사유가 안내할 게 없으면 null.
         /// </summary>
         /// <param name="emotionName">감정의 한글 이름(화면 라벨).</param>
         public static string RejectionLine(PlayVerdict verdict, int turn, Func<EmotionTag, string> emotionName)
@@ -223,8 +253,11 @@ namespace BlueComplex.Core.Stage
                 case PlayRejection.ItemNeeded:
                     return "도움이 될 아이템을 하나 넣어 두었으니, 설명을 읽고 함께 활용해 봐.";
 
+                case PlayRejection.KeyMissed:
+                    return RetryLine;
+
                 case PlayRejection.WrongDirection:
-                    if (turn > 1) return "이게 아니네. 다시 한 번 생각해 봐.";
+                    if (turn > 1) return RetryLine;
 
                     var emotions = string.Join("·", verdict.ObservedEmotions.Select(emotionName));
                     return emotions.Length == 0
@@ -235,6 +268,8 @@ namespace BlueComplex.Core.Stage
                     return null;
             }
         }
+
+        private const string RetryLine = "이게 아니네. 다시 한 번 생각해 봐.";
 
         /// <summary>마지막 글자에 받침이 있는가 — "행복이었네 / 공포였네"처럼 서술격 조사 형태를 고른다(한글 음절이 아니면 받침 없음으로 본다).</summary>
         public static bool EndsWithBatchim(string text)

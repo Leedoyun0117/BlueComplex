@@ -127,6 +127,18 @@ namespace BlueComplex.UI.Motion
         [Tooltip("독백이 다 나온 뒤 화면이 밝아지기 전까지 머무는 시간(클릭하면 건너뛴다).")]
         public float keyTurnHold = 1.1f;
 
+        [Header("컴플렉스 발현 연출 (키 턴과 같은 암전 + 나츠 독백을 더 짧게)")]
+        [Tooltip("컴플렉스가 새로 발현될 때 화면이 어두워지거나 다시 밝아지는 시간. 키 턴(keyTurnFade)보다 짧게.")]
+        public float spawnMonologueFade = 0.3f;
+        [Tooltip("발현 독백 한 글자가 나오는 간격.")]
+        public float spawnMonologueSecondsPerChar = 0.04f;
+        [Tooltip("발현 독백이 다 나온 뒤 화면이 밝아지기 전까지 머무는 시간(클릭하면 건너뛴다).")]
+        public float spawnMonologueHold = 0.6f;
+
+        [Header("튜토리얼 턴 4 오답 (결과를 끝까지 보여 준 뒤 되돌림)")]
+        [Tooltip("결과 연출이 끝나고 청장의 \"이게 아니네\" 대사가 다 나온 뒤, 되돌리기 전까지 머무는 시간.")]
+        public float trialRollbackHold = 1.2f;
+
         [Header("분기 대사 장면 (쿼터가 끝날 때: 초상화가 이름 포스트잇에 덮여 벽으로 빠지고, 나머지 게임 UI가 사라지고, 배경과 대사만 남는다)")]
         [Tooltip("초상화가 덮인 채 벽으로 빠져나가는 시간, 그리고 돌아오는 시간. 포스트잇 붙임·뗌 시간은 위의 포스트잇 값을 따른다.")]
         public float branchPortraitExit = 0.55f;

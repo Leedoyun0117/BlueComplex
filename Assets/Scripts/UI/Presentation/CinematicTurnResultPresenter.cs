@@ -195,6 +195,43 @@ namespace BlueComplex.UI.Presentation
             StartCoroutine(DrainRoutine());
         }
 
+        /// <summary>
+        /// 튜토리얼 턴 4 오답: 실제로 내지 않은 카드의 미리보기 결과를 실제 턴과 똑같이 연출한다(엑스레이·컴플렉스 반응·결과 칩·심박수 "변화 없음"·키 미획득).
+        /// 연출이 끝나면 호출자의 <paramref name="afterResult"/>(청장의 "이게 아니네" → 세션 되돌리기)를 기다린 뒤, 화면을 되돌린 코어 상태에 맞춘다 —
+        /// 키 판정 표시·심박수·뇌 영역·손패(낸 카드가 제자리로)·특성 표시. 포스트잇은 처음부터 건드리지 않는다(턴이 넘어가지 않는다).
+        /// </summary>
+        public void PresentTrial(TurnReport report, System.Func<IEnumerator> afterResult)
+        {
+            if (IsPresenting) return;
+
+            IsPresenting = true;
+            StartCoroutine(TrialRoutine(report, afterResult));
+        }
+
+        private IEnumerator TrialRoutine(TurnReport report, System.Func<IEnumerator> afterResult)
+        {
+            yield return PresentRoutine(report);
+            _traitStatus?.Refresh();
+
+            if (afterResult != null) yield return afterResult();
+
+            _heartRate.RevertTurnResult(report);
+            _brain.Refresh(Session.Complexes.InPriorityOrder().ToList());
+            _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger);
+            _traitStatus?.Refresh();
+
+            // 결과 연출이 풀어 버린 키 턴 집중을 되돌린다 — 아직 같은 키 턴이다.
+            if (Session.Runner.Outcome == StageOutcome.InProgress
+                && TurnTransitionRules.IsKeyTurn(Session.Runner.CurrentTurnInQuarter, Session.Keys.Schedule.TurnsPerQuarter))
+                _natsu?.SetExpression(NatsuExpression.Focus);
+
+            _memoryBubble.SetEngaged(false);
+            IsPresenting = false;
+
+            // 되돌리기로 돌아온 아이템(Gained)은 연출이 끝난 지금 칸에 다시 끼워진다.
+            if (_items != null) _items.FlushPending();
+        }
+
         private IEnumerator DrainRoutine()
         {
             do
@@ -264,11 +301,7 @@ namespace BlueComplex.UI.Presentation
             _traitStatus?.Refresh();
 
             // 단서를 못 낸 턴에도 심박수에 따라 컴플렉스가 새로 발현될 수 있다(TurnRunner.CompleteTurn).
-            if (report.SpawnedComplex != null)
-            {
-                yield return PlayDialogue(TurnSummaryFormatter.BuildComplexSpawnLine(report.SpawnedComplex), isNatsu: true);
-                yield return new WaitForSeconds(_eventLinePause);
-            }
+            if (report.SpawnedComplex != null) yield return PlaySpawnMonologue(report);
 
             yield return PlayDialogue(TurnSummaryFormatter.BuildPassLine());
 
@@ -295,11 +328,7 @@ namespace BlueComplex.UI.Presentation
             _brain.Arrange(report.Interpretation.DisplayOrder);
 
             // 노션 "UI 연출" — 컴플렉스 발현 이펙트는 나츠의 독백으로 전달된다. 기존 컴플렉스의 반응 대사(유키)보다 먼저 나온다.
-            if (report.SpawnedComplex != null)
-            {
-                yield return PlayDialogue(TurnSummaryFormatter.BuildComplexSpawnLine(report.SpawnedComplex), isNatsu: true);
-                yield return new WaitForSeconds(_eventLinePause);
-            }
+            if (report.SpawnedComplex != null) yield return PlaySpawnMonologue(report);
 
             yield return PlayComplexReactions(report);
 
@@ -315,6 +344,14 @@ namespace BlueComplex.UI.Presentation
 
             _clueTray.RefreshAll(Session.Hand.Cards, Session.Ledger);
         }
+
+        /// <summary>
+        /// 컴플렉스 발현 알림 — 유키 대사창이 아니라 키 턴 독백과 같은 암전 막 위에 나츠의 독백으로 띄운다(<see cref="PostitDirector.PlayMonologue"/>, 키 턴보다 짧은 시간).
+        /// 막이 걷힌 뒤에 유키의 컴플렉스별 반응 대사가 이어진다. 튜토리얼 가이드의 "컴플렉스가 발현되었네"는 턴 결산 알림이라 이 연출이 다 끝난 뒤에 나온다.
+        /// </summary>
+        private IEnumerator PlaySpawnMonologue(TurnReport report) =>
+            PostitDirector.GetOrCreate(transform.root)
+                .PlayMonologue(_monologueSpeaker, TurnSummaryFormatter.BuildComplexSpawnLine(report.SpawnedComplex));
 
         /// <summary>발동한 컴플렉스를 평가 순서(InterpretationResult.Steps 순서)대로 한 번에 하나씩 빛내고, 그때마다 대사창에 짧은 이벤트 대사를 띄운다.
         /// 대사가 다 나와야(클릭으로 건너뛰어도 된다) 다음 컴플렉스로 넘어간다 — 발광과 대사가 서로 끊기지 않는다.</summary>

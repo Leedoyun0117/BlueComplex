@@ -316,6 +316,31 @@ namespace BlueComplex.Core.Turn
             return CompleteTurn(card.Definition, interpretation, finalTags, delta);
         }
 
+        /// <summary>
+        /// 이 단서를 지금 냈다면 나올 턴 결과. <see cref="PlayClue"/>와 같은 순서(특성 → 컴플렉스 → 아이템 보정 → 평가)로 계산하지만 아무 상태도 바꾸지 않는다 —
+        /// 심박수·손패·관찰 기록·지속 시간·키 판정·특성 모두 그대로이고 이벤트도 쏘지 않는다.
+        /// 튜토리얼이 "결과를 끝까지 보여 준 뒤 되돌리는" 오답 연출(<see cref="PlayVerdict.IsTrial"/>)에 쓴다. 이 턴이 키 턴이면 키 판정도 미리 해 담는다.
+        /// 실제 턴과 다른 점: 컴플렉스 발현(<see cref="TurnReport.SpawnedComplex"/>)은 없고, <see cref="TurnReport.Outcome"/>은 판이 끝나지 않으므로 항상 InProgress다.
+        /// </summary>
+        public TurnReport PreviewPlay(ClueInstance card)
+        {
+            if (Outcome != StageOutcome.InProgress)
+                throw new InvalidOperationException("이미 종료된 스테이지입니다.");
+
+            var input = _traits.ApplyToOriginal(card.Definition.CreateOriginalTagSet());
+            var interpretation = _resolver.Resolve(input, _activeItems);
+            var finalTags = interpretation.Final;
+            _activeItems.Modify(finalTags);
+
+            var delta = _evaluator.Evaluate(finalTags);
+            var value = Math.Clamp(_heartbeat.Value + delta, Heartbeat.MinValue, Heartbeat.MaxValue);
+            KeyJudgement? keyResult = _keys.IsKeyTurn(CurrentTurn) ? _keys.PreviewJudge(value) : null;
+
+            return new TurnReport(CurrentTurn, Schedule.QuarterOf(CurrentTurn), Schedule.TurnInQuarter(CurrentTurn),
+                card.Definition, interpretation, finalTags, delta, value, null, StageOutcome.InProgress, keyResult,
+                traitsManifested: _manifested.Distinct().ToList());
+        }
+
         /// <summary>손패가 비어 낼 단서가 없는 턴 — 심박수는 그대로 두고 지속 시간과 쿼터 경계만 처리한다.</summary>
         private void PassTurn() => CompleteTurn(null, null, null, 0);
 

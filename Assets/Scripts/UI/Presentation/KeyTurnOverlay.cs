@@ -41,8 +41,8 @@ namespace BlueComplex.UI.Presentation
             return overlay;
         }
 
-        /// <summary>어두워진다. 이미 어두우면 그대로 둔다.</summary>
-        public Tween FadeIn()
+        /// <summary>어두워진다. 이미 어두우면 그대로 둔다. <paramref name="duration"/>을 안 주면 키 턴 값(<c>keyTurnFade</c>).</summary>
+        public Tween FadeIn(float? duration = null)
         {
             var settings = UiMotion.Settings;
             gameObject.SetActive(true);
@@ -52,22 +52,25 @@ namespace BlueComplex.UI.Presentation
             _textGroup.alpha = 0f;
 
             _group.DOKill();
-            return _group.DOFade(1f, settings.keyTurnFade).SetEase(Ease.InOutSine).SetUpdate(true).SetTarget(_group);
+            return _group.DOFade(1f, duration ?? settings.keyTurnFade).SetEase(Ease.InOutSine).SetUpdate(true).SetTarget(_group);
         }
 
-        /// <summary>다시 밝아진다. 다 밝아지면 막을 치운다.</summary>
-        public Tween FadeOut()
+        /// <summary>다시 밝아진다. 다 밝아지면 막을 치운다. <paramref name="duration"/>을 안 주면 키 턴 값(<c>keyTurnFade</c>).</summary>
+        public Tween FadeOut(float? duration = null)
         {
             _group.DOKill();
             _group.blocksRaycasts = false;
-            return _group.DOFade(0f, UiMotion.Settings.keyTurnFade).SetEase(Ease.InOutSine).SetUpdate(true).SetTarget(_group)
+            return _group.DOFade(0f, duration ?? UiMotion.Settings.keyTurnFade).SetEase(Ease.InOutSine).SetUpdate(true).SetTarget(_group)
                 .OnComplete(() => gameObject.SetActive(false));
         }
 
-        /// <summary>막이 어두워진 상태에서 독백을 보여 준다: 화자 이름 → 한 글자씩(글자마다 타자 소리) → 잠깐 머묾 → 사라짐. 클릭하면 건너뛴다.</summary>
-        public IEnumerator PlayMonologue(string speaker, string line)
+        /// <summary>막이 어두워진 상태에서 독백을 보여 준다: 화자 이름 → 한 글자씩(글자마다 타자 소리) → 잠깐 머묾 → 사라짐. 클릭하면 건너뛴다.
+        /// 글자 간격·머묾을 안 주면 키 턴 값(<c>keyTurnSecondsPerChar</c>·<c>keyTurnHold</c>) — 컴플렉스 발현 독백은 더 짧은 값을 넘긴다.</summary>
+        public IEnumerator PlayMonologue(string speaker, string line, float? secondsPerChar = null, float? hold = null)
         {
             var settings = UiMotion.Settings;
+            var perChar = secondsPerChar ?? settings.keyTurnSecondsPerChar;
+            var holdSeconds = hold ?? settings.keyTurnHold;
             _speaker.text = speaker;
             _line.text = string.Empty;
             _skip = false;
@@ -88,7 +91,7 @@ namespace BlueComplex.UI.Presentation
                         shown = visible;
                         _line.text = line.Substring(0, shown);
                         if (!char.IsWhiteSpace(line[shown - 1])) UiSoundHooks.Play(UiSoundCue.Type);
-                    }, count, count * settings.keyTurnSecondsPerChar)
+                    }, count, count * perChar)
                     .SetEase(Ease.Linear).SetUpdate(true).SetTarget(this)
                     .OnComplete(() => typing = false);
             }
@@ -100,7 +103,7 @@ namespace BlueComplex.UI.Presentation
             _line.text = line;
 
             _skip = false;
-            for (var elapsed = 0f; elapsed < settings.keyTurnHold && !_skip; elapsed += Time.unscaledDeltaTime)
+            for (var elapsed = 0f; elapsed < holdSeconds && !_skip; elapsed += Time.unscaledDeltaTime)
                 yield return null;
 
             yield return _textGroup.DOFade(0f, 0.25f).SetUpdate(true).SetTarget(_textGroup).WaitForCompletion(true);
