@@ -793,6 +793,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Presentation.BrainView
   _bootstrapper: {fileID: 0}
+  _lift: 0.19
+  _sizeScale: 1.15
+  _shiftX: 0
   _regions:
   - {fileID: 8644288012842677649}
   - {fileID: 7252832571440269912}
@@ -2927,6 +2930,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Layout.ComplexXrayPanel
   _verticalOffset: 80
+  _frameScale: 0.8
   _tablet: {fileID: 3486972046279749149}
   _basePlate: {fileID: 8770954893327788620}
   _handleTag: {fileID: 2769639875663777597}
