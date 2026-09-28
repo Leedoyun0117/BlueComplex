@@ -16,7 +16,7 @@ namespace BlueComplex.UI.Background
     ///
     /// ─── StageIdleBackground와의 관계 ─────────────────────────────────────
     /// 그쪽은 "방 하나 = 시트 한 장"을 전제로 스스로 생겨나 quad 한 장을 깐다.
-    /// 프리팹이 있는 스테이지에서는 두 배경이 겹치므로 그 오브젝트를 꺼 둔다.
+    /// 프리팹이 있는 스테이지에서는 두 배경이 겹치므로 없애거나 꺼 둔다(<see cref="destroyIdleBackground"/>).
     /// <b>프리팹이 없는 스테이지에서는 건드리지 않는다</b> — 아직 옮기지 않은 방은 그대로 돌아간다.
     ///
     /// 되켤 때는 Bind를 한 번 불러 준다. SessionBoundView는 OnDisable에서 세션 구독을 놓는데 다시 잡는
@@ -46,6 +46,10 @@ namespace BlueComplex.UI.Background
 
         [Tooltip("비워 두면 씬에서 찾는다.")]
         [SerializeField] private StageBootstrapper bootstrapper;
+
+        [Tooltip("프리팹으로 배경을 깔면 StageIdleBackground를 아예 없앤다. " +
+                 "끄면 숨기기만 한다 — 프리팹이 없는 스테이지로 돌아갈 수 있을 때 그렇게 둘 것.")]
+        [SerializeField] private bool destroyIdleBackground = true;
 
         /// <summary>지금 깔려 있는 배경. 아직 세션이 안 열렸거나 프리팹이 없는 스테이지면 null.</summary>
         public GameObject Background => _instance;
@@ -87,7 +91,8 @@ namespace BlueComplex.UI.Background
             // 세션이 이미 열렸다면(오프닝을 건너뛰는 설정) HandleSessionStarted가 이미 정리했다.
             if (_sessionStarted) return;
 
-            HideIdle();
+            // 아직 어느 스테이지인지 모른다 — 없애지 않고 숨기기만 한다.
+            HideIdle(false);
         }
 
         private void OnDestroy()
@@ -116,7 +121,8 @@ namespace BlueComplex.UI.Background
                 return;
             }
 
-            HideIdle();
+            // 이 방은 프리팹이 맡는다 — 겹치는 쪽은 없애도 된다.
+            HideIdle(true);
 
             // 같은 스테이지 재시작이면 다시 짓지 않는다 — 애니메이션 재생 위치가 튀지 않게.
             if (_instance != null && _instanceStage == stage) return;
@@ -125,8 +131,33 @@ namespace BlueComplex.UI.Background
 
             // instantiateInWorldSpace: false — 프리팹에 저장된 위치를 로컬 값으로 그대로 쓴다.
             _instance = Instantiate(prefab, transform, false);
-            _instance.name = prefab.name;
+
+            // 씬에 남아 있는 옛 리그와 이름이 겹치면 Hierarchy에서 구분이 안 된다.
+            _instance.name = $"{prefab.name} (Stage {stage})";
             _instanceStage = stage;
+
+            // 프리팹이 꺼진 채로 저장됐거나 누가 껐어도 깔리도록 한 번 확인한다.
+            if (!_instance.activeSelf) _instance.SetActive(true);
+
+            WarnAboutStrayRigs();
+        }
+
+        /// <summary>
+        /// 씬에 옛 Background Rig가 남아 있으면 알려 준다.
+        ///
+        /// 남아 있으면 배경이 두 벌이 되고, 더 나쁜 건 StageIdleBackground가 깨어나며 그걸 꺼 버린다는 점이다
+        /// (BackgroundLayerRig를 찾아 SetActive(false) 한다). 이름까지 같으면 "스폰된 배경이 꺼져 있다"로 보인다.
+        /// </summary>
+        private void WarnAboutStrayRigs()
+        {
+            foreach (var rig in FindObjectsByType<BackgroundLayerRig>(
+                         FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (rig.transform.IsChildOf(transform)) continue; // 우리가 깐 것.
+
+                Debug.LogWarning($"[{nameof(LSO_StageBackgroundSpawner)}] 씬에 배경 리그 '{rig.name}'가 남아 있다 — " +
+                    "프리팹으로 뺐으면 씬에서는 지울 것. 두 벌이 겹치고 StageIdleBackground가 그걸 꺼 버린다.", rig);
+            }
         }
 
         private GameObject Find(int stage)
@@ -146,10 +177,27 @@ namespace BlueComplex.UI.Background
             _instanceStage = 0;
         }
 
-        /// <summary>이미 꺼져 있던 건 담지 않는다 — 되돌릴 때 켜 버리면 안 된다.</summary>
-        private void HideIdle()
+        /// <summary>
+        /// <see cref="destroyIdleBackground"/>면 아예 없앤다. 스스로 다시 생기지는 않는다 —
+        /// EnsureExists는 씬이 로드될 때 한 번만 돈다.
+        /// 아니면 숨기기만 한다. 이미 꺼져 있던 건 건드리지 않는다(되돌릴 때 켜 버리면 안 된다).
+        /// </summary>
+        /// <param name="allowDestroy">
+        /// 세션이 열리기 전에는 false — 아직 어느 스테이지인지 몰라서, 프리팹이 없는 방이면 되돌려 줘야 한다.
+        /// </param>
+        private void HideIdle(bool allowDestroy)
         {
-            if (_idleHidden || _idle == null || !_idle.gameObject.activeSelf) return;
+            if (_idle == null) return;
+
+            if (destroyIdleBackground && allowDestroy)
+            {
+                Destroy(_idle.gameObject);
+                _idle = null;
+                _idleHidden = false;
+                return;
+            }
+
+            if (_idleHidden || !_idle.gameObject.activeSelf) return;
 
             _idle.gameObject.SetActive(false);
             _idleHidden = true;
@@ -157,7 +205,17 @@ namespace BlueComplex.UI.Background
 
         private void RestoreIdle()
         {
-            if (!_idleHidden || _idle == null) return;
+            if (_idle == null)
+            {
+                // 없앤 뒤에 프리팹 없는 스테이지로 왔다 — 되살릴 길이 없다.
+                if (destroyIdleBackground && _sessionStarted)
+                    Debug.LogWarning($"[{nameof(LSO_StageBackgroundSpawner)}] 프리팹이 없는 스테이지인데 " +
+                        "StageIdleBackground를 이미 없앴다 — 배경이 비어 있다. " +
+                        "스테이지를 오가야 하면 Destroy Idle Background를 끌 것.", this);
+                return;
+            }
+
+            if (!_idleHidden) return;
 
             _idleHidden = false;
             _idle.gameObject.SetActive(true);
