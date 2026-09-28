@@ -57,6 +57,7 @@ namespace BlueComplex.UI.Bootstrap
                     ledger.Restore(data.Clues);
                     TutorialCleared = data.TutorialCleared;
                     HighestStageCleared = data.HighestStageCleared;
+                    ledger.RestoreNoteAlert(data.NoteHasNewInfo);
                 }
                 else if (error != null)
                 {
@@ -78,6 +79,7 @@ namespace BlueComplex.UI.Bootstrap
                     Clues = ledger.ToSaveEntries(),
                     TutorialCleared = TutorialCleared,
                     HighestStageCleared = HighestStageCleared,
+                    NoteHasNewInfo = ledger.HasNewNoteInfo,
                 });
             }
             catch (Exception e)
