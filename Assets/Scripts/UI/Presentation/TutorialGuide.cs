@@ -353,8 +353,17 @@ namespace BlueComplex.UI.Presentation
             }
         }
 
-        /// <summary>이 단계에서 눌려도 되는 사각형들. 밖은 막이 삼킨다. 읽기 단계는 아무 데도 없다(말풍선만 눌린다).</summary>
+        /// <summary>이 단계에서 눌려도 되는 사각형들. 밖은 막이 삼킨다. 읽기 단계는 말풍선 말고는 엑스레이의 "접기" 버튼뿐이다 — 판넬이 열려 있으면 어느 단계에서든 접을 수 있어야 하는데
+        /// (읽기 단계 동안 막이 접기를 삼켜서 "눌러도 안 접힌다"는 제보가 있었다), 열린 판을 접는 건 안내 진행에 아무 영향이 없다.</summary>
         private IEnumerable<RectTransform> AllowedRects(TutorialGuideStep step)
+        {
+            var xray = UnityEngine.Object.FindFirstObjectByType<ComplexXrayPanel>(FindObjectsInactive.Include);
+            if (xray != null && xray.IsOpen && xray.FoldButtonRect != null) yield return xray.FoldButtonRect;
+
+            foreach (var rect in StepRects(step)) yield return rect;
+        }
+
+        private IEnumerable<RectTransform> StepRects(TutorialGuideStep step)
         {
             switch (step.Advance)
             {
