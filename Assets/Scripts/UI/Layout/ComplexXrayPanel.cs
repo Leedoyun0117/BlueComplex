@@ -57,6 +57,16 @@ namespace BlueComplex.UI.Layout
         /// 스친 것으로 보고 무시한다(EventSystem의 기본 드래그 시작 거리는 10px뿐이라 이 값이 의도적 드래그와 스침을 가른다).</summary>
         private const float OpenDragDistance = 80f;
 
+        /// <summary>판넬 전체(어깨 받침대·팔·접힌/펼친 판·안내표)를 아래로 내리는 양(참조 픽셀, 아래가 +). 위 좌표 상수는 그대로 두고 여기서 한꺼번에 민다 —
+        /// Play 중에 인스펙터에서 바꾸면 바로 반영된다(OnValidate). 2026-09-28 사용자 요청으로 도입.
+        /// 프리팹 인스펙터에서 바꾼 값이 이 기본값보다 우선한다.</summary>
+        [SerializeField, Tooltip("엑스레이 판넬 전체를 아래로 내리는 양(참조 1080p 픽셀, 아래가 +). Play 중 바로 반영된다.")]
+        private float _verticalOffset = DefaultVerticalOffset;
+
+        /// <summary>80: 펼친 판 아래 끝이 y≈751(1080p)로 하단 대사창(y≈832)과 81px 떨어진다. 접힌 팔·안내표는 유키·컴플렉스 포스트잇과 안 겹친다(캡처로 확인, 2026-09-28 도윤님 확정).
+        /// 인스펙터 필드라 나중에 바꿔도 된다.</summary>
+        public const float DefaultVerticalOffset = 80f;
+
         [SerializeField] private RectTransform _tablet;
         [SerializeField] private RectTransform _basePlate;
         [SerializeField] private RectTransform _handleTag;
@@ -139,6 +149,24 @@ namespace BlueComplex.UI.Layout
             UnsubscribeFromClueDrag();
             if (_foldButton != null) _foldButton.onClick.RemoveListener(OnFoldButton);
         }
+
+        private void OnValidate()
+        {
+            if (Application.isPlaying && _rect != null && _tablet != null && _arm != null) ApplyPose();
+        }
+
+        /// <summary>판넬 전체를 아래로 내리는 양(참조 픽셀). 검증·튜닝용.</summary>
+        public float VerticalOffset
+        {
+            get => _verticalOffset;
+            set
+            {
+                _verticalOffset = value;
+                if (_rect != null && _tablet != null && _arm != null) ApplyPose();
+            }
+        }
+
+        private Vector2 Down => new(0f, _verticalOffset);
 
         private void OnRectTransformDimensionsChange()
         {
@@ -226,7 +254,8 @@ namespace BlueComplex.UI.Layout
             var unit = _rect.rect.width / ReferenceSize.x;
             if (unit <= 0f) return;
 
-            var wrist = Vector2.LerpUnclamped(FoldedWrist, OpenWrist, _fold);
+            var shoulder = ShoulderPoint + Down;
+            var wrist = Vector2.LerpUnclamped(FoldedWrist, OpenWrist, _fold) + Down;
             var scale = Mathf.LerpUnclamped(FoldedScale, OpenScale, _fold);
 
             if (_dragBlend > 0f)
@@ -238,19 +267,19 @@ namespace BlueComplex.UI.Layout
             }
 
             // 손목이 닿는 거리를 넘으면 팔이 뻗을 수 있는 데까지만 간다 — 판넬은 손목에 매달려 있으니 같이 멈춘다.
-            wrist = _arm.Solve(ShoulderPoint, wrist, ArmLength, unit);
+            wrist = _arm.Solve(shoulder, wrist, ArmLength, unit);
 
             // 어깨 받침대와 손잡이 안내표는 접힌 위치에 고정이다(컨테이너 크기에 맞춰 환산만 한다).
             if (_basePlate != null)
             {
-                _basePlate.anchoredPosition = new Vector2(ShoulderPoint.x, -ShoulderPoint.y) * unit;
+                _basePlate.anchoredPosition = new Vector2(shoulder.x, -shoulder.y) * unit;
                 _basePlate.sizeDelta = new Vector2(70f, 56f) * unit;
             }
 
             if (_handleTag != null)
             {
                 // 안내표는 화면 왼쪽 가장자리에 잘리지 않게 폭의 절반 + 여백 이상으로 놓는다.
-                var folded = FoldedWrist + new Vector2(TabletSize.x * 0.5f * FoldedScale + HingeGap, TabletSize.y * 0.5f * FoldedScale + 24f);
+                var folded = FoldedWrist + Down + new Vector2(TabletSize.x * 0.5f * FoldedScale + HingeGap, TabletSize.y * 0.5f * FoldedScale + 24f);
                 folded.x = Mathf.Max(folded.x, HandleTagSize.x * 0.5f + 8f);
                 _handleTag.anchoredPosition = new Vector2(folded.x, -folded.y) * unit;
                 _handleTag.sizeDelta = HandleTagSize * unit;
