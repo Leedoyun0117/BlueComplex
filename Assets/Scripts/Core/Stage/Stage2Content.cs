@@ -277,15 +277,15 @@ namespace BlueComplex.Core.Stage
                 new AddPerson(PersonTag.Family)
             });
 
-        /// <summary>연인 + 사랑 → 사랑을 공포로.</summary>
+        /// <summary>가족 + 사랑 → 사랑을 공포로.</summary>
         public static ComplexDefinition Distrust() => new(
             "stage2_distrust",
             "불신 컴플렉스",
-            "가까운 사람의 애정을 두려움으로 받아들인다.",
+            "가족의 애정을 두려움으로 받아들인다.",
             defaultDuration: 5,
             new IComplexCondition[]
             {
-                new HasPerson(PersonTag.Lover),
+                new HasPerson(PersonTag.Family),
                 new HasAnyEmotion(EmotionTag.Love)
             },
             new IComplexEffect[]
@@ -315,7 +315,7 @@ namespace BlueComplex.Core.Stage
         public static ComplexDefinition Persecution() => new(
             "stage2_persecution",
             "피해 망상 컴플렉스",
-            "가까운 사람에게 슬픔을 느끼면 행복한 감정은 잊고, 슬픔을 더 깊게 느낍니다.",
+            "가족이나 연인에게 슬픔을 느끼면 행복한 감정은 잊고, 슬픔을 느낀다.",
             defaultDuration: 3,
             new IComplexCondition[]
             {

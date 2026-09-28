@@ -16,12 +16,18 @@ namespace BlueComplex.UI.Presentation
     internal sealed class MainMenuView : MonoBehaviour
     {
         private const string ResourcePath = "UI/MainMenu";
+        private const string ResetLogoResourcePath = "UI/zentonLogo";
+        private const float ResetButtonSize = 56f;
+        private const float ResetButtonMargin = 24f;
 
         private CanvasGroup _group;
         private TMP_Text _toast;
         private Tween _toastTween;
+        private TMP_FontAsset _font;
+        private Action _onReset;
+        private RectTransform _resetConfirmRoot;
 
-        public static MainMenuView Create(Transform parent, TMP_FontAsset font, Action onStart, Action onNotes, Action onQuit)
+        public static MainMenuView Create(Transform parent, TMP_FontAsset font, Action onStart, Action onNotes, Action onQuit, Action onReset)
         {
             var prefab = Resources.Load<GameObject>(ResourcePath);
             if (prefab == null)
@@ -31,9 +37,11 @@ namespace BlueComplex.UI.Presentation
             instance.name = prefab.name;
 
             var view = instance.AddComponent<MainMenuView>();
+            view._font = font;
             view._group = instance.AddComponent<CanvasGroup>();
             view.Wire(onStart, onNotes, onQuit);
             view.BuildToast(font);
+            view.BuildResetButton(onReset);
             return view;
         }
 
@@ -96,6 +104,100 @@ namespace BlueComplex.UI.Presentation
             _toast.textWrappingMode = TextWrappingModes.Normal;
             _toast.raycastTarget = false;
             _toast.alpha = 0f;
+        }
+
+        /// <summary>화면 오른쪽 아래 구석의 "세이브 데이터 초기화" 버튼 — zenton 로고를 그대로 버튼 얼굴로 쓴다.
+        /// 프리팹에는 자리가 없어 토스트처럼 여기서 덧붙인다. 확인 팝업 없이 누르면 되돌릴 수 없어 확인을 한 번 거친다.</summary>
+        private void BuildResetButton(Action onReset)
+        {
+            _onReset = onReset;
+
+            var rect = RuntimeUi.CreateRect((RectTransform)transform, "ResetSaveBtn", new Vector2(1f, 0f), new Vector2(1f, 0f),
+                Vector2.zero, Vector2.zero);
+            rect.pivot = new Vector2(1f, 0f);
+            rect.sizeDelta = new Vector2(ResetButtonSize, ResetButtonSize);
+            rect.anchoredPosition = new Vector2(-ResetButtonMargin, ResetButtonMargin);
+
+            var image = rect.gameObject.AddComponent<Image>();
+            image.sprite = Resources.Load<Sprite>(ResetLogoResourcePath);
+            image.color = Color.white;
+            image.raycastTarget = true;
+            if (image.sprite == null)
+                Debug.LogWarning($"[MainMenuView] 초기화 버튼 로고를 찾지 못했다: Resources/{ResetLogoResourcePath}.png", this);
+
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            var colors = button.colors;
+            colors.highlightedColor = new Color(1f, 1f, 1f, 0.82f);
+            colors.pressedColor = new Color(0.75f, 0.75f, 0.75f, 1f);
+            button.colors = colors;
+            button.onClick.AddListener(() =>
+            {
+                UiSoundHooks.Play(UiSoundCue.ButtonClick);
+                ShowResetConfirm();
+            });
+        }
+
+        private void ShowResetConfirm()
+        {
+            if (_resetConfirmRoot == null) BuildResetConfirm();
+            _resetConfirmRoot.gameObject.SetActive(true);
+            _resetConfirmRoot.SetAsLastSibling();
+        }
+
+        private void HideResetConfirm()
+        {
+            if (_resetConfirmRoot != null) _resetConfirmRoot.gameObject.SetActive(false);
+        }
+
+        /// <summary>메인 화면 전체를 덮는 확인 팝업 — 딤 배경 + 문구 + 초기화/취소 두 버튼. 처음 열 때 한 번만 짓는다.</summary>
+        private void BuildResetConfirm()
+        {
+            _resetConfirmRoot = RuntimeUi.CreateStretched(transform, "ResetSaveConfirm");
+            RuntimeUi.CreateImage(_resetConfirmRoot, "Dim", new Color(0f, 0f, 0f, 0.6f), Vector2.zero, Vector2.one,
+                Vector2.zero, Vector2.zero, raycastTarget: true);
+
+            var box = RuntimeUi.CreateRect(_resetConfirmRoot, "Box", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            box.sizeDelta = new Vector2(560f, 220f);
+            RuntimeUi.CreateImage(box, "Panel", new Color(0.12f, 0.12f, 0.14f, 0.97f), Vector2.zero, Vector2.one,
+                Vector2.zero, Vector2.zero, raycastTarget: true);
+
+            var message = RuntimeUi.CreateText(box, "Message",
+                "세이브 데이터를 초기화합니다.\n진행도와 단서 기록이 모두 사라집니다.", _font, 24f, Color.white,
+                TextAlignmentOptions.Center, new Vector2(0f, 0.4f), new Vector2(1f, 1f));
+            message.textWrappingMode = TextWrappingModes.Normal;
+
+            BuildConfirmButton(box, "ConfirmBtn", "초기화", new Vector2(0.1f, 0.1f), new Vector2(0.46f, 0.32f), ConfirmReset);
+            BuildConfirmButton(box, "CancelBtn", "취소", new Vector2(0.54f, 0.1f), new Vector2(0.9f, 0.32f), HideResetConfirm);
+        }
+
+        private void BuildConfirmButton(Transform parent, string name, string label, Vector2 anchorMin, Vector2 anchorMax,
+            UnityEngine.Events.UnityAction onConfirm)
+        {
+            var background = RuntimeUi.CreateImage(parent, name, new Color(1f, 1f, 1f, 0.12f), anchorMin, anchorMax,
+                Vector2.zero, Vector2.zero, raycastTarget: true);
+
+            var button = background.gameObject.AddComponent<Button>();
+            button.targetGraphic = background;
+            var colors = button.colors;
+            colors.highlightedColor = new Color(1f, 1f, 1f, 0.24f);
+            colors.pressedColor = new Color(1f, 1f, 1f, 0.34f);
+            button.colors = colors;
+            button.onClick.AddListener(() =>
+            {
+                UiSoundHooks.Play(UiSoundCue.ButtonClick);
+                onConfirm();
+            });
+
+            RuntimeUi.CreateText(background.transform, "Label", label, _font, 22f, Color.white,
+                TextAlignmentOptions.Center, Vector2.zero, Vector2.one);
+        }
+
+        private void ConfirmReset()
+        {
+            HideResetConfirm();
+            _onReset?.Invoke();
         }
     }
 }

@@ -1,0 +1,22 @@
+{
+  "group_id": "ef5b0a4b-3b55-4521-8002-b2bc909d0aeb",
+  "objects": [
+    {
+      "id": "e91df5b4-f63f-47db-a8ae-70149deb3213",
+      "name": "base",
+      "prompt": "eiffel tower souvenir",
+      "size": {
+        "width": 64,
+        "height": 64
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/eiffel_tower_souvenir.png"
+      },
+      "animations": {}
+    }
+  ],
+  "export_version": "1.1",
+  "export_date": "2026-09-27T20:20:23.789507"
+}

@@ -3,6 +3,7 @@ using System.Collections;
 using BlueComplex.Core.Clues;
 using BlueComplex.Core.Stage;
 using BlueComplex.Core.Tags;
+using BlueComplex.UI.Bootstrap;
 using BlueComplex.UI.Layout;
 using BlueComplex.UI.Motion;
 using DG.Tweening;
@@ -138,7 +139,7 @@ namespace BlueComplex.UI.Presentation
             _startGame = startGame;
             DOTween.SetTweensCapacity(800, 100); // 단어 포스트잇이 수십 장 동시에 붙는다 — 트윈이 기본 용량(200)을 넘으면 자동 확장 경고가 뜬다.
             _art = IntroCutsceneArt.Load();
-            _font = RuntimeUi.FindFont(_canvasRoot) ?? FindFirstObjectByType<TMP_Text>(FindObjectsInactive.Include)?.font; // 전용 캔버스엔 글자가 없어 씬의 것을 빌린다.
+            _font = RuntimeUi.GameFont;
             BuildOverlay();
 
             // 오프닝은 자기 배경곡(FinalDetection)만 깐다 — 상시 배경음(Fragile Notes)과 심박수 배경음이 켜져 있었다면 끈다.
@@ -157,7 +158,7 @@ namespace BlueComplex.UI.Presentation
 
             Current = this;
             _startGame = startGame;
-            _font = RuntimeUi.FindFont(_canvasRoot) ?? FindFirstObjectByType<TMP_Text>(FindObjectsInactive.Include)?.font;
+            _font = RuntimeUi.GameFont;
             BuildOverlay(); // 막은 완전히 검은 채로 시작한다 — 실패 암전과 그대로 이어진다.
 
             UiSoundHooks.StopAmbient();
@@ -642,7 +643,7 @@ namespace BlueComplex.UI.Presentation
             if (fadeOutFirst) yield return FadeVeil(1f, s.seqFade * 0.5f);
             ClearLayer();
             _backdrop.color = Color.black;
-            _menu = MainMenuView.Create(_slide.Root, _font, OnStartPressed, OnNotesPressed, OnQuitPressed);
+            _menu = MainMenuView.Create(_slide.Root, _font, OnStartPressed, OnNotesPressed, OnQuitPressed, OnResetPressed);
             yield return FadeVeil(0f, s.seqMenuFade);
         }
 
@@ -694,6 +695,19 @@ namespace BlueComplex.UI.Presentation
 #else
             Application.Quit();
 #endif
+        }
+
+        /// <summary>메인 화면의 "세이브 데이터 초기화"(확인 팝업을 거친 뒤): 세이브 파일과 지금 든 지식 장부·진행도를
+        /// 모두 처음 하는 사람의 상태로 되돌린다. 열려 있던 단서 노트는 이제 지워진 지식을 보여 주게 되므로 함께 닫는다.</summary>
+        private void OnResetPressed()
+        {
+            if (_menu == null) return;
+
+            // OpenNotes?.Close()로 쓰면 안 된다 — ?.는 유니티의 Destroy() 오버로드된 == null 판정을 타지 않고 원시 참조만 보므로,
+            // 노트를 열었다 닫은 뒤(Close()가 Destroy) 이미 죽은 오브젝트에도 다시 Close()를 불러 MissingReferenceException이 난다.
+            if (OpenNotes != null) OpenNotes.Close();
+            GameSave.ResetAll(NotesLedger);
+            _menu.ShowToast("세이브 데이터를 초기화했습니다.");
         }
 
         // ------------------------------------------------------------------

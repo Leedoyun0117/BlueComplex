@@ -209,7 +209,7 @@ namespace BlueComplex.UI.Presentation
             if (_hint != null) return;
 
             var canvasRoot = transform.root;
-            var font = RuntimeUi.FindFont(canvasRoot);
+            var font = RuntimeUi.GameFont;
 
             // 모니터 왼쪽 아래, 쿼터 진행 포스트잇 왼쪽의 빈 자리(화면 비율).
             _hint = RuntimeUi.CreateRect(canvasRoot, "Item Target Hint", new Vector2(0.20f, 0.815f), new Vector2(0.565f, 0.865f), Vector2.zero, Vector2.zero);

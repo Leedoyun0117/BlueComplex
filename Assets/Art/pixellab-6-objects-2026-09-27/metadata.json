@@ -1,0 +1,224 @@
+{
+  "objects": [
+    {
+      "id": "dd3b30ef-284f-496a-94cd-f9c2e3ca00fb",
+      "name": "base",
+      "prompt": "fishing rod",
+      "size": {
+        "width": 64,
+        "height": 64
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/fishing_rod.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "bda3e7f5-5c11-41bb-a1c4-377f2558b025",
+      "name": "base",
+      "prompt": "empty fish bowl",
+      "size": {
+        "width": 48,
+        "height": 48
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/empty_fish_bowl.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "b46b645b-1f61-435b-9193-93d7bb8f301d",
+      "name": "base",
+      "prompt": "telephone",
+      "size": {
+        "width": 64,
+        "height": 64
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/telephone.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "413ee0f8-7918-434e-8210-03f653a8db6a",
+      "name": "base",
+      "prompt": "Horror movie poster",
+      "size": {
+        "width": 64,
+        "height": 64
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/Horror_movie_poster.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "488c2080-8b11-4955-aa33-bbb50c48eddf",
+      "name": "base",
+      "prompt": "stale pink donuts",
+      "size": {
+        "width": 64,
+        "height": 64
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/stale_pink_donuts.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "71e51da4-afd1-4949-834e-38431845e9b3",
+      "name": "base",
+      "prompt": "A family photo of a blonde daughter with her mother and father on the grass hill",
+      "size": {
+        "width": 64,
+        "height": 64
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/A_family_photo_of_a_blonde_dau.png"
+      },
+      "animations": {}
+    }
+  ],
+  "groups": [
+    {
+      "group_id": "0eed8f39-0b9e-4d7d-97ba-2ac3baef59f5",
+      "folder": "objects/fishing_rod",
+      "objects": [
+        {
+          "id": "dd3b30ef-284f-496a-94cd-f9c2e3ca00fb",
+          "name": "base",
+          "prompt": "fishing rod",
+          "size": {
+            "width": 64,
+            "height": 64
+          },
+          "directions": 1,
+          "view": "low top-down",
+          "rotations": {
+            "unknown": "rotations/fishing_rod.png"
+          },
+          "animations": {}
+        }
+      ]
+    },
+    {
+      "group_id": "a18fcb90-eb02-477d-9d06-a3ee08c1dca8",
+      "folder": "objects/empty_fish_bowl",
+      "objects": [
+        {
+          "id": "bda3e7f5-5c11-41bb-a1c4-377f2558b025",
+          "name": "base",
+          "prompt": "empty fish bowl",
+          "size": {
+            "width": 48,
+            "height": 48
+          },
+          "directions": 1,
+          "view": "low top-down",
+          "rotations": {
+            "unknown": "rotations/empty_fish_bowl.png"
+          },
+          "animations": {}
+        }
+      ]
+    },
+    {
+      "group_id": "89731bbb-0496-42d2-80cf-e8cc672ff79d",
+      "folder": "objects/telephone",
+      "objects": [
+        {
+          "id": "b46b645b-1f61-435b-9193-93d7bb8f301d",
+          "name": "base",
+          "prompt": "telephone",
+          "size": {
+            "width": 64,
+            "height": 64
+          },
+          "directions": 1,
+          "view": "low top-down",
+          "rotations": {
+            "unknown": "rotations/telephone.png"
+          },
+          "animations": {}
+        }
+      ]
+    },
+    {
+      "group_id": "f81a3cd7-82d4-4908-beae-741cd5002c87",
+      "folder": "objects/Horror_movie_poster",
+      "objects": [
+        {
+          "id": "413ee0f8-7918-434e-8210-03f653a8db6a",
+          "name": "base",
+          "prompt": "Horror movie poster",
+          "size": {
+            "width": 64,
+            "height": 64
+          },
+          "directions": 1,
+          "view": "low top-down",
+          "rotations": {
+            "unknown": "rotations/Horror_movie_poster.png"
+          },
+          "animations": {}
+        }
+      ]
+    },
+    {
+      "group_id": "b05b3ac6-990e-48f1-9540-96ff189b02de",
+      "folder": "objects/stale_pink_donuts",
+      "objects": [
+        {
+          "id": "488c2080-8b11-4955-aa33-bbb50c48eddf",
+          "name": "base",
+          "prompt": "stale pink donuts",
+          "size": {
+            "width": 64,
+            "height": 64
+          },
+          "directions": 1,
+          "view": "low top-down",
+          "rotations": {
+            "unknown": "rotations/stale_pink_donuts.png"
+          },
+          "animations": {}
+        }
+      ]
+    },
+    {
+      "group_id": "e1b91760-3a15-4858-a1df-722870355a8c",
+      "folder": "objects/A_family_photo_of_a_blonde_dau",
+      "objects": [
+        {
+          "id": "71e51da4-afd1-4949-834e-38431845e9b3",
+          "name": "base",
+          "prompt": "A family photo of a blonde daughter with her mother and father on the grass hill",
+          "size": {
+            "width": 64,
+            "height": 64
+          },
+          "directions": 1,
+          "view": "low top-down",
+          "rotations": {
+            "unknown": "rotations/A_family_photo_of_a_blonde_dau.png"
+          },
+          "animations": {}
+        }
+      ]
+    }
+  ],
+  "export_version": "1.1",
+  "export_date": "2026-09-27T19:11:53.982788"
+}

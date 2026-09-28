@@ -46,7 +46,7 @@ namespace BlueComplex.Core.Tests
                 "find_excited", "emotion_ten", "drag_clue",
                 "clear_1", "new_branch", "complex_intro", "read_xray",
                 "find_depressed", "clear_3",
-                "stack_intro", "use_item", "branch_reminder"
+                "stack_intro", "use_item", "trait_intro", "branch_reminder"
             }, Ids(TutorialGuideContent.CreateFlow()));
         }
 
@@ -79,6 +79,8 @@ namespace BlueComplex.Core.Tests
             Assert.AreEqual(GuideAdvance.BookClosed, steps["close_book"].Advance);
             Assert.AreEqual(GuideAdvance.XrayOpened, steps["read_xray"].Advance);
             Assert.AreEqual(GuideAdvance.ItemUsed, steps["use_item"].Advance);
+            Assert.AreEqual(2, steps["use_item"].RequiredCount, "아이템 둘(자아비대·기억 공감)을 모두 써야 넘어간다");
+            Assert.IsTrue(steps.Values.Where(s => s.Id != "use_item").All(s => s.RequiredCount == 1));
 
             // 카드 제시는 턴 결산으로 안다: 턴 1의 정답은 턴 2(넘김 턴, 첫 키 판정)까지 끝나야, 턴 3, 턴 4는 각자 그 턴.
             Assert.AreEqual((GuideAdvance.TurnResolved, 2), (steps["drag_clue"].Advance, steps["drag_clue"].WaitTurn));
@@ -98,6 +100,7 @@ namespace BlueComplex.Core.Tests
             Assert.AreEqual("아래의 정보를 읽어 보게.", steps["read_xray"].Line);
             Assert.AreEqual("잘했어! 이제 마지막이네.", steps["clear_3"].Line);
             Assert.AreEqual("2번의 변형을 고려해서 최종 결과가 침체 쪽으로 기울게 해보게. 도움이 될 아이템을 하나 넣어 두었으니, 설명을 읽고 함께 활용해 봐.", steps["use_item"].Line);
+            Assert.AreEqual("아이템을 사용하면 ‘특성’이 나타나기도 한다네. 특성 위에 마우스를 올리면 정보를 확인할 수 있으니 참고하게나.", steps["trait_intro"].Line);
             StringAssert.Contains("‘컴플렉스 중첩’", steps["stack_intro"].Line);
             StringAssert.Contains("열쇠 2개가 필요하네", steps["intro_key_count"].Line);
 
@@ -214,10 +217,15 @@ namespace BlueComplex.Core.Tests
             Assert.AreEqual("clear_3", flow.Current.Id);
             GoTo(flow, "use_item");
 
-            // 턴 4: 아이템을 쓰면 넘어가고, 카드를 내면 끝난다.
+            // 턴 4: 아이템 둘을 모두 써야 넘어가고, 특성 안내를 읽고 넘기면, 카드를 내면 끝난다.
             session.Runner.UseItem(session.Items.Held[0]);
+            Assert.AreEqual("use_item", flow.Current.Id, "아이템 하나만 쓰면 아직 안 넘어간다");
+            Assert.AreEqual(1, flow.RemainingCount);
+            session.Runner.UseItem(session.Items.Held[0]);
+            Assert.AreEqual("trait_intro", flow.Current.Id);
+            Assert.IsTrue(flow.Notify(GuideAdvance.Read));
             Assert.AreEqual("branch_reminder", flow.Current.Id);
-            session.Runner.PlayClue(session.Hand.Cards.First(c => c.Definition.Id == "tutorial_daughter_photo"));
+            session.Runner.PlayClue(session.Hand.Cards.First(c => c.Definition.Id == "tutorial_phone_ring"));
 
             Assert.IsTrue(flow.IsFinished);
             Assert.AreEqual(StageOutcome.Cleared, session.Runner.Outcome);
@@ -295,6 +303,65 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
+        public void RejectionLine_KeyMissedTrial_UsesTheRetryLine()
+        {
+            var missed = PlayVerdict.Trial(PlayRejection.KeyMissed, new[] { EmotionTag.Disgust, EmotionTag.Happiness });
+            Assert.AreEqual("이게 아니네. 다시 한 번 생각해 봐.", TutorialGuideContent.RejectionLine(missed, 4, Emotion));
+        }
+
+        [Test]
+        public void Flow_StepWithRequiredCount_WaitsForEveryNotification()
+        {
+            var flow = new TutorialGuideFlow(new[]
+            {
+                new TutorialGuideStep("both", "둘 다", GuideTarget.Items, GuideAdvance.ItemUsed, requiredCount: 2),
+                new TutorialGuideStep("next", "다음")
+            });
+            flow.Begin();
+
+            Assert.AreEqual(2, flow.RemainingCount);
+            Assert.IsFalse(flow.Notify(GuideAdvance.Read), "다른 사건은 세지 않는다");
+            Assert.AreEqual(2, flow.RemainingCount);
+            Assert.IsFalse(flow.Notify(GuideAdvance.ItemUsed));
+            Assert.AreEqual("both", flow.Current.Id);
+            Assert.IsTrue(flow.Notify(GuideAdvance.ItemUsed));
+            Assert.AreEqual("next", flow.Current.Id);
+            Assert.AreEqual(1, flow.RemainingCount, "새 단계에서는 다시 센다");
+        }
+
+        [Test]
+        public void Flow_Rewind_GoesBackOnlyWhenPastTheStep()
+        {
+            var flow = TutorialGuideContent.CreateFlow();
+            flow.Begin();
+            FastForward(flow, "use_item");
+
+            Assert.IsFalse(flow.Rewind("use_item"), "이미 그 단계면 아무 일도 없다");
+            flow.Notify(GuideAdvance.ItemUsed);
+            flow.Notify(GuideAdvance.ItemUsed);
+            Assert.AreEqual("trait_intro", flow.Current.Id);
+
+            var changed = new List<string>();
+            flow.StepChanged += step => changed.Add(step.Id);
+            Assert.IsTrue(flow.Rewind("use_item"));
+            Assert.AreEqual("use_item", flow.Current.Id);
+            CollectionAssert.AreEqual(new[] { "use_item" }, changed);
+            Assert.AreEqual(2, flow.RemainingCount, "다시 둘 다 써야 한다");
+            Assert.IsFalse(flow.Rewind("branch_reminder"), "아직 안 온 단계로는 가지 않는다");
+        }
+
+        [Test]
+        public void RealSession_TrialRollback_SignalsTheGuide()
+        {
+            var session = TutorialContent.CreateSession(Polarity, new SystemRandomSource(1), new ClueKnowledgeLedger());
+            var rolled = 0;
+            session.TrialRolledBack += () => rolled++;
+            session.Runner.StartStage();
+            session.RollBackTrial();
+            Assert.AreEqual(1, rolled);
+        }
+
+        [Test]
         public void RejectionLine_ItemNeeded_AndAllowed()
         {
             Assert.AreEqual("도움이 될 아이템을 하나 넣어 두었으니, 설명을 읽고 함께 활용해 봐.",
@@ -313,9 +380,9 @@ namespace BlueComplex.Core.Tests
                 TutorialGuideContent.RejectionLine(donut, session.Runner.CurrentTurn, Emotion));
 
             session.Runner.PlayClue(session.Hand.Cards.First(c => c.Definition.Id == "tutorial_calendar"));
-            var paper = session.CheckPlay(session.Hand.Cards.First(c => c.Definition.Id == "tutorial_paper_pile"));
+            var fishingRod = session.CheckPlay(session.Hand.Cards.First(c => c.Definition.Id == "tutorial_fishing_rod"));
             Assert.AreEqual("이게 아니네. 다시 한 번 생각해 봐.",
-                TutorialGuideContent.RejectionLine(paper, session.Runner.CurrentTurn, Emotion), "턴 3의 오답");
+                TutorialGuideContent.RejectionLine(fishingRod, session.Runner.CurrentTurn, Emotion), "턴 3의 오답");
         }
 
         [Test]

@@ -31,6 +31,16 @@ namespace BlueComplex.Core.Stage
 
         /// <summary>단서를 내도 되는지 — <see cref="TurnRunner.PlayClue"/> 전에 반드시 이걸 거친다(드롭 영역·디버그 입력 모두).</summary>
         public PlayVerdict CheckPlay(ClueInstance card) => PlayGate?.Check(card) ?? PlayVerdict.Allow;
+
+        /// <summary>결과를 보여 준 거절(<see cref="PlayVerdict.IsTrial"/>)의 연출이 끝난 뒤 부른다 — 이번 턴이 시작된 상태로 되돌린다. 게이트가 없으면 아무 일도 없다.</summary>
+        public void RollBackTrial()
+        {
+            PlayGate?.RollBackTrial();
+            TrialRolledBack?.Invoke();
+        }
+
+        /// <summary>결과를 보여 준 오답을 되돌린 직후 — 가이드가 "아이템을 쓰는" 단계로 되돌아가는 데 쓴다.</summary>
+        public event Action TrialRolledBack;
     }
 
     public static class StageFactory

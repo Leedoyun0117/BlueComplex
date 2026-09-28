@@ -256,13 +256,6 @@ namespace BlueComplex.EditorTools
             var bg = CreateImage(go.transform, "Bubble", PanelBubble, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             Wire(comp, "_bubbleBackground", bg);
 
-            // 최종 감정 고정 표시 — 위로 떠오르며 사라지는 연출(PlayRemainingTags)과 별개로 항상
-            // 남아 있는다. 버블 하단 띠에 둬서 위쪽 상승 공간과 겹치지 않는다.
-            var summary = CreateTmpText(go.transform, "PersistentSummary", string.Empty, font, 16,
-                TextAlignmentOptions.Center, new Vector2(0.04f, 0f), new Vector2(0.96f, 0.28f), Vector2.zero, Vector2.zero);
-            summary.raycastTarget = false;
-            Wire(comp, "_summaryText", summary);
-
             // 판정 영역은 시각 영역보다 사방 32px 크게 — _Shake 흥분 최대치(±11.5px/±4.5px)와
             // 요청된 20px 여유를 합친 것보다 넉넉하다.
             var dropZone = CreateImage(go.transform, "DropZone", new Color(0f, 0f, 0f, 0f),

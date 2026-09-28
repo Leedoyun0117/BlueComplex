@@ -19,8 +19,11 @@ namespace BlueComplex.UI.Presentation
         /// <summary>보이는 자물쇠 폭 대비 자물쇠 사이 간격(눈에 보이는 빈틈)의 비율.</summary>
         private const float GapRatio = 0.35f;
 
-        /// <summary>자물쇠 한 칸의 최대 크기(캔버스 단위) — 도트 3칸. 자리가 넉넉해도 이보다 커지지 않는다.</summary>
-        private const float MaxLockSize = 64f * 3f;
+        /// <summary>자물쇠 한 칸의 목표 높이 — 화면 세로 길이 대비 비율. 자리가 넉넉하면 항상 이 크기로 그린다.</summary>
+        private const float TargetHeightFraction = 0.25f;
+
+        /// <summary>화면 좌우에 남기는 최소 여백(화면 가로 길이 대비, 한쪽 기준) — 자물쇠 줄 전체가 이 여백 안쪽에서만 넓어진다.</summary>
+        private const float ScreenMarginFraction = 0.06f;
 
         private readonly List<StageLockView> _locks = new();
         private CanvasGroup _group;
@@ -39,8 +42,9 @@ namespace BlueComplex.UI.Presentation
         }
 
         /// <summary>
-        /// 자물쇠를 <paramref name="count"/>개로 새로 늘어놓는다(전부 닫힌 채, 안 보이는 상태에서). 그려진 자물쇠들이 <paramref name="area"/>(부모 로컬 좌표) 안에 가로로 꽉 차도록
-        /// 크기를 정하되 <see cref="MaxLockSize"/>보다는 키우지 않는다 — 자물쇠는 항상 <see cref="GapRatio"/>만큼의 같은 빈틈으로 area의 중앙에 늘어선다(개수가 몇 개든).
+        /// 자물쇠를 <paramref name="count"/>개로 새로 늘어놓는다(전부 닫힌 채, 안 보이는 상태에서). 자물쇠 한 칸의 크기는 화면 세로 길이의
+        /// <see cref="TargetHeightFraction"/>을 목표로 하되, <paramref name="area"/>(부모 로컬 좌표)의 가로 폭이 그보다 좁으면 화면 여백(<see cref="ScreenMarginFraction"/>)까지
+        /// 넓혀서 자리를 만든다(그래도 부족하면 그만큼 줄어든다) — 자물쇠는 항상 <see cref="GapRatio"/>만큼의 같은 빈틈으로 area의 중앙에 늘어선다(개수가 몇 개든).
         /// 간격은 그림 칸(투명 여백 포함)이 아니라 그려진 폭으로 잰다. 어디가 "빈 자리"인지는 부른 쪽(<see cref="StageClearDirector"/>)이 잰다 — 이 클래스는 배치만 한다.
         /// </summary>
         public void Build(int count, Rect area)
@@ -48,7 +52,10 @@ namespace BlueComplex.UI.Presentation
             Clear();
 
             var visibleUnits = count * VisibleWidth + (count - 1) * VisibleWidth * GapRatio; // 크기 1 기준으로 그려진 줄 전체의 폭
-            var size = Mathf.Min(MaxLockSize, area.width / visibleUnits);
+            var screenRect = ((RectTransform)transform.parent).rect; // 부모(Stage Clear Director)는 캔버스 전체에 꽉 차 있다 — 곧 화면 크기.
+            var targetSize = screenRect.height * TargetHeightFraction;
+            var widthBudget = Mathf.Max(area.width, screenRect.width * (1f - 2f * ScreenMarginFraction));
+            var size = Mathf.Min(targetSize, widthBudget / visibleUnits);
             var pitch = size * VisibleWidth * (1f + GapRatio); // 이웃 자물쇠 중심 사이 거리
 
             var rect = (RectTransform)transform;

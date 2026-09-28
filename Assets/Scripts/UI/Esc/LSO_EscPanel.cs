@@ -135,6 +135,7 @@ namespace UI.Esc
             slide.SnapClosed();
             SetInteractable(false);
             LSO_EscSilhouette.Ensure(this);
+            LSO_EscExitButton.Ensure(this);
         }
 
         private void OnDestroy()
@@ -151,6 +152,14 @@ namespace UI.Esc
 
             if (_opened) ClosePanel();
             else OpenPanel();
+        }
+
+        /// <summary>코드에서 창을 닫는다 — ESC 키를 누른 것과 같다(<see cref="Update"/>). "메인 메뉴로 나가기"를 확정한 뒤처럼
+        /// 창을 직접 치워야 할 때 쓴다. 이미 닫혀 있으면 아무 일도 하지 않는다.</summary>
+        public void Close()
+        {
+            if (!_opened) return;
+            ClosePanel();
         }
 
         private void OpenPanel()
