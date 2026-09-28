@@ -58,6 +58,9 @@ namespace BlueComplex.UI.Layout
             return unit > 0f ? (mid.x - rect.xMin) / unit : OpenCenter.x;
         }
 
+        /// <summary>접힌 상태 안내표("엑스레이 · 끌어서 열기")의 중심 y(참조 픽셀, 세로 오프셋 적용 전). 2026-09-28 사용자 지정.</summary>
+        private const float HandleTagY = 200f;
+
         private const float FoldedScale = 0.26f;
         private const float OpenScale = 1f;
         private const float DragScale = 0.7f;
@@ -321,7 +324,8 @@ namespace BlueComplex.UI.Layout
             if (_handleTag != null)
             {
                 // 안내표는 화면 왼쪽 가장자리에 잘리지 않게 폭의 절반 + 여백 이상으로 놓는다.
-                var folded = FoldedWrist + Down + new Vector2(HalfWidth * FoldedScale + HingeGap, TabletSize.y * 0.5f * _frameScale * FoldedScale + 24f);
+                // 세로는 사용자가 인스펙터에서 정한 자리(Pos Y -280 = 200 + 세로 오프셋 80)로 고정한다 — 판 크기를 바꿔도 안 움직인다.
+                var folded = new Vector2(FoldedWrist.x + HalfWidth * FoldedScale + HingeGap, HandleTagY) + Down;
                 folded.x = Mathf.Max(folded.x, HandleTagSize.x * 0.5f + 8f);
                 _handleTag.anchoredPosition = new Vector2(folded.x, -folded.y) * unit;
                 _handleTag.sizeDelta = HandleTagSize * unit;
