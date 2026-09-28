@@ -150,8 +150,11 @@ namespace BlueComplex.UI.Layout
             }
         }
 
-        public static TMP_FontAsset FindFont(Transform canvasRoot) =>
-            canvasRoot.GetComponentInChildren<TMP_Text>(true)?.font;
+        /// <summary>
+        /// 포스트잇 손글씨(<see cref="PostitStyle.HandFont"/>)를 뺀 모든 글자의 글꼴 — NotoSansKR SDF. TMP Settings의 기본 글꼴로 물려 있어
+        /// 글꼴을 따로 지정하지 않은 TMP_Text도 같은 글꼴이 된다. 예전처럼 캔버스의 "아무 글자"에서 빌리면 포스트잇이 먼저 걸릴 때 손글씨체가 옮는다.
+        /// </summary>
+        public static TMP_FontAsset GameFont => TMP_Settings.defaultFontAsset;
 
         public static RectTransform CreateRect(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax,
             Vector2 offsetMin, Vector2 offsetMax)

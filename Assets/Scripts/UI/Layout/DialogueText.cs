@@ -11,11 +11,15 @@ namespace BlueComplex.UI.Layout
     /// <summary>유키 대사 한 줄(흰 종이 패널 + 이름표). 한 글자씩 출력하고(글자마다 타자 소리 훅), 출력 중 클릭하면 즉시 전체 표시로 건너뛴다.
     /// 다 나온 뒤에는 오른쪽 아래에 "다음" 표시(▼)가 천천히 깜빡인다 — 스프라이트로 그려서 글꼴에 ▼ 글리프가 없어도 나온다.
     /// 컴플렉스가 발동할 때의 짧은 이벤트 대사도 같은 창에 나온다(<see cref="PlayTyped(string, bool)"/>의 isEvent — 글자 색만 다르다).
+    /// 컴플렉스가 새로 발현될 때의 나츠 독백도 같은 창에 나온다(<see cref="PlayNatsuLine"/> — 역시 글자 색만 다르다).
     /// 글자 간격·깜빡임 시간은 UiMotionSettings(인스펙터)에서 온다.</summary>
     public sealed class DialogueText : MonoBehaviour, IPointerClickHandler
     {
         /// <summary>이벤트 대사(컴플렉스 발동)의 글자색 — 종이 위 잉크색보다 붉은 갈색.</summary>
         private static readonly Color EventInk = new Color32(150, 58, 38, 255);
+
+        /// <summary>나츠의 독백(컴플렉스 발현 알림 등)의 글자색 — 유키의 잉크·이벤트 색과 구분되는 차분한 청색.</summary>
+        private static readonly Color NatsuInk = new Color32(58, 90, 138, 255);
 
         [SerializeField] private TMP_Text _label;
 
@@ -76,13 +80,18 @@ namespace BlueComplex.UI.Layout
         public void PlayTyped(string line) => PlayTyped(line, isEvent: false);
 
         /// <param name="isEvent">컴플렉스 발동 같은 짧은 이벤트 대사 — 같은 창에 나오되 글자색이 다르다.</param>
-        public void PlayTyped(string line, bool isEvent)
+        public void PlayTyped(string line, bool isEvent) => BeginTyping(line, isEvent ? EventInk : _lineInk);
+
+        /// <summary>나츠의 짧은 독백(컴플렉스 발현 알림 등) — 같은 창에 나오되 글자색이 다르다.</summary>
+        public void PlayNatsuLine(string line) => BeginTyping(line, NatsuInk);
+
+        private void BeginTyping(string line, Color ink)
         {
             StopTyping();
             _fullLine = line ?? string.Empty;
             if (_label != null)
             {
-                _label.color = isEvent ? EventInk : _lineInk;
+                _label.color = ink;
                 _label.text = string.Empty;
             }
             ShowNextIndicator(false);

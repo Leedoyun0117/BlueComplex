@@ -2926,6 +2926,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5164a928512924b48be6830df8076c08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BlueComplex.UI.Layout.ComplexXrayPanel
+  _verticalOffset: 80
   _tablet: {fileID: 3486972046279749149}
   _basePlate: {fileID: 8770954893327788620}
   _handleTag: {fileID: 2769639875663777597}

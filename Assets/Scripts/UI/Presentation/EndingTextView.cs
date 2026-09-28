@@ -11,7 +11,7 @@ namespace BlueComplex.UI.Presentation
 {
     /// <summary>
     /// 엔딩의 글 화면: 검은 바탕 위에 한 문단이 한 글자씩 타이핑되고, 클릭하면 그 문단이 즉시 완성되고, 다시 클릭하면 다음으로 넘어간다.
-    /// 컷신 9 "붙잡히는 유키"와 에필로그 문단이 같이 쓴다 — 화자 이름표 없는 통짜 내레이션이다(화자 스타일이 필요해지면 문단마다 색만 넘기면 된다).
+    /// 컷신 9 "붙잡히는 유키"와 에필로그 문단이 같이 쓴다 — 화자 이름표 없는 통짜 글이다. 에필로그는 메인 화면 배경 위 나츠의 독백 자리(<see cref="SetMonologueLayout"/>)로 옮겨 쓴다.
     ///
     /// 문단이 길어(에필로그는 최대 300자) 글자 크기가 문단 길이에 맞춰 줄어드는데, 타이핑하며 글이 자라면 크기가 흔들리므로
     /// 전체 글을 미리 놓고 <see cref="TMP_Text.maxVisibleCharacters"/>만 늘려 드러낸다.
@@ -87,6 +87,45 @@ namespace BlueComplex.UI.Presentation
 
         public void OnPointerClick(PointerEventData eventData) => _clicked = true;
 
+        /// <summary>
+        /// 글 자리를 바꾼다. 거짓(기본) = 검은 바탕 가운데 통짜 내레이션(컷신 9). 참 = 메인 화면 배경(취조실) 위 나츠의 독백 — 가운데는 창·게시판·나츠가 차지해
+        /// 그림이 가장 어두운 오른쪽 벽/바닥 띠(<see cref="MonologueMin"/>~<see cref="MonologueMax"/>)에 왼쪽 정렬로 놓는다. 어두운 막은 깔지 않고,
+        /// 밝은 바닥·빛줄기 위에서도 읽히도록 글자에만 부드러운 그림자(TMP 밑깔림)를 준다.
+        /// </summary>
+        public void SetMonologueLayout(bool monologue)
+        {
+            var rect = _text.rectTransform;
+            rect.anchorMin = monologue ? MonologueMin : NarrationMin;
+            rect.anchorMax = monologue ? MonologueMax : NarrationMax;
+            _text.alignment = monologue ? TextAlignmentOptions.MidlineLeft : TextAlignmentOptions.Center;
+            _text.fontSizeMax = monologue ? 32f : 40f;
+            _text.fontSizeMin = monologue ? 22f : 24f;
+            _text.lineSpacing = monologue ? 10f : 12f;
+
+            var material = _text.fontMaterial; // 인스턴스 — 폰트 공용 머티리얼은 건드리지 않는다.
+            if (monologue)
+            {
+                material.EnableKeyword(ShaderUtilities.Keyword_Underlay);
+                material.SetColor(ShaderUtilities.ID_UnderlayColor, new Color(0f, 0f, 0f, 0.85f));
+                material.SetFloat(ShaderUtilities.ID_UnderlayDilate, 0.35f);
+                material.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0.6f);
+                material.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0.25f);
+                material.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.25f);
+            }
+            else material.DisableKeyword(ShaderUtilities.Keyword_Underlay);
+            _text.UpdateMeshPadding();
+
+            var indicator = (RectTransform)_nextIndicator.transform;
+            indicator.anchorMin = indicator.anchorMax = indicator.pivot = monologue ? new Vector2(MonologueMax.x - 0.01f, MonologueMin.y - 0.03f) : new Vector2(0.5f, 0.12f);
+        }
+
+        private static readonly Vector2 NarrationMin = new(0.14f, 0.18f);
+        private static readonly Vector2 NarrationMax = new(0.86f, 0.82f);
+
+        /// <summary>독백 글 자리(화면 비율). 배경 그림에서 게시판 오른쪽 끝(약 0.74)과 나츠 의자(약 0.70)보다 오른쪽이다.</summary>
+        private static readonly Vector2 MonologueMin = new(0.745f, 0.14f);
+        private static readonly Vector2 MonologueMax = new(0.975f, 0.88f);
+
         /// <summary>진행 중인 타이핑·깜박임을 멈추고 글자를 지운다.</summary>
         public void ResetNow()
         {
@@ -126,8 +165,8 @@ namespace BlueComplex.UI.Presentation
             var go = new GameObject("Paragraph", typeof(RectTransform)) { layer = gameObject.layer };
             go.transform.SetParent(transform, false);
             var rect = (RectTransform)go.transform;
-            rect.anchorMin = new Vector2(0.14f, 0.18f);
-            rect.anchorMax = new Vector2(0.86f, 0.82f);
+            rect.anchorMin = NarrationMin;
+            rect.anchorMax = NarrationMax;
             rect.offsetMin = rect.offsetMax = Vector2.zero;
 
             _text = go.AddComponent<TextMeshProUGUI>();

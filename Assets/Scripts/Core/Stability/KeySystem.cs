@@ -407,6 +407,15 @@ namespace BlueComplex.Core.Stability
             ZoneOpened?.Invoke(zone);
         }
 
+        /// <summary><see cref="Judge"/>와 같은 판정이지만 아무 상태도 바꾸지 않는다(결과 기록·구역 닫기·획득 수·이벤트 없음). 열린 구역이 없으면 null.</summary>
+        public KeyJudgement? PreviewJudge(int indicatorPosition)
+        {
+            if (ActiveZone == null) return null;
+
+            var zone = ActiveZone.Value;
+            return new KeyJudgement(_activeQuarter, Schedule.LastTurnOf(_activeQuarter), zone, indicatorPosition, zone.Contains(indicatorPosition));
+        }
+
         /// <summary>쿼터 마지막 턴 종료 시점의 인디케이터 위치로 획득 여부를 판정한다. 열린 구역이 없으면 null.</summary>
         public KeyJudgement? Judge(int indicatorPosition)
         {

@@ -77,6 +77,20 @@ namespace BlueComplex.UI.Presentation
             Hud.RecordKeyResult(judgement.Quarter, judgement.Success);
         }
 
+        /// <summary>미리보기로 보여 준 턴 결과(<see cref="PlayTurnResult"/>)를 되돌린다 — 키 판정 표시를 지우고 심박수를 코어의 현재 값으로 돌린다.
+        /// 튜토리얼 턴 4 오답을 보여 준 뒤 세션을 되돌린 직후 Presenter가 부른다.</summary>
+        public void RevertTurnResult(TurnReport shown)
+        {
+            if (shown.KeyResult is { } judgement)
+            {
+                _bar.ClearKeyResult(judgement.Quarter);
+                Hud.ClearKeyResult(judgement.Quarter);
+            }
+
+            SyncTurnState();
+            ShowBpm(Session.Heartbeat.Value, snap: false);
+        }
+
         /// <summary>BPM 숫자·상태 배지·심전도 파형을 한 번에 갱신한다 — 셋 다 같은 시점(Presenter가 정한다)에 바뀌고 같은 시간 동안 넘어가야 어긋나 보이지 않는다.
         /// 파형이 불규칙해지는 구간은 심박수 상태(매우 침체·매우 흥분·즉사)로 정한다.</summary>
         private void ShowBpm(int value, bool snap)

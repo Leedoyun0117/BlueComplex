@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using BlueComplex.UI.Layout;
 using BlueComplex.UI.Motion;
 using BlueComplex.UI.Rendering;
 using DG.Tweening;
@@ -19,9 +20,11 @@ namespace BlueComplex.UI.Presentation
     /// <summary>
     /// 스테이지 종료 컷신(김태호의 Timeline 컷신, Assets/TimeLine/Prefabs)을 게임 화면 위에 재생한다 — <see cref="StageFlowHooks.PlayCutscene"/>의 실제 구현이다.
     ///
-    /// 컷신 프리팹은 월드 스페이스 캔버스 + 원근 카메라(fov 63.3, 원점에서 +z를 봄)로 만들어져 있다. 게임 화면의 HUD·CRT 합성과 섞이지 않게 전용 카메라를 하나 세워 화면 전체를 덮는다:
+    /// 컷신 프리팹은 월드 스페이스 캔버스 + 원근 카메라(fov 63.3, 원점에서 +z를 봄)로 만들어져 있다. 게임 화면의 HUD와 섞이지 않게 전용 카메라를 하나 세워 화면 전체를 덮는다:
     ///  · 프리팹은 재생할 때마다 새로 만든다(<see cref="StageOrigin"/> — 게임 배경 카메라 시야 밖) → 페이드·대사 순번 같은 재생 상태가 매번 처음부터다. 끝나면 지운다.
-    ///  · 카메라는 UI 카메라와 같은 렌더러(CRT·기분 효과가 없는 Base_Renderer)를 쓴다 — 메인 카메라의 CRT 패스는 RT_UI(HUD)를 위에 덧그리기 때문이다.
+    ///  · 카메라는 메인 카메라와 같은 렌더러(CRT 패스가 있는 것)를 써서 게임 화면과 같은 기본 CRT(스캔라인·곡률·비네트)로 그려진다. 심박수에 따른 흥분/침체 톤
+    ///    (DLJ 무드 효과)은 <see cref="Covering"/> 동안 DLJ_HeartbeatMoodEffectController가 스스로 걷는다.
+    ///    CRT 패스는 RT_UI(HUD)를 위에 덧그리므로, 컷신이 덮는 동안 UI 카메라는 아무것도 그리지 않는다(컬링 마스크 0 → RT_UI는 투명으로만 지워진다). <see cref="Release"/>가 되돌린다.
     ///  · 컷신이 화면을 덮는 동안 게임 소리(배경음·효과음)는 꺼진다(<see cref="UiSoundHooks.SuppressGameSounds"/>) — 컷신 자체의 소리만 들린다.
     ///  · 컷신이 하나 끝나도 카메라(검은 배경)는 남는다 — 번호가 이어지는 통합 컷신(6+7, 10+11) 사이에 게임 화면이 비치지 않게. 스테이지 종료 연출이 <see cref="Release"/>로 걷는다.
     ///  · 재생 중 Space로 건너뛴다(오프닝과 같은 "Space  건너뛰기" 안내가 우측 하단에 뜬다). 건너뛰면 재생 중이던 타임라인을 멈추고 프리팹·컷신 효과음을 즉시 치운 뒤
@@ -87,11 +90,7 @@ namespace BlueComplex.UI.Presentation
                 return null;
             }
 
-            if (_skipped)
-            {
-                Debug.Log($"[StageCutsceneHost] 컷신 #{number} — 건너뛰기 중이라 재생하지 않는다.");
-                return null;
-            }
+            if (_skipped) return null;
 
             var prefab = catalog.Find(number);
             return prefab != null ? Run(number, prefab) : null;
@@ -110,6 +109,7 @@ namespace BlueComplex.UI.Presentation
 
             if (_camera != null) Destroy(_camera.gameObject);
             _camera = null;
+            ShowHud();
 
             UiSoundHooks.SuppressGameSounds(false); // 게임 소리가 컷신과 함께 돌아온다.
         }
@@ -148,7 +148,8 @@ namespace BlueComplex.UI.Presentation
         //
         // 설정창은 게임 캔버스(MainHud, UI 카메라 → RT_UI → CRT 합성) 안에 있어 정렬 순서를 아무리 올려도 컷신 카메라(depth 100, 화면 전체) 밑에 깔린다.
         // 그래서 컷신 카메라가 화면을 덮는 동안만 설정창을 이 호스트의 오버레이 캔버스(카메라와 무관하게 맨 마지막에 그려짐)로 옮겼다가, 걷힐 때 제자리로 돌린다.
-        // 컷신 카메라는 CRT 없이 그리므로 그 위의 설정창도 CRT 없이 평평하게 그려지는 게 맞고, 클릭 보정(CRT 곡률)도 그동안 끈다.
+        // 오버레이 캔버스는 CRT 패스 뒤에 그려져 설정창이 CRT 없이 평평하게 나온다 — 클릭 보정(CRT 곡률)도 그동안 끈다.
+        // (게임 캔버스에 두면 CRT는 먹지만, 컷신 동안 UI 카메라는 HUD를 그리지 않으므로 창도 안 보인다.)
         // 창 크기는 게임 캔버스와 같은 기준 해상도(1920×1080, 너비·높이 0.5)로 맞춰 둔 오버레이라 그대로다.
 
         private Transform _escHome;
@@ -259,7 +260,6 @@ namespace BlueComplex.UI.Presentation
         {
             _skipped = true;
             HideHint();
-            Debug.Log("[StageCutsceneHost] Space — 컷신을 건너뛴다.");
 
             if (_instance != null)
             {
@@ -381,7 +381,7 @@ namespace BlueComplex.UI.Presentation
             rect.offsetMin = rect.offsetMax = Vector2.zero;
 
             _hint = text.AddComponent<TextMeshProUGUI>();
-            var font = FindGameFont();
+            var font = RuntimeUi.GameFont; // 포스트잇 손글씨가 아닌 게임 글꼴(NotoSansKR SDF).
             if (font != null) _hint.font = font;
             _hint.text = "Space  건너뛰기";
             _hint.fontSize = 22f;
@@ -389,15 +389,6 @@ namespace BlueComplex.UI.Presentation
             _hint.alignment = TextAlignmentOptions.MidlineRight;
             _hint.raycastTarget = false;
             _hint.alpha = 0f;
-        }
-
-        /// <summary>한글이 들어 있는 게임 글꼴을 씬의 글자에서 빌린다(컷신 프리팹의 글자는 곧 지워지니 건너뛴다).</summary>
-        private static TMP_FontAsset FindGameFont()
-        {
-            foreach (var text in FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-                if (text.font != null && !IsCutsceneObject(text.gameObject)) return text.font;
-
-            return null;
         }
 
         /// <summary>시네머신 트랙이 있는 컷신(08)은 트랙이 움직일 카메라(브레인)가 프리팹 밖 씬 오브젝트라 프리팹에 저장돼 있지 않다 — 전용 카메라의 브레인을 물려 준다.</summary>
@@ -462,29 +453,53 @@ namespace BlueComplex.UI.Presentation
             var data = cam.GetUniversalAdditionalCameraData();
             data.renderShadows = false;
             data.renderPostProcessing = false;
-            UseUiCameraRenderer(data);
+            UseMainCameraRenderer(data);
 
             _camera = cam;
+            HideHud(); // CRT 패스가 컷신 위에 HUD(RT_UI)를 덧그리지 않게.
             LiftEscOverCutscene(); // 이제부터 화면은 컷신 카메라 차지 — 설정창은 그 위 오버레이로.
 
             // 컷신이 화면을 덮는 동안 게임 소리는 끈다 — 컷신 자체의 소리(타임라인 오디오)만 들린다. Release가 되돌린다.
             UiSoundHooks.SuppressGameSounds(true);
         }
 
-        /// <summary>UI 카메라가 쓰는 렌더러(CRT 패스가 없는 것)를 그대로 쓴다. 인덱스는 UI 카메라가 들고 있는 값을 읽는다 — 렌더러 목록 순서를 여기서 가정하지 않는다.</summary>
-        private static void UseUiCameraRenderer(UniversalAdditionalCameraData data)
+        private Camera _uiCamera;
+        private int _uiCameraMask;
+
+        /// <summary>UI 카메라가 HUD를 그리지 않게 한다. UI 카메라는 투명으로 지우는 카메라라 RT_UI가 빈 채로 CRT 패스에 들어간다.</summary>
+        private void HideHud()
         {
+            if (_uiCamera != null) return;
+
             var rig = FindFirstObjectByType<UiCompositorRig>();
-            var uiData = rig != null ? rig.GetComponent<Camera>()?.GetUniversalAdditionalCameraData() : null;
+            _uiCamera = rig != null ? rig.GetComponent<Camera>() : null;
+            if (_uiCamera == null) return;
+
+            _uiCameraMask = _uiCamera.cullingMask;
+            _uiCamera.cullingMask = 0;
+        }
+
+        private void ShowHud()
+        {
+            if (_uiCamera != null) _uiCamera.cullingMask = _uiCameraMask;
+            _uiCamera = null;
+        }
+
+        /// <summary>메인 카메라가 쓰는 렌더러(CRT 패스가 있는 것)를 그대로 쓴다. 인덱스는 메인 카메라가 들고 있는 값을 읽는다 — 렌더러 목록 순서를 여기서 가정하지 않는다
+        /// (-1 = 파이프라인 기본 렌더러).</summary>
+        private static void UseMainCameraRenderer(UniversalAdditionalCameraData data)
+        {
+            var main = Camera.main;
+            var mainData = main != null ? main.GetUniversalAdditionalCameraData() : null;
             var field = typeof(UniversalAdditionalCameraData).GetField("m_RendererIndex", BindingFlags.NonPublic | BindingFlags.Instance);
 
-            if (uiData != null && field != null && field.GetValue(uiData) is int index && index >= 0)
+            if (mainData != null && field != null && field.GetValue(mainData) is int index)
             {
                 data.SetRenderer(index);
                 return;
             }
 
-            Debug.LogWarning("[StageCutsceneHost] UI 카메라의 렌더러를 읽지 못했다 — 컷신이 기본 렌더러(CRT)로 그려져 HUD가 위에 비칠 수 있다.");
+            Debug.LogWarning("[StageCutsceneHost] 메인 카메라의 렌더러를 읽지 못했다 — 컷신이 기본 렌더러로 그려진다.");
         }
     }
 }

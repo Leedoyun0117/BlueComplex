@@ -282,9 +282,9 @@ namespace BlueComplex.Core.Tests
             ("의식 분산 컴플렉스", "stage2_scattered_mind", "두 명 이상의 인물에 대한 감정을 느끼면, 의식이 분산되어 침체됩니다.", 3),
             ("자기 분노 컴플렉스", "stage2_self_anger", "침체와 흥분 감정을 동시에 느끼고 있다면 흥분 감정을 더 깊게 느낀다.", 4),
             ("전이 컴플렉스", "stage2_transference", "타인에게 가족의 모습을 겹쳐 본다.", 4),
-            ("불신 컴플렉스", "stage2_distrust", "가까운 사람의 애정을 두려움으로 받아들인다.", 5),
+            ("불신 컴플렉스", "stage2_distrust", "가족의 애정을 두려움으로 받아들인다.", 5),
             ("과대 해석 컴플렉스", "stage2_over_interpretation", "가까운 사람의 사랑을 느끼면, 다른 감정은 모두 무시하고, 사랑만 받아들입니다.", 3),
-            ("피해 망상 컴플렉스", "stage2_persecution", "가까운 사람에게 슬픔을 느끼면 행복한 감정은 잊고, 슬픔을 더 깊게 느낍니다.", 3),
+            ("피해 망상 컴플렉스", "stage2_persecution", "가족이나 연인에게 슬픔을 느끼면 행복한 감정은 잊고, 슬픔을 느낀다.", 3),
             ("사고 과다 컴플렉스", "stage2_overthinking", "과거의 감정을 배로 느낍니다.", 4),
             ("가족애 컴플렉스", "stage2_family_love", "기억에 가족이 강하게 남아있다면, 깊은 행복을 느낍니다.", 3)
         };
@@ -742,7 +742,7 @@ namespace BlueComplex.Core.Tests
             CollectionAssert.AreEqual(new[] { Other }, lover.Persons, "타자화: 이미 타인이 있으면 하나로 합쳐진다");
             Assert.AreEqual(1, lover.CountOfPerson(Other));
 
-            var distrust = Make(new[] { Past }, new[] { Lover }, Love);
+            var distrust = Make(new[] { Past }, new[] { Family }, Love);
             Assert.IsTrue(Apply(Complex("stage2_distrust"), distrust));
             AssertEmotions(distrust, "불신: 사랑 → 공포", (Fear, 1));
 
@@ -753,16 +753,16 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void Distrust_LoverAndLove_TurnsLoveIntoFear()
+        public void Distrust_FamilyAndLove_TurnsLoveIntoFear()
         {
             var complex = Complex("stage2_distrust");
 
-            var tags = Make(new[] { Past }, new[] { Lover }, Love, Happy);
+            var tags = Make(new[] { Past }, new[] { Family }, Love, Happy);
             Assert.IsTrue(Apply(complex, tags));
             AssertEmotions(tags, "사랑 → 공포", (Fear, 1), (Happy, 1));
 
-            Assert.IsFalse(Apply(complex, Make(new[] { Past }, new[] { Friend }, Love)), "연인이 아니면 발동하지 않는다");
-            Assert.IsFalse(Apply(complex, Make(new[] { Past }, new[] { Lover }, Happy)), "사랑이 없으면 발동하지 않는다");
+            Assert.IsFalse(Apply(complex, Make(new[] { Past }, new[] { Lover }, Love)), "가족이 아니면 발동하지 않는다");
+            Assert.IsFalse(Apply(complex, Make(new[] { Past }, new[] { Family }, Happy)), "사랑이 없으면 발동하지 않는다");
         }
 
         [Test]

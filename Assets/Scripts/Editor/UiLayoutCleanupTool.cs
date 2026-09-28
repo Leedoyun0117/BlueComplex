@@ -749,11 +749,6 @@ namespace BlueComplex.EditorTools
             var bubble = root.transform.Find("Bubble").GetComponent<Image>();
             bubble.color = new Color(1f, 1f, 1f, 0.55f);
             bubble.raycastTarget = false;
-
-            // 최종 감정 요약은 선 안쪽 아래에 둔다.
-            var summary = root.transform.Find("PersistentSummary");
-            SetRect(summary, new Vector2(0.24f, 0.12f), new Vector2(0.80f, 0.30f), Vector2.zero, Vector2.zero);
-            StyleLabel(summary, 18f, TextAlignmentOptions.Center);
         }
 
         /// <summary>흰 종이 패널: 왼쪽 위에 이름표("유키"), 그 아래 대사. 오른쪽 아래의 "다음" 표시(▼)는 DialogueText가 런타임에 짓는다.
@@ -912,8 +907,9 @@ namespace BlueComplex.EditorTools
             SetRef(GetOrAdd<T>(rect.gameObject), "_label", label);
         }
 
-        /// <summary>턴 결과를 즉시 반영하던 2단계 Presenter를 3단계 연출 Presenter로 갈아끼운다 — 컴플렉스 발광·이벤트 대사·태그 상승·심박수 이동·아이템 카드 끼우기가 전부 이 Presenter가 잡는 순서로 돈다.
-        /// 필드 참조는 Presenter가 같은 HUD 아래에서 스스로 찾는다(CinematicTurnResultPresenter.ResolveReferences). 이미 갈아끼워져 있으면 아무것도 안 한다(멱등).</summary>
+        /// <summary>MainHud의 "Turn Result Presenter"에 3단계 연출 Presenter가 붙어 있는지 보장한다 — 컴플렉스 발광·이벤트 대사·태그 상승·심박수 이동·아이템 카드
+        /// 끼우기가 전부 이 Presenter가 잡는 순서로 돈다. 필드 참조는 Presenter가 같은 HUD 아래에서 스스로 찾는다(CinematicTurnResultPresenter.ResolveReferences).
+        /// 이미 붙어 있으면 아무것도 안 한다(멱등). (예전엔 즉시 반영하던 2단계 Presenter를 여기서 갈아끼웠는데, 그 구현체는 삭제됐다.)</summary>
         private static void UseCinematicPresenter(Transform hud)
         {
             var holder = hud.Find("Turn Result Presenter");
@@ -923,8 +919,6 @@ namespace BlueComplex.EditorTools
                 return;
             }
 
-            var immediate = holder.GetComponent<ImmediateTurnResultPresenter>();
-            if (immediate != null) Object.DestroyImmediate(immediate);
             GetOrAdd<CinematicTurnResultPresenter>(holder.gameObject);
         }
 
@@ -1064,14 +1058,6 @@ namespace BlueComplex.EditorTools
             label.textWrappingMode = TextWrappingModes.NoWrap;
             label.raycastTarget = false;
             return label;
-        }
-
-        private static void StyleLabel(Transform child, float size, TextAlignmentOptions alignment)
-        {
-            var label = child.GetComponent<TMP_Text>();
-            label.fontSize = size;
-            label.alignment = alignment;
-            label.raycastTarget = false;
         }
 
         private static void SetRect(Transform child, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
