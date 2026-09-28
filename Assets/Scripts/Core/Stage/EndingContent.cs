@@ -53,6 +53,7 @@ namespace BlueComplex.Core.Stage
             new CreditSection("기획", "김하민"),
             new CreditSection("개발", "이도윤", "김태호", "주다림", "이시온"),
             new CreditSection("아트", "방승준", "최근무", "황선우"),
+            new CreditSection("사운드", "정현준"),
         };
 
         /// <summary>컷신 9 "붙잡히는 유키" — 그림 없이 검은 화면에서 타이핑되는 한 덩어리 글.</summary>
