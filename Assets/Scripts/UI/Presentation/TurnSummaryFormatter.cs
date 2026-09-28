@@ -12,12 +12,12 @@ namespace BlueComplex.UI.Presentation
         /// <summary>컴플렉스가 발동하는 순간 대사창에 뜨는 짧은 이벤트 대사 — 컴플렉스 id로 <see cref="ComplexReactionLines"/> 표에서 뽑는다
         /// (대사가 여럿이면 무작위). 표에 대사가 없는 컴플렉스는 이름만 넣은 공통 문구로 대신한다. 표시 이름에 이미 "컴플렉스"가 들어 있다("죄책감 컴플렉스").</summary>
         public static string BuildComplexEventLine(ComplexInstance complex) =>
-            ComplexReactions.Pick(complex.Definition.Id) ?? $"\"{complex.Definition.DisplayName}\"이(가) 반응했다!";
+            ComplexReactions.Pick(complex.Definition.Id) ?? $"{complex.Definition.DisplayName}이(가) 반응했다!";
 
         /// <summary>컴플렉스가 새로 발현되는 순간 대사창에 뜨는 나츠의 독백 — 턴 번호·괄호 숫자 등 내부 정보는 넣지 않는다.
         /// 한 턴에 새로 발현되는 컴플렉스는 최대 하나뿐이다(TurnRunner.CompleteTurn — 스폰 시도가 턴마다 한 번).</summary>
         public static string BuildComplexSpawnLine(ComplexInstance spawned) =>
-            $"—\"{spawned.Definition.DisplayName}\"이(가) 나타났어.";
+            $"{spawned.Definition.DisplayName}이(가) 나타났어.";
 
         /// <summary>손에 낼 단서가 없어 턴이 그냥 넘어갈 때 대사창에 나오는 짧은 대사. 컴플렉스 발현·특성 발현·키 판정·스테이지 결과는
         /// 뇌 UI·포스트잇·심박수 모니터·자물쇠 연출 등 별도 시각 요소로 이미 전달되므로 여기서는 넣지 않는다(노션 "대화와 반응" 표에도 이 경우의 대사는 없다).</summary>
