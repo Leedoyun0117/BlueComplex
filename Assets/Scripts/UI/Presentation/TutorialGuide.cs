@@ -306,7 +306,7 @@ namespace BlueComplex.UI.Presentation
                     // 강조는 접힌 상태에서 보이는 태블릿과 이름표만 — Root는 열렸을 때의 넓은 판 전체라 그대로 강조하면 화면 반을 덮는다.
                     var xray = UnityEngine.Object.FindFirstObjectByType<ComplexXrayPanel>(FindObjectsInactive.Include);
                     if (xray == null) break;
-                    if (xray.TabletRect != null) Pulse(xray.TabletRect);
+                    if (xray.HighlightRect != null) Pulse(xray.HighlightRect);
                     if (xray.HandleTagRect != null) Pulse(xray.HandleTagRect);
                     break;
 
@@ -345,7 +345,7 @@ namespace BlueComplex.UI.Presentation
                 case GuideTarget.ManualTab:
                     return _book != null ? _book.ManualTabButtonRect : null;
                 case GuideTarget.Xray:
-                    return UnityEngine.Object.FindFirstObjectByType<ComplexXrayPanel>(FindObjectsInactive.Include)?.TabletRect;
+                    return UnityEngine.Object.FindFirstObjectByType<ComplexXrayPanel>(FindObjectsInactive.Include)?.HighlightRect;
                 case GuideTarget.Items:
                     return UnityEngine.Object.FindFirstObjectByType<ItemDisplayPanel>(FindObjectsInactive.Include)?.Root;
                 default:
@@ -559,9 +559,30 @@ namespace BlueComplex.UI.Presentation
             }
 
             center += offset;
+            center = AvoidFoldButton(center, half);
             center.x = Mathf.Clamp(center.x, bounds.xMin + ScreenMargin + half.x, bounds.xMax - ScreenMargin - half.x);
             center.y = Mathf.Clamp(center.y, bounds.yMin + ScreenMargin + half.y, bounds.yMax - ScreenMargin - half.y);
             _bubble.position = _canvasRect.TransformPoint(center);
+        }
+
+        /// <summary>엑스레이가 펼쳐져 있으면 그 "접기" 버튼을 말풍선이 가리지 않게 말풍선을 위로 올린다 — 버튼이 보여야 누를 수 있다(읽기 단계에서 말풍선이 버튼 위에 얹혀 접기가 안 눌렸다).</summary>
+        private Vector2 AvoidFoldButton(Vector2 center, Vector2 half)
+        {
+            var xray = UnityEngine.Object.FindFirstObjectByType<ComplexXrayPanel>(FindObjectsInactive.Include);
+            var button = xray != null && xray.IsOpen ? xray.FoldButtonRect : null;
+            if (button == null) return center;
+
+            var corners = new Vector3[4];
+            button.GetWorldCorners(corners);
+            var min = (Vector2)_canvasRect.InverseTransformPoint(corners[0]);
+            var max = (Vector2)_canvasRect.InverseTransformPoint(corners[2]);
+
+            var overlapsX = center.x - half.x < max.x && center.x + half.x > min.x;
+            var bubbleBottom = center.y - half.y;
+            if (overlapsX && bubbleBottom < max.y && center.y + half.y > min.y)
+                center.y += max.y - bubbleBottom + BubbleGap;
+
+            return center;
         }
 
         private static bool Fits(Vector2 center, Vector2 half, Rect bounds) =>
