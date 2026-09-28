@@ -11,10 +11,15 @@ namespace BlueComplex.UI.Presentation
     /// 지터(±11.5px/±4.5px)와 요청된 20px 여유를 합친 것보다 넉넉하게.
     /// 히트테스트 자체(왜곡 보정 포함)는 Canvas의 DistortionCorrectedGraphicRaycaster가 이미
     /// 처리하므로 여기서 좌표 보정을 신경 쓸 필요는 없다.
+    ///
+    /// 단, 히트테스트는 단서 카드를 끄는 동안에만 받는다(<see cref="ICanvasRaycastFilter"/>). 이 넉넉한 투명 사각형은 형제 순서상 엑스레이 판넬 위에 있어서,
+    /// 평소에도 켜 두면 펼친 엑스레이의 "접기" 버튼과 유키 초상화 오른쪽을 덮어 클릭·드롭을 가로챘다.
     /// </summary>
-    public sealed class MemorySpaceDropZone : MonoBehaviour, IDropHandler
+    public sealed class MemorySpaceDropZone : MonoBehaviour, IDropHandler, ICanvasRaycastFilter
     {
         [SerializeField] private StageBootstrapper _bootstrapper;
+
+        public bool IsRaycastLocationValid(Vector2 screenPoint, Camera eventCamera) => ClueCardDragHandler.Current != null;
 
         public void OnDrop(PointerEventData eventData)
         {

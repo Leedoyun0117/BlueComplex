@@ -1,6 +1,6 @@
 using System;
 using System.Collections;
-using TMPro;
+using BlueComplex.UI.Layout;
 using UnityEngine;
 
 namespace BlueComplex.UI.Presentation
@@ -73,8 +73,6 @@ namespace BlueComplex.UI.Presentation
         }
 
         private StageDialogueOverlay Overlay =>
-            _overlay != null ? _overlay : _overlay = StageDialogueOverlay.Create(_canvasRoot, RuntimeFont());
-
-        private TMP_FontAsset RuntimeFont() => _canvasRoot.GetComponentInChildren<TMP_Text>(true)?.font;
+            _overlay != null ? _overlay : _overlay = StageDialogueOverlay.Create(_canvasRoot, RuntimeUi.GameFont);
     }
 }

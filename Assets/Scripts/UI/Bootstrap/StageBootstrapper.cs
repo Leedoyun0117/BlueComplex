@@ -444,6 +444,9 @@ namespace BlueComplex.UI.Bootstrap
             var director = EndingCutsceneDirector.GetOrCreate(FindCanvasRoot());
             if (director == null) yield break;
 
+            // 엔딩(컷신9→에필로그→크레딧)은 스테이지 1 배경음으로 — 직전 턴의 심박수 배경음(흥분·침체 등)이 그대로 깔린 채 넘어가지 않게.
+            UiSoundHooks.SetBed(UiSoundCue.HeartbeatBase);
+
             InputBlocked = true;
             yield return director.Play();
             InputBlocked = false;

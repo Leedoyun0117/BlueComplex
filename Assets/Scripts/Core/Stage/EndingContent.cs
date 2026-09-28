@@ -48,14 +48,11 @@ namespace BlueComplex.Core.Stage
             "나는 커피 한 잔과 함께 시간을 죽였다."
         };
 
-        // 제작진 명단은 노션에 없다 — 구조만 두고 자리를 채운다. 실제 명단은 여기 이름만 바꾸면 된다.
         private static readonly CreditSection[] CreditRoll =
         {
-            new CreditSection("기획", "(이름)"),
-            new CreditSection("시나리오", "(이름)"),
-            new CreditSection("프로그래밍", "(이름)", "(이름)"),
-            new CreditSection("아트", "(이름)", "(이름)"),
-            new CreditSection("사운드", "(이름)"),
+            new CreditSection("기획", "김하민"),
+            new CreditSection("개발", "이도윤", "김태호", "주다림", "이시온"),
+            new CreditSection("아트", "방승준", "최근무", "황선우"),
         };
 
         /// <summary>컷신 9 "붙잡히는 유키" — 그림 없이 검은 화면에서 타이핑되는 한 덩어리 글.</summary>

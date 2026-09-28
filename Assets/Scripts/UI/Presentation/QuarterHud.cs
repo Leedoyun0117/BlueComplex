@@ -149,7 +149,7 @@ namespace BlueComplex.UI.Presentation
 
             DestroyPanels();
 
-            var font = RuntimeUi.FindFont(_canvasRoot);
+            var font = RuntimeUi.GameFont;
             var tray = _canvasRoot.GetComponentInChildren<ClueCardTray>(true);
             var trayRect = tray != null ? tray.Root : null;
 

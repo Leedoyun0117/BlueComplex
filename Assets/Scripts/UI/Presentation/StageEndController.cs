@@ -132,6 +132,15 @@ namespace BlueComplex.UI.Presentation
             if (plan.Route == StageEndRoute.ClearToEnding)
             {
                 yield return Bootstrapper.PlayEndingSequence();
+
+                // 엔딩(마지막 스테이지 클리어)은 재시작 패널이 아니라 메인 화면으로 돌아간다 — 새 시드로 이어서 시작하는 흐름은 실패 복귀와 같다(ReturnToMainMenu).
+                var returnToStart = StageFlowHooks.ReturnToStart?.Invoke();
+                if (returnToStart != null)
+                {
+                    yield return returnToStart;
+                    yield break;
+                }
+
                 if (covered) director.FadeFromBlack();
                 _panel.Show(KoreanLabels.Outcome(outcome));
                 yield break;

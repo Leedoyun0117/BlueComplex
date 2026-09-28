@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using BlueComplex.Core.Complexes;
 using BlueComplex.Core.Turn;
 
@@ -37,27 +36,5 @@ namespace BlueComplex.UI.Presentation
         /// 유키의 결과 대사. 표에 없는 조합(태그 없음, 침체/흥분 감정이 섞인 경우 등)은 null — 호출자가 그 턴엔 건너뛴다.</summary>
         public static string BuildResultTagLine(TurnReport report) =>
             report.IsPass ? null : ResultTagReactions.Pick(report.FinalTags);
-
-        /// <summary>MemorySpaceBubble의 고정 표시용 — "혐오 ×2, 슬픔  ▲ 흥분" 형태.
-        /// 침체/흥분 구분은 이번 턴 심박수 변화 방향(HeartbeatDelta)으로 색을 입힌다.</summary>
-        public static string BuildFinalEmotionSummary(TurnReport report)
-        {
-            var parts = report.FinalTags.Emotions
-                .Select(pair => pair.Value > 1
-                    ? $"{KoreanLabels.Emotion(pair.Key)} ×{pair.Value}"
-                    : KoreanLabels.Emotion(pair.Key));
-
-            var body = string.Join(", ", parts);
-            if (string.IsNullOrEmpty(body)) body = "(없음)";
-
-            var direction = report.HeartbeatDelta switch
-            {
-                > 0 => "<color=#D97B4A>▲ 흥분</color>",
-                < 0 => "<color=#5B8FB0>▼ 침체</color>",
-                _ => "<color=#AAAAAA>- 변화 없음</color>"
-            };
-
-            return $"{body}  {direction}";
-        }
     }
 }

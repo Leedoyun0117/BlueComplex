@@ -204,6 +204,8 @@ namespace BlueComplex.Core.Stage
             new TutorialGuideStep("use_item",
                 "2번의 변형을 고려해서 최종 결과가 침체 쪽으로 기울게 해보게. 도움이 될 아이템을 하나 넣어 두었으니, 설명을 읽고 함께 활용해 봐.",
                 GuideTarget.Items, GuideAdvance.ItemUsed),
+            new TutorialGuideStep("trait_intro",
+                "아이템을 사용하면 ‘특성’이 나타나기도 한다네. 특성 위에 마우스를 올리면 정보를 확인할 수 있으니 참고하게나."),
             new TutorialGuideStep("branch_reminder",
                 "모든 대화는 ‘분기점’으로 나뉜다네. 각 분기점에서 열쇠를 얻어야 다음 기억으로 넘어갈 수 있다는 사실을 잊지 말게나.",
                 GuideTarget.None, GuideAdvance.TurnResolved, waitTurn: 4),

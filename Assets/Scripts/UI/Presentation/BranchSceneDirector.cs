@@ -212,7 +212,7 @@ namespace BlueComplex.UI.Presentation
 
             var postit = Postit.Attach(root.gameObject);
             postit.SetRestTilt(cover.Tilt);
-            var font = PostitStyle.HandFont != null ? PostitStyle.HandFont : RuntimeUi.FindFont(_canvasRoot);
+            var font = PostitStyle.HandFont != null ? PostitStyle.HandFont : RuntimeUi.GameFont;
             BuildLabel(postit, cover.Label, Mathf.Min(cover.Bounds.width, cover.Bounds.height) * 0.3f, font);
 
             cover.Root = root;

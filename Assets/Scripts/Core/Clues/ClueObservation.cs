@@ -93,6 +93,14 @@ namespace BlueComplex.Core.Clues
         /// 이미 확정된 영구 지식(<see cref="CommitRun"/>)은 건드리지 않는다.</summary>
         public void DiscardPending() => _pending.Clear();
 
+        /// <summary>확정 지식·미확정 관찰·본 단서를 전부 비운다 — 세이브 초기화 버튼이 메모리 상태까지 처음 하는 사람으로 되돌릴 때 쓴다.</summary>
+        public void Clear()
+        {
+            _persistent.Clear();
+            _pending.Clear();
+            _seen.Clear();
+        }
+
         // ── 세이브 ──────────────────────────────────────────────────────────
 
         /// <summary>확정된 지식과 본 단서를 세이브 항목으로 뜬다. 미확정 관찰(pending)은 넣지 않는다 — 런이 끝나야 지식이다.

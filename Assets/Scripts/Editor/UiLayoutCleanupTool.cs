@@ -749,11 +749,6 @@ namespace BlueComplex.EditorTools
             var bubble = root.transform.Find("Bubble").GetComponent<Image>();
             bubble.color = new Color(1f, 1f, 1f, 0.55f);
             bubble.raycastTarget = false;
-
-            // 최종 감정 요약은 선 안쪽 아래에 둔다.
-            var summary = root.transform.Find("PersistentSummary");
-            SetRect(summary, new Vector2(0.24f, 0.12f), new Vector2(0.80f, 0.30f), Vector2.zero, Vector2.zero);
-            StyleLabel(summary, 18f, TextAlignmentOptions.Center);
         }
 
         /// <summary>흰 종이 패널: 왼쪽 위에 이름표("유키"), 그 아래 대사. 오른쪽 아래의 "다음" 표시(▼)는 DialogueText가 런타임에 짓는다.
@@ -1063,14 +1058,6 @@ namespace BlueComplex.EditorTools
             label.textWrappingMode = TextWrappingModes.NoWrap;
             label.raycastTarget = false;
             return label;
-        }
-
-        private static void StyleLabel(Transform child, float size, TextAlignmentOptions alignment)
-        {
-            var label = child.GetComponent<TMP_Text>();
-            label.fontSize = size;
-            label.alignment = alignment;
-            label.raycastTarget = false;
         }
 
         private static void SetRect(Transform child, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)

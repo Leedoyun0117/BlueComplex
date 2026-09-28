@@ -94,9 +94,7 @@ namespace BlueComplex.UI.Presentation
         }
 
         private KeyTurnOverlay Overlay =>
-            _overlay != null ? _overlay : _overlay = KeyTurnOverlay.Create(_canvasRoot, RuntimeFont());
-
-        private TMPro.TMP_FontAsset RuntimeFont() => _canvasRoot.GetComponentInChildren<TMPro.TMP_Text>(true)?.font;
+            _overlay != null ? _overlay : _overlay = KeyTurnOverlay.Create(_canvasRoot, RuntimeUi.GameFont);
 
         /// <summary>떼고 붙일 포스트잇들(컴플렉스 → 대화 순). 아직 없는 것(그 HUD가 없는 씬)은 건너뛴다.</summary>
         private List<Postit> FindPostits()
