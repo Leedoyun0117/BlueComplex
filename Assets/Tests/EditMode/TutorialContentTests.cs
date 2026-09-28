@@ -12,19 +12,36 @@ using BlueComplex.Core.Turn;
 namespace BlueComplex.Core.Tests
 {
     /// <summary>
-    /// 튜토리얼(기획서 '게임 시작 연출 / 튜토리얼', 2026-09-27 개정: 자아 비판 → 애정 공허)의 콘텐츠와 이음새를 검증한다: 단서·컴플렉스가 표와 같은지, 마지막 중첩 턴(반 과거 → 애정 공허)에 정답 카드가 실제로 있는지,
-    /// 스크립트대로 4턴을 끝까지 통과할 수 있는지(키 범위 90~100 / 70~80에 맞는 심박수 경로), 오답 거절이 상태를 건드리지 않는지, 코어 이음새(ReplaceWith·고정 키 구역·정해진 발현·게이트)가 약속대로 움직이는지.
+    /// 튜토리얼(기획서 '게임 시작 연출 / 튜토리얼', 2026-09-28 개정: 애정 공허 → 자아 부정, 아이템 자아비대 + 기억 공감)의 콘텐츠와 이음새를 검증한다: 단서·컴플렉스가 표와 같은지, 마지막 중첩 턴의 결과가 기획 지시 표와 같은지,
+    /// 스크립트대로 4턴을 끝까지 통과할 수 있는지(키 범위 90~100 / 70~80에 맞는 심박수 경로), 오답 거절·결과를 보여 준 오답의 되돌리기가 상태를 원래대로 두는지, 코어 이음새(ReplaceWith·고정 키 구역·정해진 발현·게이트)가 약속대로 움직이는지.
     /// 기댓값은 TutorialContent를 거치지 않고 노션 표와 기획 지시를 직접 옮겨 적었다.
     /// </summary>
     public class TutorialContentTests
     {
         private static readonly IEmotionPolarityTable Polarity = new DefaultEmotionPolarityTable();
 
+        private const string Ego = "item_ego_inflation";
+        private const string Empathy = "item_empathy";
+
         private static StageSession NewSession(ClueKnowledgeLedger ledger = null) =>
             TutorialContent.CreateSession(Polarity, new SystemRandomSource(1), ledger ?? new ClueKnowledgeLedger());
 
         private static ClueInstance Held(StageSession session, string id) =>
             session.Hand.Cards.First(card => card.Definition.Id == id);
+
+        /// <summary>정답으로 턴 1·3을 지나 턴 4가 시작된 세션(아이템 둘을 쥐고 있고 아직 안 썼다).</summary>
+        private static StageSession SessionAtTurn4(ClueKnowledgeLedger ledger = null)
+        {
+            var session = NewSession(ledger);
+            session.Runner.StartStage();
+            session.Runner.PlayClue(Held(session, "tutorial_calendar"));
+            session.Runner.PlayClue(Held(session, "tutorial_daughter_photo"));
+            Assert.AreEqual(4, session.Runner.CurrentTurn);
+            return session;
+        }
+
+        private static void UseItem(StageSession session, string itemId) =>
+            session.Runner.UseItem(session.Items.Held.First(item => item.Id == itemId));
 
         private static string[] HandIds(StageSession session) => session.Hand.Cards.Select(c => c.Definition.Id).ToArray();
 
@@ -97,91 +114,106 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void LoveVoid_ConvertsAnyEmotionToSadnessWhenFamilyPresent()
+        public void SelfDenial_AddsOneHappiness_WhenAnyDepressedEmotion()
         {
-            var definition = TutorialContent.LoveVoid(Polarity);
-            Assert.AreEqual("tutorial_love_void", definition.Id);
-            Assert.AreEqual("애정 공허 컴플렉스", definition.DisplayName);
+            var definition = TutorialContent.SelfDenial(Polarity);
+            Assert.AreEqual("tutorial_self_denial", definition.Id);
+            Assert.AreEqual("자아 부정 컴플렉스", definition.DisplayName);
+            Assert.AreEqual("침체되는 감정을 느끼면 행복을 함께 느낍니다.", definition.Description);
+            Assert.AreEqual(2, definition.DefaultDuration, "노션에 없어 반 과거와 같은 2턴으로 둔 값");
 
-            // 가족 + 임의의 감정(종류 무관) → 그 감정을 슬픔으로 변환. 이미 슬픔이면 그대로.
-            var loving = new TagSet(TimeTag.Present, new[] { PersonTag.Family }, new[] { EmotionTag.Love });
-            Assert.IsTrue(definition.TryInterpret(new ComplexContext(loving)));
-            Assert.AreEqual(0, loving.CountOf(EmotionTag.Love));
-            Assert.AreEqual(1, loving.CountOf(EmotionTag.Sadness));
+            var disgust = new TagSet(TimeTag.Past, new[] { PersonTag.Friend }, new[] { EmotionTag.Disgust });
+            Assert.IsTrue(definition.TryInterpret(new ComplexContext(disgust)));
+            Assert.AreEqual(1, disgust.CountOf(EmotionTag.Disgust), "침체 감정은 그대로 남는다");
+            Assert.AreEqual(1, disgust.CountOf(EmotionTag.Happiness));
 
-            var excited = new TagSet(TimeTag.Present, new[] { PersonTag.Family }, new[] { EmotionTag.Anger });
-            Assert.IsTrue(definition.TryInterpret(new ComplexContext(excited)));
-            Assert.AreEqual(0, excited.CountOf(EmotionTag.Anger));
-            Assert.AreEqual(1, excited.CountOf(EmotionTag.Sadness));
-
-            // 여러 인물 태그 중 가족이 섞여 있어도 성립.
-            var withOther = new TagSet(TimeTag.Present, new[] { PersonTag.Family, PersonTag.Other }, new[] { EmotionTag.Happiness });
-            Assert.IsTrue(definition.TryInterpret(new ComplexContext(withOther)));
-            Assert.AreEqual(1, withOther.CountOf(EmotionTag.Sadness));
+            // 침체 감정이 여러 개(종류도 여러 개)여도 행복은 한 번만.
+            var many = new TagSet(TimeTag.Past, new[] { PersonTag.Other }, new[] { EmotionTag.Sadness, EmotionTag.Sadness, EmotionTag.Fear });
+            Assert.IsTrue(definition.TryInterpret(new ComplexContext(many)));
+            Assert.AreEqual(1, many.CountOf(EmotionTag.Happiness));
         }
 
         [Test]
-        public void LoveVoid_DoesNotReactWithoutFamilyOrEmotion()
+        public void SelfDenial_DoesNotReactWithoutDepressedEmotion()
         {
-            var definition = TutorialContent.LoveVoid(Polarity);
+            var definition = TutorialContent.SelfDenial(Polarity);
 
-            var noFamily = new TagSet(TimeTag.Present, new[] { PersonTag.Friend }, new[] { EmotionTag.Happiness });
-            Assert.IsFalse(definition.TryInterpret(new ComplexContext(noFamily)));
-            Assert.AreEqual(1, noFamily.CountOf(EmotionTag.Happiness), "가족이 없으면 그대로");
+            var excited = new TagSet(TimeTag.Present, new[] { PersonTag.Family }, new[] { EmotionTag.Love, EmotionTag.Happiness });
+            Assert.IsFalse(definition.TryInterpret(new ComplexContext(excited)));
+            Assert.AreEqual(1, excited.CountOf(EmotionTag.Happiness), "흥분 감정만 있으면 그대로");
 
-            var noEmotion = new TagSet(TimeTag.Present, new[] { PersonTag.Family });
-            Assert.IsFalse(definition.TryInterpret(new ComplexContext(noEmotion)));
+            Assert.IsFalse(definition.TryInterpret(new ComplexContext(new TagSet(TimeTag.Present, new[] { PersonTag.Family }))));
         }
 
-        // ── 설계 검증: 카드 × 컴플렉스 ────────────────────────────────────────────
+        [Test]
+        public void SelfDenial_IsSeparateFromStage3SelfDenial()
+        {
+            var tutorial = TutorialContent.SelfDenial(Polarity);
+            var stage3 = Stage3Content.SelfDenial(Polarity);
+
+            Assert.AreNotEqual(stage3.Id, tutorial.Id, "규칙이 달라 id를 따로 쓴다");
+            Assert.AreEqual(stage3.DisplayName, tutorial.DisplayName);
+
+            // 흥분이 우세한 태그에 스테이지 3 것은 혐오를 더하지만 튜토리얼 것은 반응하지 않는다.
+            var excited = new TagSet(TimeTag.Present, new[] { PersonTag.Family }, new[] { EmotionTag.Love });
+            Assert.IsFalse(tutorial.TryInterpret(new ComplexContext(excited.Clone())));
+            Assert.IsTrue(stage3.TryInterpret(new ComplexContext(excited.Clone())));
+        }
 
         [Test]
-        public void FinalTurn_EachOfFourCards_AntiPastThenLoveVoid()
+        public void Items_AreEgoInflationAndMemoryEmpathy_TwoSlots_EmptyAtStart()
         {
+            var session = NewSession();
+            Assert.AreEqual(2, session.Items.Capacity, "튜토리얼 아이템 칸은 둘");
+            Assert.AreEqual(Ego, TutorialContent.EgoInflation().Id);
+            Assert.AreEqual(Empathy, TutorialContent.MemoryEmpathy().Id);
+            Assert.AreEqual("trait_hallucination", TutorialContent.MemoryEmpathy().GrantedTraitId);
+            Assert.IsNotNull(session.Traits.Find("trait_hallucination"), "기억 공감이 부여할 환각이 카탈로그에 있어야 한다");
+
+            session.Runner.StartStage();
+            Assert.IsEmpty(session.Items.Held, "시작 리필이 칸을 채우면 턴 4의 지급 자리가 사라진다 — 시작 때는 비어 있어야 한다");
+        }
+
+        // ── 설계 검증: 카드 × 컴플렉스 × 아이템 (기획 지시 표) ────────────────────
+
+        [Test]
+        public void ThirdTurn_AntiPastOnly_SouvenirAndPhotoDepressed_PhoneAndRodExcited()
+        {
+            // 턴 3에는 반 과거만 붙어 있다(자아 부정은 턴 3이 끝날 때 붙는다).
             var antiPast = TutorialContent.AntiPast(Polarity);
-            var loveVoid = TutorialContent.LoveVoid(Polarity);
+            var directions = TutorialContent.Quarter2Hand().ToDictionary(c => c.Id, c => Direction(Resolve(c, antiPast)));
 
-            // 기념품: 반 과거로 행복 → 혐오, 애정 공허는 미발동(가족 아님) → 혐오만. 침체.
-            var souvenir = Resolve(TutorialContent.Souvenir, antiPast, loveVoid);
-            Assert.AreEqual(1, souvenir.Emotions.Count);
-            Assert.AreEqual(1, souvenir.CountOf(EmotionTag.Disgust));
-            Assert.AreEqual(-1, Direction(souvenir));
-
-            // 전화벨 소리: 현재라 반 과거 미발동, 애정 공허가 사랑 → 슬픔. 침체.
-            var phoneRing = Resolve(TutorialContent.PhoneRing, antiPast, loveVoid);
-            Assert.AreEqual(1, phoneRing.Emotions.Count);
-            Assert.AreEqual(1, phoneRing.CountOf(EmotionTag.Sadness));
-            Assert.AreEqual(-1, Direction(phoneRing));
-
-            // 낚싯대: 미래+친구라 둘 다 미발동 — 행복 그대로. 흥분(오답).
-            var fishingRod = Resolve(TutorialContent.FishingRod, antiPast, loveVoid);
-            Assert.AreEqual(1, fishingRod.Emotions.Count);
-            Assert.AreEqual(1, fishingRod.CountOf(EmotionTag.Happiness));
-            Assert.AreEqual(1, Direction(fishingRod));
-
-            // 어린 딸의 사진: 반 과거로 행복 → 혐오, 애정 공허가 그 혐오를 다시 슬픔으로 변환(가족이므로) → 슬픔만 남는다. 둘 다 발동하지만 태그 하나로 합쳐진다.
-            var daughter = Resolve(TutorialContent.DaughterPhoto, antiPast, loveVoid);
-            Assert.AreEqual(1, daughter.Emotions.Count);
-            Assert.AreEqual(1, daughter.CountOf(EmotionTag.Sadness));
-            Assert.AreEqual(-1, Direction(daughter));
-
-            // 목표(침체)를 만족하는 카드는 기념품·전화벨 소리·어린 딸의 사진 셋 — 낚싯대만 오답.
-            var depressed = TutorialContent.Quarter2Hand()
-                .Where(c => Direction(Resolve(c, antiPast, loveVoid)) < 0).ToArray();
-            Assert.AreEqual("tutorial_souvenir,tutorial_phone_ring,tutorial_daughter_photo", Ids(depressed));
+            Assert.AreEqual(-1, directions["tutorial_souvenir"], "기념품 = 침체(정답)");
+            Assert.AreEqual(-1, directions["tutorial_daughter_photo"], "어린 딸의 사진 = 침체(정답)");
+            Assert.AreEqual(1, directions["tutorial_phone_ring"], "전화벨 소리 = 흥분(오답)");
+            Assert.AreEqual(1, directions["tutorial_fishing_rod"], "낚싯대 = 흥분(오답)");
         }
 
         [Test]
-        public void FinalTurn_DaughterPhoto_FiresBothComplexesInOrder()
+        public void FinalTurn_BothItems_MatchesTheDesignTable()
         {
-            var board = new ComplexBoard();
-            board.TryAttach(new ComplexInstance(TutorialContent.AntiPast(Polarity), 100));
-            board.TryAttach(new ComplexInstance(TutorialContent.LoveVoid(Polarity), 101));
+            // 기획 지시: 턴 4(반 과거 + 자아 부정 + 아이템 둘, 환각 + ×2) — 기념품·어린 딸의 사진 = 변화 없음, 전화벨 소리·낚싯대 = 침체.
+            var expected = new Dictionary<string, (int Delta, string Tags)>
+            {
+                ["tutorial_souvenir"] = (0, "Disgust×2,Happiness×2"),
+                ["tutorial_daughter_photo"] = (0, "Disgust×2,Happiness×2"),
+                ["tutorial_phone_ring"] = (-12, "Love×2"),
+                ["tutorial_fishing_rod"] = (-12, "Happiness×2"),
+            };
 
-            var result = new ComplexResolver(board).Resolve(TutorialContent.DaughterPhoto.CreateOriginalTagSet());
+            foreach (var pair in expected)
+            {
+                var session = SessionAtTurn4();
+                UseItem(session, Ego);
+                UseItem(session, Empathy);
 
-            CollectionAssert.AreEqual(new[] { "complex_anti_past", "tutorial_love_void" },
-                result.Steps.Where(s => s.Triggered).Select(s => s.Complex.Definition.Id).ToArray(), "중첩이 화면에 보이려면 둘 다 발동해야 한다");
+                var report = session.Runner.PlayClue(Held(session, pair.Key));
+                var tags = string.Join(",", report.FinalTags.Emotions.OrderBy(e => e.Key.ToString()).Select(e => $"{e.Key}×{e.Value}"));
+
+                Assert.AreEqual(pair.Value.Delta, report.HeartbeatDelta, pair.Key);
+                Assert.AreEqual(pair.Value.Tags, tags, pair.Key);
+                Assert.AreEqual(pair.Value.Delta != 0, report.KeyResult.Value.Success, pair.Key + " — 침체 카드만 키를 얻는다");
+            }
         }
 
         [Test]
@@ -189,15 +221,15 @@ namespace BlueComplex.Core.Tests
         {
             var board = new ComplexBoard();
             board.TryAttach(new ComplexInstance(TutorialContent.AntiPast(Polarity), 100));
-            board.TryAttach(new ComplexInstance(TutorialContent.LoveVoid(Polarity), 101));
+            board.TryAttach(new ComplexInstance(TutorialContent.SelfDenial(Polarity), 101));
             var resolver = new ComplexResolver(board);
 
             var expected = new Dictionary<string, string[]>
             {
-                ["tutorial_souvenir"] = new[] { "complex_anti_past" },
-                ["tutorial_phone_ring"] = new[] { "tutorial_love_void" },
+                ["tutorial_souvenir"] = new[] { "complex_anti_past", "tutorial_self_denial" },
+                ["tutorial_phone_ring"] = new string[0],
                 ["tutorial_fishing_rod"] = new string[0],
-                ["tutorial_daughter_photo"] = new[] { "complex_anti_past", "tutorial_love_void" },
+                ["tutorial_daughter_photo"] = new[] { "complex_anti_past", "tutorial_self_denial" },
             };
 
             foreach (var clue in TutorialContent.Quarter2Hand())
@@ -209,13 +241,21 @@ namespace BlueComplex.Core.Tests
         }
 
         [Test]
-        public void ThirdTurn_TwoCardsAreDepressedUnderAntiPast()
+        public void FinalTurn_OneItemOrNone_NeverReachesTheKey()
         {
-            // 턴 3에는 반 과거만 붙어 있다(애정 공허는 턴 3이 끝날 때 붙는다).
-            var antiPast = TutorialContent.AntiPast(Polarity);
-            var depressed = TutorialContent.Quarter2Hand()
-                .Where(c => Direction(Resolve(c, antiPast)) < 0).ToArray();
-            Assert.AreEqual("tutorial_souvenir,tutorial_daughter_photo", Ids(depressed), "턴 3(반 과거만)의 정답은 기념품·어린 딸의 사진 둘");
+            // 아이템을 하나만(또는 하나도) 쓰면 어느 카드를 내도 70~80에 못 들어간다.
+            var itemSets = new[] { new string[0], new[] { Ego }, new[] { Empathy } };
+            foreach (var items in itemSets)
+            foreach (var clue in TutorialContent.Quarter2Hand())
+            {
+                var session = SessionAtTurn4();
+                foreach (var item in items) UseItem(session, item);
+
+                var report = session.Runner.PlayClue(Held(session, clue.Id));
+                var label = $"{clue.Id} + [{string.Join(",", items)}]";
+                Assert.IsFalse(report.KeyResult.Value.Success, label);
+                Assert.That(session.Heartbeat.Value, Is.Not.InRange(TutorialContent.Quarter2KeyMin, TutorialContent.Quarter2KeyMax), label);
+            }
         }
 
         // ── 심박수 경로 ──────────────────────────────────────────────────────────
@@ -223,36 +263,41 @@ namespace BlueComplex.Core.Tests
         [Test]
         public void HeartbeatPath_MatchesKeyRanges_ByArithmetic()
         {
-            // 태그 수: 턴 1 +1(달력 행복), 턴 3 −1(딸: 혐오), 턴 4 −1(딸: 슬픔 하나뿐 — 반 과거→애정 공허가 변환만 하고 더하지 않는다) → 자아비대로 ×2 = −2. 턴 2는 넘김.
+            // 태그 수: 턴 1 +1(달력 행복), 턴 3 −1(딸: 혐오), 턴 4 전화벨/낚싯대: 흥분 1 → ×2 → 환각으로 −2. 상쇄 카드(기념품·딸)는 0. 턴 2는 넘김.
             var m = TutorialContent.TagMagnitude;
-            var afterTurn2 = TutorialContent.StartHeartbeat + m;
-            var afterTurn3 = afterTurn2 - m;
-            var afterTurn4WithItem = afterTurn3 - 2 * m;
-            var afterTurn4WithoutItem = afterTurn3 - m;
+            var s = TutorialContent.StartHeartbeat;
+            var afterTurn3 = s + m - m;
 
-            Assert.That(afterTurn2, Is.InRange(90, 100), "1쿼터 키 90~100");
-            Assert.That(afterTurn4WithItem, Is.InRange(70, 80), "2쿼터 키 70~80 (자아비대 사용)");
-            Assert.That(afterTurn4WithoutItem, Is.Not.InRange(70, 80), "아이템 없이는 키를 못 딴다 — 자아비대가 필요하다");
+            Assert.That(s + m, Is.InRange(90, 100), "1쿼터 키 90~100");
+            Assert.That(afterTurn3 - 2 * m, Is.InRange(70, 80), "2쿼터 키 70~80 (두 아이템)");
+            Assert.That(afterTurn3 - m, Is.Not.InRange(70, 80), "기억 공감만: 환각 −1태그");
+            Assert.That(afterTurn3 + 2 * m, Is.Not.InRange(70, 80), "자아비대만: 흥분 +2태그");
+            Assert.That(afterTurn3 + m, Is.Not.InRange(70, 80), "아이템 없이: 흥분 +1태그");
+            Assert.That(afterTurn3, Is.Not.InRange(70, 80), "상쇄 카드: 변화 없음");
             Assert.AreEqual(6, m);
-            Assert.AreEqual(89, TutorialContent.StartHeartbeat);
+            Assert.AreEqual(89, s);
         }
 
         [Test]
         public void TagMagnitudeCandidates_OnlySmallValuesFitTheNarrowRanges()
         {
-            // 자아비대가 필수이면서(없으면 실패) 두 범위에 모두 들어오는 시작 심박수가 있는 영향력만 쓸 수 있다.
-            bool Feasible(int m) => Enumerable.Range(0, 201).Any(s =>
+            // 두 아이템이 모두 필요하면서(하나만/없이/상쇄 카드는 실패) 두 범위에 모두 들어오는 시작 심박수가 있는 영향력만 쓸 수 있다.
+            bool Fits(int m, int s)
             {
-                var h2 = s + m;
-                var h3 = h2 - m;
-                var withItem = h3 - 2 * m;
-                var without = h3 - m;
-                return h2 is >= 90 and <= 100 && withItem is >= 70 and <= 80 && !(without is >= 70 and <= 80);
-            });
+                bool InKey2(int v) => v is >= 70 and <= 80;
+                var h3 = s;
+                return s + m is >= 90 and <= 100 && InKey2(h3 - 2 * m)
+                       && !InKey2(h3 - m) && !InKey2(h3 + 2 * m) && !InKey2(h3 + m) && !InKey2(h3);
+            }
 
-            Assert.IsTrue(Feasible(TutorialContent.TagMagnitude));
+            bool Feasible(int m) => Enumerable.Range(0, 201).Any(s => Fits(m, s));
+
+            Assert.IsTrue(Fits(TutorialContent.TagMagnitude, TutorialContent.StartHeartbeat), "지금 값(6·89)이 그대로 맞는다");
             Assert.IsFalse(Feasible(10), "본편 기본값 10은 두 범위에 모두 들어오는 시작 심박수가 없다");
-            Assert.IsFalse(Feasible(30), "지난번 값 30은 좁은 범위에 안 맞는다");
+            Assert.IsFalse(Feasible(30), "30도 좁은 범위에 안 맞는다");
+
+            // 영향력 6에서 가능한 시작값은 87~92 — 89는 모든 경계에서 여유 3 이상(턴 4의 77은 80까지 3, 기억 공감만의 83은 80까지 3).
+            CollectionAssert.AreEqual(new[] { 87, 88, 89, 90, 91, 92 }, Enumerable.Range(0, 201).Where(s => Fits(6, s)).ToArray());
         }
 
         // ── 스크립트 진행 ────────────────────────────────────────────────────────
@@ -304,6 +349,7 @@ namespace BlueComplex.Core.Tests
             {
                 var verdict = session.CheckPlay(card);
                 Assert.IsFalse(verdict.Allowed, card.Definition.Id);
+                Assert.IsFalse(verdict.IsTrial, "턴 1의 오답은 내기 전에 거절한다");
                 Assert.AreEqual(PlayRejection.WrongDirection, verdict.Reason);
                 CollectionAssert.AreEqual(card.Definition.Emotions, verdict.ObservedEmotions, "거절 메시지가 말할 감정 = 그 카드의 감정");
             }
@@ -325,9 +371,14 @@ namespace BlueComplex.Core.Tests
             CollectionAssert.AreEquivalent(TutorialContent.Quarter2Hand().Select(c => c.Id), HandIds(session));
             Assert.IsEmpty(session.Items.Held, "아이템은 턴 4 전에는 손에 없다");
 
-            // 턴 3: 반 과거 하나 — 기념품·어린 딸의 사진 둘 다 통과, 전화벨/낚싯대는 오답.
+            // 턴 3: 반 과거 하나 — 기념품·어린 딸의 사진 둘 다 통과, 전화벨/낚싯대는 내기 전에 거절.
             foreach (var card in session.Hand.Cards.Where(c => c.Definition.Id != "tutorial_souvenir" && c.Definition.Id != "tutorial_daughter_photo"))
-                Assert.IsFalse(session.CheckPlay(card).Allowed, card.Definition.Id);
+            {
+                var verdict = session.CheckPlay(card);
+                Assert.IsFalse(verdict.Allowed, card.Definition.Id);
+                Assert.IsFalse(verdict.IsTrial, "턴 3의 오답은 내기 전에 거절한다");
+                Assert.AreEqual(PlayRejection.WrongDirection, verdict.Reason);
+            }
             Assert.IsTrue(session.CheckPlay(Held(session, "tutorial_souvenir")).Allowed);
             Assert.IsTrue(session.CheckPlay(Held(session, "tutorial_daughter_photo")).Allowed);
 
@@ -336,38 +387,42 @@ namespace BlueComplex.Core.Tests
             Assert.AreEqual(-6, reports[2].HeartbeatDelta);
             Assert.AreEqual(89, session.Heartbeat.Value);
             Assert.AreEqual(4, session.Runner.CurrentTurn);
-            CollectionAssert.AreEqual(new[] { "complex_anti_past", "tutorial_love_void" },
-                session.Complexes.InPriorityOrder().Select(c => c.Definition.Id).ToArray(), "반 과거가 먼저, 애정 공허가 나중");
+            Assert.AreEqual("tutorial_self_denial", reports[2].SpawnedComplex.Definition.Id);
+            CollectionAssert.AreEqual(new[] { "complex_anti_past", "tutorial_self_denial" },
+                session.Complexes.InPriorityOrder().Select(c => c.Definition.Id).ToArray(), "반 과거가 먼저, 자아 부정이 나중");
             CollectionAssert.AreEquivalent(TutorialContent.Quarter2Hand().Select(c => c.Id), HandIds(session), "턴 4 손패도 표 2의 4장");
 
-            // 턴 4: 아이템(자아비대)이 이 턴에 처음 손에 들어온다. 낚싯대는 아이템과 무관하게 오답, 기념품/전화벨/딸의 사진은 아이템을 켜야 통과.
-            Assert.AreEqual(new[] { TutorialContent.EgoInflationItemId }, session.Items.Held.Select(i => i.Id).ToArray());
+            // 턴 4: 아이템 둘(자아비대·기억 공감)이 이 턴에 처음 손에 들어온다. 둘 다 켜기 전에는 어느 카드든 아이템 안내.
+            CollectionAssert.AreEqual(new[] { Ego, Empathy }, session.Items.Held.Select(i => i.Id).ToArray());
+            foreach (var card in session.Hand.Cards)
+                Assert.AreEqual(PlayRejection.ItemNeeded, session.CheckPlay(card).Reason, card.Definition.Id);
 
-            var wrongCard = Held(session, "tutorial_fishing_rod");
-            var wrongVerdict = session.CheckPlay(wrongCard);
-            Assert.AreEqual(PlayRejection.WrongDirection, wrongVerdict.Reason);
-            CollectionAssert.AreEqual(new[] { EmotionTag.Happiness }, wrongVerdict.ObservedEmotions);
+            UseItem(session, Ego);
+            foreach (var card in session.Hand.Cards)
+                Assert.AreEqual(PlayRejection.ItemNeeded, session.CheckPlay(card).Reason, card.Definition.Id + " — 하나만 켜서는 부족");
 
-            var itemGatedIds = new[] { "tutorial_souvenir", "tutorial_phone_ring", "tutorial_daughter_photo" };
-            foreach (var id in itemGatedIds)
-                Assert.AreEqual(PlayRejection.ItemNeeded, session.CheckPlay(Held(session, id)).Reason, id);
+            UseItem(session, Empathy);
+            Assert.IsTrue(session.Traits.Has("trait_hallucination"), "기억 공감이 환각을 붙인다");
 
-            session.Runner.UseItem(session.Items.Held[0]);
-            foreach (var id in itemGatedIds)
-                Assert.IsTrue(session.CheckPlay(Held(session, id)).Allowed, id);
-            Assert.AreEqual(PlayRejection.WrongDirection, session.CheckPlay(wrongCard).Reason, "아이템을 켜도 낚싯대는 오답");
+            // 둘 다 켜면: 전화벨 소리·낚싯대는 허용, 기념품·딸의 사진은 "보여 준 뒤 되돌리는" 오답.
+            Assert.IsTrue(session.CheckPlay(Held(session, "tutorial_phone_ring")).Allowed);
+            Assert.IsTrue(session.CheckPlay(Held(session, "tutorial_fishing_rod")).Allowed);
+            foreach (var id in new[] { "tutorial_souvenir", "tutorial_daughter_photo" })
+            {
+                var verdict = session.CheckPlay(Held(session, id));
+                Assert.IsFalse(verdict.Allowed, id);
+                Assert.IsTrue(verdict.IsTrial, id + " — 턴 4의 오답은 결과를 보여 준 뒤 되돌린다");
+                Assert.AreEqual(PlayRejection.KeyMissed, verdict.Reason, id);
+            }
 
-            var last = session.Runner.PlayClue(Held(session, "tutorial_daughter_photo"));
+            var last = session.Runner.PlayClue(Held(session, "tutorial_phone_ring"));
 
-            Assert.AreEqual(-12, last.HeartbeatDelta, "슬픔 하나, 자아비대로 ×2 → 2태그 × 6");
+            Assert.AreEqual(-12, last.HeartbeatDelta, "사랑 하나 ×2 → 환각으로 침체 2태그 × 6");
             Assert.AreEqual(77, session.Heartbeat.Value);
             Assert.IsTrue(last.KeyResult.Value.Success);
             Assert.AreEqual(2, session.Keys.Collected);
             Assert.AreEqual(StageOutcome.Cleared, last.Outcome);
-            CollectionAssert.AreEqual(new[] { "complex_anti_past", "tutorial_love_void" },
-                last.Interpretation.Steps.Where(s => s.Triggered).Select(s => s.Complex.Definition.Id).ToArray(), "턴 4의 실제 판정에서 중첩이 둘 다 발동");
-            Assert.AreEqual(0, last.FinalTags.CountOf(EmotionTag.Disgust), "애정 공허가 혐오를 슬픔으로 다시 바꿔 혐오는 남지 않는다");
-            Assert.AreEqual(2, last.FinalTags.CountOf(EmotionTag.Sadness));
+            CollectionAssert.AreEqual(new[] { "trait_hallucination" }, last.TraitsManifested.Select(t => t.Id).ToArray(), "결과에 환각 특성 태그가 뜬다");
         }
 
         [Test]
@@ -381,49 +436,37 @@ namespace BlueComplex.Core.Tests
             session.Runner.PlayClue(Held(session, "tutorial_daughter_photo"));
             var remaining = session.Complexes.Slots.ToDictionary(c => c.Definition.Id, c => c.RemainingTurns);
             Assert.AreEqual(1, remaining["complex_anti_past"], "턴 4 판정 시점에도 반 과거가 살아 있다(턴 4가 끝날 때 만료)");
-            Assert.AreEqual(2, remaining["tutorial_love_void"]);
-        }
-
-        [Test]
-        public void ItemIsRequiredForTheSecondKey()
-        {
-            // 게이트를 우회해 아이템 없이 딸의 사진을 내면 심박수가 83에 머물러 70~80을 놓친다 — 자아비대가 정말 필요하다.
-            var session = NewSession();
-            session.Runner.StartStage();
-            session.Runner.PlayClue(Held(session, "tutorial_calendar"));
-            session.Runner.PlayClue(Held(session, "tutorial_daughter_photo"));
-
-            var report = session.Runner.PlayClue(Held(session, "tutorial_daughter_photo"));
-
-            Assert.AreEqual(-6, report.HeartbeatDelta);
-            Assert.AreEqual(83, session.Heartbeat.Value);
-            Assert.IsFalse(report.KeyResult.Value.Success);
-            Assert.AreEqual(StageOutcome.Failed, report.Outcome);
+            Assert.AreEqual(2, remaining["tutorial_self_denial"]);
         }
 
         [Test]
         public void TheAllowedPaths_ClearTheStage()
         {
-            // 턴 1은 정답이 하나(달력)지만 턴 3·4는 애정 공허의 넓은 조건 때문에 여럿이다 — 어느 정답을 골라도 스테이지를 깰 수 있다.
-            var session = NewSession();
-            session.Runner.StartStage();
+            // 턴 1은 정답이 하나(달력), 턴 3은 둘(기념품·딸의 사진), 턴 4는 둘(전화벨 소리·낚싯대) — 어느 정답을 골라도 스테이지를 깰 수 있다.
+            foreach (var turn3 in new[] { "tutorial_souvenir", "tutorial_daughter_photo" })
+            foreach (var turn4 in new[] { "tutorial_phone_ring", "tutorial_fishing_rod" })
+            {
+                var session = NewSession();
+                session.Runner.StartStage();
 
-            var turn1 = session.Hand.Cards.Where(c => session.CheckPlay(c).Allowed).ToList();
-            Assert.AreEqual(1, turn1.Count);
-            session.Runner.PlayClue(turn1[0]);
-            Assert.AreEqual(1, session.Keys.Collected);
+                var turn1 = session.Hand.Cards.Where(c => session.CheckPlay(c).Allowed).ToList();
+                Assert.AreEqual(1, turn1.Count);
+                session.Runner.PlayClue(turn1[0]);
+                Assert.AreEqual(1, session.Keys.Collected);
 
-            var turn3 = session.Hand.Cards.Where(c => session.CheckPlay(c).Allowed).Select(c => c.Definition.Id).ToArray();
-            CollectionAssert.AreEquivalent(new[] { "tutorial_souvenir", "tutorial_daughter_photo" }, turn3);
-            session.Runner.PlayClue(Held(session, "tutorial_daughter_photo"));
+                var allowed3 = session.Hand.Cards.Where(c => session.CheckPlay(c).Allowed).Select(c => c.Definition.Id).ToArray();
+                CollectionAssert.AreEquivalent(new[] { "tutorial_souvenir", "tutorial_daughter_photo" }, allowed3);
+                session.Runner.PlayClue(Held(session, turn3));
 
-            session.Runner.UseItem(session.Items.Held[0]);
-            var turn4 = session.Hand.Cards.Where(c => session.CheckPlay(c).Allowed).Select(c => c.Definition.Id).ToArray();
-            CollectionAssert.AreEquivalent(new[] { "tutorial_souvenir", "tutorial_phone_ring", "tutorial_daughter_photo" }, turn4);
+                UseItem(session, Ego);
+                UseItem(session, Empathy);
+                var allowed4 = session.Hand.Cards.Where(c => session.CheckPlay(c).Allowed).Select(c => c.Definition.Id).ToArray();
+                CollectionAssert.AreEquivalent(new[] { "tutorial_phone_ring", "tutorial_fishing_rod" }, allowed4);
 
-            var report = session.Runner.PlayClue(Held(session, "tutorial_daughter_photo"));
-            Assert.AreEqual(StageOutcome.Cleared, report.Outcome);
-            Assert.AreEqual(2, session.Keys.Collected);
+                var report = session.Runner.PlayClue(Held(session, turn4));
+                Assert.AreEqual(StageOutcome.Cleared, report.Outcome, $"{turn3} → {turn4}");
+                Assert.AreEqual(77, session.Heartbeat.Value);
+            }
         }
 
         [Test]
@@ -447,23 +490,158 @@ namespace BlueComplex.Core.Tests
             Assert.IsEmpty(session.Complexes.Slots);
             Assert.AreEqual(0, ledger.PendingCount);
 
-            // 컴플렉스가 발동하는 미리보기(턴 4에서 아이템 없이 딸의 사진 → ItemNeeded)도 관찰 기록·심박수·손패·지속 턴을 건드리지 않는다.
+            // 컴플렉스가 발동하는 미리보기(턴 4에서 아이템을 켠 뒤 오답 카드)도 관찰 기록·심박수·손패·지속 턴을 건드리지 않는다.
             session.Runner.PlayClue(Held(session, "tutorial_calendar"));
             session.Runner.PlayClue(Held(session, "tutorial_daughter_photo"));
+            UseItem(session, Ego);
+            UseItem(session, Empathy);
             var pendingBefore = ledger.PendingCount;
             var heartbeatBefore = session.Heartbeat.Value;
             var handBeforeTurn4 = HandIds(session);
             var remaining = session.Complexes.Slots.Select(c => c.RemainingTurns).ToArray();
+            var reportCount = reports.Count;
 
             for (var i = 0; i < 3; i++)
-                Assert.AreEqual(PlayRejection.ItemNeeded, session.CheckPlay(Held(session, "tutorial_daughter_photo")).Reason);
+                Assert.IsTrue(session.CheckPlay(Held(session, "tutorial_daughter_photo")).IsTrial);
 
-            Assert.AreEqual(pendingBefore, ledger.PendingCount, "거절은 관찰 기록을 남기지 않는다");
+            Assert.AreEqual(pendingBefore, ledger.PendingCount, "판정은 관찰 기록을 남기지 않는다");
             Assert.AreEqual(heartbeatBefore, session.Heartbeat.Value);
             CollectionAssert.AreEqual(handBeforeTurn4, HandIds(session));
             CollectionAssert.AreEqual(remaining, session.Complexes.Slots.Select(c => c.RemainingTurns).ToArray());
             Assert.AreEqual(4, session.Runner.CurrentTurn);
+            Assert.AreEqual(reportCount, reports.Count);
         }
+
+        // ── 턴 4 오답: 결과를 보여 준 뒤 되돌리기 ───────────────────────────────────
+
+        [Test]
+        public void PreviewPlay_MatchesTheRealPlay_WithoutChangingState()
+        {
+            foreach (var clue in TutorialContent.Quarter2Hand())
+            {
+                var session = SessionAtTurn4();
+                UseItem(session, Ego);
+                UseItem(session, Empathy);
+                var heartbeat = session.Heartbeat.Value;
+                var pending = session.Ledger.PendingCount;
+
+                var preview = session.Runner.PreviewPlay(Held(session, clue.Id));
+                Assert.AreEqual(heartbeat, session.Heartbeat.Value, clue.Id);
+                Assert.AreEqual(pending, session.Ledger.PendingCount, clue.Id);
+                Assert.AreEqual(1, session.Keys.Collected, clue.Id);
+                Assert.AreEqual(StageOutcome.InProgress, preview.Outcome, "미리보기는 판을 끝내지 않는다");
+
+                var real = session.Runner.PlayClue(Held(session, clue.Id));
+                Assert.AreEqual(real.HeartbeatDelta, preview.HeartbeatDelta, clue.Id);
+                Assert.AreEqual(real.HeartbeatValue, preview.HeartbeatValue, clue.Id);
+                CollectionAssert.AreEquivalent(real.FinalTags.Emotions, preview.FinalTags.Emotions, clue.Id);
+                Assert.AreEqual(real.KeyResult.Value.Success, preview.KeyResult.Value.Success, clue.Id);
+                Assert.AreEqual(real.KeyResult.Value.Quarter, preview.KeyResult.Value.Quarter, clue.Id);
+                CollectionAssert.AreEqual(real.TraitsManifested, preview.TraitsManifested, clue.Id);
+                CollectionAssert.AreEqual(
+                    real.Interpretation.Steps.Where(s => s.Triggered).Select(s => s.Complex.Definition.Id),
+                    preview.Interpretation.Steps.Where(s => s.Triggered).Select(s => s.Complex.Definition.Id), clue.Id);
+            }
+        }
+
+        [Test]
+        public void Turn4Trial_RollBack_RestoresTheTurnStartExactly()
+        {
+            var ledger = new ClueKnowledgeLedger();
+            var session = SessionAtTurn4(ledger);
+            var reports = new List<TurnReport>();
+            var ended = 0;
+            session.Runner.TurnResolved += reports.Add;
+            session.Runner.StageEnded += _ => ended++;
+
+            // 턴 4가 시작된 상태(카드를 내기 전, 아이템을 쓰기 전)를 떠 둔다.
+            var cards = session.Hand.Cards.ToList();
+            var held = session.Items.Held.ToList();
+            var complexes = session.Complexes.InPriorityOrder().Select(c => (c, c.RemainingTurns)).ToList();
+            var heartbeat = session.Heartbeat.Value;
+            var pending = ledger.PendingCount;
+            var keyResults = session.Keys.Results.ToList();
+            var activeZone = session.Keys.ActiveZone;
+
+            // 두 아이템을 쓰고 오답 카드(딸의 사진)를 낸다 → 결과를 보여 줄 거절.
+            UseItem(session, Ego);
+            UseItem(session, Empathy);
+            var card = Held(session, "tutorial_daughter_photo");
+            Assert.IsTrue(session.CheckPlay(card).IsTrial);
+            var shown = session.Runner.PreviewPlay(card);
+            Assert.AreEqual(0, shown.HeartbeatDelta, "변화 없음");
+            Assert.IsFalse(shown.KeyResult.Value.Success, "키 미획득");
+            CollectionAssert.AreEqual(new[] { "complex_anti_past", "tutorial_self_denial" },
+                shown.Interpretation.Steps.Where(s => s.Triggered).Select(s => s.Complex.Definition.Id).ToArray(), "연출할 컴플렉스 반응");
+
+            session.RollBackTrial();
+
+            CollectionAssert.AreEqual(cards, session.Hand.Cards, "손패: 같은 카드 인스턴스가 같은 순서로");
+            CollectionAssert.AreEqual(held, session.Items.Held, "사용한 아이템 둘이 원래 칸 순서대로 돌아온다");
+            Assert.IsEmpty(session.ActiveItems.Active, "켜 둔 아이템 효과가 거둬진다");
+            Assert.IsEmpty(session.Traits.Traits, "부여된 환각이 떨어진다");
+            CollectionAssert.AreEqual(complexes, session.Complexes.InPriorityOrder().Select(c => (c, c.RemainingTurns)).ToList(), "컴플렉스와 남은 턴");
+            Assert.AreEqual(heartbeat, session.Heartbeat.Value);
+            Assert.AreEqual(4, session.Runner.CurrentTurn);
+            Assert.AreEqual(StageOutcome.InProgress, session.Runner.Outcome);
+            Assert.AreEqual(1, session.Keys.Collected);
+            CollectionAssert.AreEqual(keyResults, session.Keys.Results);
+            Assert.AreEqual(activeZone, session.Keys.ActiveZone, "2쿼터 구역이 열린 채");
+            Assert.AreEqual(pending, ledger.PendingCount, "튜토리얼 장부에 관찰이 남지 않는다");
+            Assert.IsEmpty(reports, "턴 결산이 일어나지 않는다");
+            Assert.AreEqual(0, ended);
+
+            // 되돌린 뒤 다시: 아이템을 또 쓸 수 있고, 정답을 내면 깨진다 — 환각은 이번 결과에 한 번만 뜬다.
+            foreach (var verdictCard in session.Hand.Cards)
+                Assert.AreEqual(PlayRejection.ItemNeeded, session.CheckPlay(verdictCard).Reason, "되돌린 뒤엔 다시 아이템부터");
+            UseItem(session, Ego);
+            UseItem(session, Empathy);
+            var report = session.Runner.PlayClue(Held(session, "tutorial_phone_ring"));
+
+            Assert.AreEqual(77, session.Heartbeat.Value);
+            Assert.AreEqual(StageOutcome.Cleared, report.Outcome);
+            CollectionAssert.AreEqual(new[] { "trait_hallucination" }, report.TraitsManifested.Select(t => t.Id).ToArray());
+            Assert.AreEqual(1, reports.Count);
+        }
+
+        [Test]
+        public void Turn4Trial_RollBack_WorksRepeatedly()
+        {
+            var session = SessionAtTurn4();
+            var held = session.Items.Held.ToList();
+
+            for (var i = 0; i < 3; i++)
+            {
+                UseItem(session, Empathy);
+                UseItem(session, Ego);
+                Assert.IsTrue(session.CheckPlay(Held(session, i % 2 == 0 ? "tutorial_souvenir" : "tutorial_daughter_photo")).IsTrial);
+                session.RollBackTrial();
+
+                CollectionAssert.AreEqual(held, session.Items.Held, $"{i}회째: 쓴 순서와 무관하게 원래 칸 순서");
+                Assert.IsEmpty(session.ActiveItems.Active);
+                Assert.IsEmpty(session.Traits.Traits);
+                Assert.AreEqual(89, session.Heartbeat.Value);
+            }
+        }
+
+        [Test]
+        public void Turn4Trial_RollBack_ReturnsItemsThroughGainedEvents()
+        {
+            var session = SessionAtTurn4();
+            var gained = new List<string>();
+            var removedTraits = new List<string>();
+            session.Items.Gained += item => gained.Add(item.Id);
+            session.Traits.Removed += trait => removedTraits.Add(trait.Definition.Id);
+
+            UseItem(session, Ego);
+            UseItem(session, Empathy);
+            session.RollBackTrial();
+
+            CollectionAssert.AreEqual(new[] { Ego, Empathy }, gained, "화면(ItemController)이 칸에 다시 끼울 수 있게 획득 이벤트로 알린다");
+            CollectionAssert.AreEqual(new[] { "trait_hallucination" }, removedTraits);
+        }
+
+        // ── 장부·발현 ────────────────────────────────────────────────────────────
 
         [Test]
         public void Ledger_IsIsolatedFromTheMainLedger()
@@ -494,7 +672,8 @@ namespace BlueComplex.Core.Tests
                 session.Runner.PlayClue(Held(session, "tutorial_calendar"));
                 Assert.AreEqual(new[] { "complex_anti_past" }, session.Complexes.Slots.Select(c => c.Definition.Id).ToArray(), $"seed {seed}");
                 session.Runner.PlayClue(Held(session, "tutorial_daughter_photo"));
-                Assert.AreEqual(new[] { "complex_anti_past", "tutorial_love_void" }, session.Complexes.Slots.Select(c => c.Definition.Id).ToArray(), $"seed {seed}");
+                Assert.AreEqual(new[] { "complex_anti_past", "tutorial_self_denial" }, session.Complexes.Slots.Select(c => c.Definition.Id).ToArray(), $"seed {seed}");
+                CollectionAssert.AreEqual(new[] { Ego, Empathy }, session.Items.Held.Select(i => i.Id).ToArray(), $"seed {seed}");
             }
         }
 
@@ -619,6 +798,7 @@ namespace BlueComplex.Core.Tests
             Assert.IsNull(session.PlayGate);
             foreach (var card in session.Hand.Cards)
                 Assert.IsTrue(session.CheckPlay(card).Allowed);
+            Assert.DoesNotThrow(session.RollBackTrial, "게이트가 없으면 되돌리기는 아무 일도 없다");
         }
 
         [Test]
@@ -644,11 +824,11 @@ namespace BlueComplex.Core.Tests
         {
             var session = NewSession();
             session.Runner.StartStage();
-            var ego = TutorialContent.EgoInflation();
 
-            Assert.IsTrue(session.Items.TryGrant(ego));
-            Assert.IsFalse(session.Items.TryGrant(ego), "칸이 하나라 두 번째는 못 받는다");
-            Assert.AreEqual(1, session.Items.Held.Count);
+            Assert.IsTrue(session.Items.TryGrant(TutorialContent.EgoInflation()));
+            Assert.IsTrue(session.Items.TryGrant(TutorialContent.MemoryEmpathy()));
+            Assert.IsFalse(session.Items.TryGrant(TutorialContent.EgoInflation()), "칸이 둘이라 세 번째는 못 받는다");
+            Assert.AreEqual(2, session.Items.Held.Count);
         }
     }
 }

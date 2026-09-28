@@ -109,6 +109,15 @@ namespace BlueComplex.UI.Presentation
             Refresh(animate: true);
         }
 
+        /// <summary>쿼터의 키 판정 결과를 지워 판정 전으로 되돌린다(튜토리얼 턴 4 오답을 보여 준 뒤 되돌릴 때).</summary>
+        public void ClearKeyResult(int quarter)
+        {
+            if (quarter < 1 || quarter > _results.Length || _results[quarter - 1] == null) return;
+
+            _results[quarter - 1] = null;
+            Refresh(animate: false);
+        }
+
         /// <summary>스테이지가 끝나면 오버레이를 닫는다 — 결과 패널이 그 밑에 깔리지 않게.</summary>
         public void CloseOverview()
         {

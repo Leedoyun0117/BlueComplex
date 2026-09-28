@@ -14,6 +14,7 @@ namespace BlueComplex.UI.Presentation
     ///
     /// 일반 턴: 두 포스트잇이 0.1초 시차로 떼어짐 → 글자 쓰는 소리(그 사이 내용 갱신) → 갱신된 포스트잇이 붙음.
     /// 키 턴: 포스트잇이 떼어지며 화면이 어두워짐 → 나츠 독백 → 화면이 다시 밝아지며 포스트잇이 붙음.
+    /// 같은 암전 막은 컴플렉스 발현 독백(<see cref="PlayMonologue"/>, 포스트잇 없이 더 짧게)도 쓴다.
     ///
     /// 두 포스트잇의 위치는 이미 잡혀 있고(컴플렉스: 프리팹, 대화: QuarterHud) 이 클래스는 그 <see cref="Postit"/>만 찾아 움직인다.
     /// MainHud.prefab에 넣지 않고 처음 필요할 때 캔버스 아래에 짓는다(QuarterHud와 같은 방식).
@@ -68,6 +69,23 @@ namespace BlueComplex.UI.Presentation
             var bright = keyTurn ? Overlay.FadeOut() : null;
 
             yield return Staggered(postits, postit => postit.Stick(), settings.postitStagger);
+            if (bright != null && bright.IsActive()) yield return bright.WaitForCompletion(true);
+        }
+
+        /// <summary>
+        /// 포스트잇은 그대로 두고 키 턴과 같은 암전 막 위에 독백만 짧게 띄운다: 어두워짐 → 독백 → 밝아짐. 컴플렉스가 새로 발현될 때의 나츠 독백이 쓴다 —
+        /// 키 턴보다 짧게 끝나도록 시간은 발현 연출 값(<c>spawnMonologue*</c>, UiMotionSettings)을 쓴다.
+        /// </summary>
+        public IEnumerator PlayMonologue(string speaker, string monologue)
+        {
+            var settings = UiMotion.Settings;
+
+            var dim = Overlay.FadeIn(settings.spawnMonologueFade);
+            if (dim != null && dim.IsActive()) yield return dim.WaitForCompletion(true);
+
+            yield return Overlay.PlayMonologue(speaker, monologue, settings.spawnMonologueSecondsPerChar, settings.spawnMonologueHold);
+
+            var bright = Overlay.FadeOut(settings.spawnMonologueFade);
             if (bright != null && bright.IsActive()) yield return bright.WaitForCompletion(true);
         }
 

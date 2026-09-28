@@ -198,6 +198,13 @@ namespace BlueComplex.Core.Items
                 Expired?.Invoke(expired);
             }
         }
+
+        /// <summary>앞서 떠 둔 목록(<see cref="Active"/>의 사본)으로 되돌린다 — 그 뒤에 켠 효과만 거둔다(튜토리얼의 오답 되돌리기). 만료가 아니므로 <see cref="Expired"/>는 쏘지 않는다.</summary>
+        public void RestoreTo(IReadOnlyList<ActiveItem> snapshot)
+        {
+            _active.Clear();
+            _active.AddRange(snapshot);
+        }
     }
 
     /// <summary>
@@ -259,6 +266,20 @@ namespace BlueComplex.Core.Items
             _held.Add(item);
             Gained?.Invoke(item);
             return true;
+        }
+
+        /// <summary>
+        /// 앞서 떠 둔 보유 목록(<see cref="Held"/>의 사본)으로 되돌린다 — 그 사이에 쓴 아이템이 원래 칸 순서대로 돌아온다(튜토리얼의 오답 되돌리기).
+        /// 돌아온 아이템마다 <see cref="Gained"/>를 쏜다(화면이 칸에 다시 끼운다). 쓴 기록(다음 리필이 피할 종류)에서도 뺀다.
+        /// </summary>
+        public void RestoreHeld(IReadOnlyList<ItemDefinition> snapshot)
+        {
+            var returned = snapshot.Where(item => !_held.Contains(item)).ToList();
+
+            _held.Clear();
+            _held.AddRange(snapshot);
+            foreach (var item in returned) _usedSinceRefill.Remove(item);
+            foreach (var item in returned) Gained?.Invoke(item);
         }
 
         /// <summary>아이템을 쓴다: 보유에서 빼고 → 행동 실행(즉시 효과 + 지속 효과 등록) → 부여 특성을 붙인다. 대상·상태 검증은 호출자(TurnRunner)가 이미 했다.</summary>

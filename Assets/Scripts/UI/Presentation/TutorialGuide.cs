@@ -134,6 +134,7 @@ namespace BlueComplex.UI.Presentation
             session.Runner.TurnBegan += OnTurnBegan;
             session.Runner.TurnResolved += OnTurnResolved;
             session.Items.Used += OnItemUsed;
+            session.TrialRolledBack += OnTrialRolledBack;
 
             gameObject.SetActive(true);
             _group.alpha = 1f;
@@ -149,6 +150,7 @@ namespace BlueComplex.UI.Presentation
                 _session.Runner.TurnBegan -= OnTurnBegan;
                 _session.Runner.TurnResolved -= OnTurnResolved;
                 _session.Items.Used -= OnItemUsed;
+                _session.TrialRolledBack -= OnTrialRolledBack;
                 _session = null;
             }
 
@@ -185,6 +187,9 @@ namespace BlueComplex.UI.Presentation
         private void OnTurnResolved(TurnReport report) => _pendingTurns.Enqueue(report.Turn);
 
         private void OnItemUsed(BlueComplex.Core.Items.ItemDefinition item) => _flow?.Notify(GuideAdvance.ItemUsed);
+
+        /// <summary>오답을 보여 준 뒤 아이템이 돌아왔다 — 다시 써야 하니 아이템 단계로 되돌아가 두 칸을 다시 강조한다. 청장의 "이게 아니네" 말풍선은 그 단계 문구로 바뀐다.</summary>
+        private void OnTrialRolledBack() => _flow?.Rewind("use_item");
         private void OnBookOpened() => _flow?.Notify(GuideAdvance.BookOpened);
         private void OnManualTabShown() => _flow?.Notify(GuideAdvance.ManualTabShown);
         private void OnBookClosed() => _flow?.Notify(GuideAdvance.BookClosed);
@@ -201,6 +206,29 @@ namespace BlueComplex.UI.Presentation
             {
                 var xray = UnityEngine.Object.FindFirstObjectByType<ComplexXrayPanel>(FindObjectsInactive.Include);
                 if (xray != null && xray.IsOpen) _flow.Notify(GuideAdvance.XrayOpened);
+            }
+
+            if (step != null && step.Target == GuideTarget.Items) SyncItemPulses();
+        }
+
+        /// <summary>아이템 강조는 아이템이 든 칸만 — 여러 개를 써야 하는 단계(자아비대·기억 공감)에서 하나를 쓰면 그 칸의 강조만 꺼지고 남은 칸은 계속 깜박인다.</summary>
+        private void SyncItemPulses()
+        {
+            var items = UnityEngine.Object.FindFirstObjectByType<ItemDisplayPanel>(FindObjectsInactive.Include);
+            if (items == null) return;
+
+            for (var i = 0; i < items.SlotCount; i++)
+            {
+                var slot = items.GetSlot(i);
+                if (slot == null) continue;
+
+                var want = slot.Item != null && slot.gameObject.activeInHierarchy;
+                var has = _pulsed.Contains(slot);
+                if (want == has) continue;
+
+                TargetPulse.Set(slot, want);
+                if (want) _pulsed.Add(slot);
+                else _pulsed.Remove(slot);
             }
         }
 

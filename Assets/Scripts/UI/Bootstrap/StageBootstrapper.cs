@@ -382,15 +382,53 @@ namespace BlueComplex.UI.Bootstrap
                 return;
             }
 
-            var card = Session.Hand.Cards[index];
+            TryPlayCard(Session.Hand.Cards[index], FindCanvasRoot());
+        }
+
+        /// <summary>
+        /// 카드를 내는 모든 입구(드롭 영역·디버그 숫자키)가 부른다. 게이트(<see cref="StageSession.CheckPlay"/>)를 거쳐:
+        /// 허용이면 실제로 내고, 결과를 보여 주는 거절(<see cref="PlayVerdict.IsTrial"/>, 튜토리얼 턴 4 오답)이면 미리보기 결과를 끝까지 연출한 뒤 되돌리고,
+        /// 그 밖의 거절이면 안내만 띄운다. 카드가 손을 떠났으면(실제로 냈거나 시연을 시작했으면) true — 드롭 영역은 이때만 카드를 받아들인다.
+        /// </summary>
+        public bool TryPlayCard(ClueInstance card, Transform feedbackAnchor)
+        {
+            if (Session == null || Session.Runner.Outcome != StageOutcome.InProgress) return false;
+
             var verdict = Session.CheckPlay(card);
+            if (verdict.IsTrial)
+            {
+                var presenter = FindCanvasRoot()?.GetComponentInChildren<ITurnResultPresenter>(true);
+                if (presenter == null || presenter.IsPresenting) return false;
+
+                var report = Session.Runner.PreviewPlay(card);
+                InputBlocked = true;
+                presenter.PresentTrial(report, () => AfterTrialResult(verdict, feedbackAnchor));
+                return true;
+            }
+
             if (!verdict.Allowed)
             {
-                PlayGateFeedback.Show(FindCanvasRoot(), verdict, Session.Runner.CurrentTurn);
-                return;
+                PlayGateFeedback.Show(feedbackAnchor, verdict, Session.Runner.CurrentTurn);
+                return false;
             }
 
             Session.Runner.PlayClue(card);
+            return true;
+        }
+
+        /// <summary>시연 결과 연출이 끝난 뒤: 청장의 "이게 아니네. 다시 한 번 생각해 봐." → 읽을 시간 → 세션을 이 턴이 시작된 상태로 되돌린다. 화면 되돌리기는 Presenter가 이어서 한다.</summary>
+        private IEnumerator AfterTrialResult(PlayVerdict verdict, Transform feedbackAnchor)
+        {
+            var session = Session;
+            PlayGateFeedback.Show(feedbackAnchor, verdict, session.Runner.CurrentTurn);
+
+            var line = TutorialGuideContent.RejectionLine(verdict, session.Runner.CurrentTurn, KoreanLabels.Emotion) ?? string.Empty;
+            var motion = UiMotion.Settings;
+            yield return new WaitForSecondsRealtime(line.Length * motion.dialogueSecondsPerChar + motion.trialRollbackHold);
+
+            if (Session != session) yield break; // 그 사이 재시작됐다.
+            session.RollBackTrial();
+            InputBlocked = false;
         }
 
         /// <summary>스테이지 번호(1~3)를 골라 새 무작위 시드로 시작한다. 해금 지식(Ledger)은 유지된다. 임시 디버그 선택용.</summary>

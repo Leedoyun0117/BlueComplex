@@ -82,6 +82,15 @@ namespace BlueComplex.UI.Presentation
             if (_ecg != null) _ecg.FlashBand(UiMotion.Settings.bandResultFlash);
         }
 
+        /// <summary>기록된 키 판정 결과를 지워 판정 전 모습(키 턴이면 띠 강조)으로 되돌린다 — 튜토리얼 턴 4 오답을 보여 준 뒤 되돌릴 때.</summary>
+        public void ClearKeyResult(int quarter)
+        {
+            if (quarter != _shownQuarter || _result == null) return;
+
+            _result = null;
+            Refresh(animate: false);
+        }
+
         /// <summary>파형의 높이·속도(BPM)와 선 색을 정한다. snap이면 바로, 아니면 <c>heartTransition</c> 동안 부드럽게 — 턴 결과 연출의 심박수 이동과 같은 타이밍이다.</summary>
         public void SetPulse(int bpm, Color color, bool irregular, bool snap)
         {
