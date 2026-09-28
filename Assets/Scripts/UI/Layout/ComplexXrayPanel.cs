@@ -121,6 +121,9 @@ namespace BlueComplex.UI.Layout
         /// <summary>접힌 상태에서 눈에 보이는 태블릿 — 튜토리얼 가이드가 "끌어서 열기"를 가리킬 때 강조하는 자리(<see cref="Root"/>는 열렸을 때의 넓은 판 전체다).</summary>
         public RectTransform TabletRect => _tablet;
 
+        /// <summary>눈에 보이는 프레임 그림의 사각형 — 튜토리얼 강조·말풍선이 붙는 자리. 프레임 그림은 판(<see cref="TabletRect"/>) 안에서 위로 옮겨 놓았기 때문에 판 사각형과 다르다.</summary>
+        public RectTransform HighlightRect => _frame != null ? _frame.rectTransform : _tablet;
+
         /// <summary>"엑스레이 · 끌어서 열기" 이름표.</summary>
         public RectTransform HandleTagRect => _handleTag;
         public bool IsOpen { get; private set; }
