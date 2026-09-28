@@ -21,15 +21,65 @@ namespace BlueComplex.UI.Presentation
         /// <summary>우선순위 i번째 컴플렉스가 받는 영역 인덱스 — 뇌 영역 배열은 Left/Middle/Right(0/1/2) 순이지만 채워지는 순서는 Left(0) → Right(2) → Middle(1)이다.</summary>
         private static readonly int[] FillOrder = { 0, 2, 1 };
 
+        /// <summary>뇌 그림(과 영역 글자)을 프레임 안에서 위로 올리는 양 — 판 안쪽(Content) 높이에 대한 비율(0.1 = 10%). 유키 초상화·프레임은 움직이지 않고 뇌만 머리 위쪽으로 간다
+        /// (전엔 뇌 아래쪽이 유키 눈을 덮었다). 기본 자리(프리팹의 BrainArea 앵커) 기준이라 0이면 예전 자리. Play 중 인스펙터에서 바꾸면 바로 반영된다. 2026-09-28 사용자 요청.</summary>
+        [SerializeField, Range(0f, 0.4f), Tooltip("뇌를 위로 올리는 양(판 안쪽 높이 비율). 0 = 원래 자리. Play 중 바로 반영된다.")]
+        private float _lift = DefaultLift;
+
+        public const float DefaultLift = 0.17f;
+
         [SerializeField] private BrainRegionView[] _regions;
         [SerializeField] private TooltipPopup _tooltip;
 
         public int RegionCount => _regions?.Length ?? 0;
 
+        private RectTransform _area;
+        private Vector2 _baseAnchorMin, _baseAnchorMax;
+
         protected override void Awake()
         {
             foreach (var region in _regions) region.Init(_tooltip);
+            CacheArea();
+            ApplyLift();
             base.Awake();
+        }
+
+        /// <summary>뇌를 올리는 양(판 안쪽 높이 비율). 검증·튜닝용.</summary>
+        public float Lift
+        {
+            get => _lift;
+            set
+            {
+                _lift = value;
+                ApplyLift();
+            }
+        }
+
+        private void OnValidate()
+        {
+            if (Application.isPlaying) ApplyLift();
+        }
+
+        /// <summary>올릴 대상은 이 뇌의 부모(BrainArea) — 뇌 아트와 영역 글자(Labels)가 같이 그 아래에 있어 함께 올라간다. 원래 앵커는 처음 한 번만 기억한다(다시 적용해도 쌓이지 않게).</summary>
+        private void CacheArea()
+        {
+            if (_area != null) return;
+
+            _area = transform.parent as RectTransform;
+            if (_area == null) return;
+
+            _baseAnchorMin = _area.anchorMin;
+            _baseAnchorMax = _area.anchorMax;
+        }
+
+        private void ApplyLift()
+        {
+            CacheArea();
+            if (_area == null) return;
+
+            var up = new Vector2(0f, _lift);
+            _area.anchorMin = _baseAnchorMin + up;
+            _area.anchorMax = _baseAnchorMax + up;
         }
 
         protected override void Subscribe(StageSession session) { }

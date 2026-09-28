@@ -40,9 +40,10 @@ namespace BlueComplex.UI.Layout
         private const float ArmLength = 260f;
 
         /// <summary>접힌 손목(어깨 바로 옆 — 두 선분이 포개진다)과 펼친 손목(원 왼쪽 가장자리 중앙). 펼친 손목은 원 중심을 (462, 437)로
-        /// 고정한 채 역산했다: center = wrist + (TabletSize.x*0.5 + HingeGap, 0) → wrist = (462 - 212.5 - 6, 437).</summary>
+        /// 고정한 채 역산했다: wrist = center - (반폭 + HingeGap, 0) — 펼친 손목은 <see cref="_frameScale"/>에 맞춰 ApplyPose가 그때그때 구한다.</summary>
         private static readonly Vector2 FoldedWrist = new(88f, 160f);
-        private static readonly Vector2 OpenWrist = new(243.5f, 437f);
+        /// <summary>펼친 판의 중심(참조 픽셀) — 유키 머리 위. 판 크기(<see cref="_frameScale"/>)를 바꿔도 이 중심은 그대로고, 그에 맞춰 손목 자리가 달라진다.</summary>
+        private static readonly Vector2 OpenCenter = new(462f, 437f);
 
         private const float FoldedScale = 0.26f;
         private const float OpenScale = 1f;
@@ -66,6 +67,13 @@ namespace BlueComplex.UI.Layout
         /// <summary>80: 펼친 판 아래 끝이 y≈751(1080p)로 하단 대사창(y≈832)과 81px 떨어진다. 접힌 팔·안내표는 유키·컴플렉스 포스트잇과 안 겹친다(캡처로 확인, 2026-09-28 도윤님 확정).
         /// 인스펙터 필드라 나중에 바꿔도 된다.</summary>
         public const float DefaultVerticalOffset = 80f;
+
+        /// <summary>프레임(태블릿) 전체 배율 — 1이면 <see cref="TabletSize"/> 그대로. 프레임·안의 뇌·"엑스레이" 제목·"접기" 버튼·안내표가 <b>같이</b> 줄어든다(자식들은 판 크기에 비율로 매달려 있고
+        /// 판의 localScale 하나로 줄인다). 판 중심(<see cref="OpenCenter"/>)은 그대로 둔 채 가장자리만 안으로 들어오므로 위쪽 청장 대사창·아래쪽 유키 대사창·심박수 모니터와 더 멀어진다. 2026-09-28 사용자 요청.</summary>
+        [SerializeField, Range(0.5f, 1f), Tooltip("엑스레이 프레임 전체 크기 배율(비율 유지). 1 = 원래 크기. Play 중 바로 반영된다.")]
+        private float _frameScale = DefaultFrameScale;
+
+        public const float DefaultFrameScale = 0.8f;
 
         [SerializeField] private RectTransform _tablet;
         [SerializeField] private RectTransform _basePlate;
@@ -108,6 +116,23 @@ namespace BlueComplex.UI.Layout
         public float Fold => _fold;
 
         public bool IsDragging => _dragging;
+
+        /// <summary>펼쳤을 때만 눈에 보이는 "접기" 버튼 — 튜토리얼 가이드의 클릭 막이 이 자리를 뚫어 줘야 한다.</summary>
+        public RectTransform FoldButtonRect => _foldButton != null ? (RectTransform)_foldButton.transform : null;
+
+        /// <summary>프레임 배율(참조: 1 = 원래 크기). 검증·튜닝용.</summary>
+        public float FrameScale
+        {
+            get => _frameScale;
+            set
+            {
+                _frameScale = value;
+                if (_rect != null && _tablet != null && _arm != null) ApplyPose();
+            }
+        }
+
+        /// <summary>손목에서 원래 크기의 판 중심까지의 가로 거리에 프레임 배율을 곱한 반폭.</summary>
+        private float HalfWidth => TabletSize.x * 0.5f * _frameScale;
 
         private void Awake()
         {
@@ -255,13 +280,14 @@ namespace BlueComplex.UI.Layout
             if (unit <= 0f) return;
 
             var shoulder = ShoulderPoint + Down;
-            var wrist = Vector2.LerpUnclamped(FoldedWrist, OpenWrist, _fold) + Down;
+            var openWrist = new Vector2(OpenCenter.x - HalfWidth - HingeGap, OpenCenter.y);
+            var wrist = Vector2.LerpUnclamped(FoldedWrist, openWrist, _fold) + Down;
             var scale = Mathf.LerpUnclamped(FoldedScale, OpenScale, _fold);
 
             if (_dragBlend > 0f)
             {
                 var dragScale = Mathf.Lerp(scale, DragScale, _dragBlend);
-                var dragWrist = _dragCenter - new Vector2(TabletSize.x * 0.5f * DragScale + HingeGap, 0f);
+                var dragWrist = _dragCenter - new Vector2(HalfWidth * DragScale + HingeGap, 0f);
                 wrist = Vector2.Lerp(wrist, dragWrist, _dragBlend);
                 scale = dragScale;
             }
@@ -279,16 +305,16 @@ namespace BlueComplex.UI.Layout
             if (_handleTag != null)
             {
                 // 안내표는 화면 왼쪽 가장자리에 잘리지 않게 폭의 절반 + 여백 이상으로 놓는다.
-                var folded = FoldedWrist + Down + new Vector2(TabletSize.x * 0.5f * FoldedScale + HingeGap, TabletSize.y * 0.5f * FoldedScale + 24f);
+                var folded = FoldedWrist + Down + new Vector2(HalfWidth * FoldedScale + HingeGap, TabletSize.y * 0.5f * _frameScale * FoldedScale + 24f);
                 folded.x = Mathf.Max(folded.x, HandleTagSize.x * 0.5f + 8f);
                 _handleTag.anchoredPosition = new Vector2(folded.x, -folded.y) * unit;
                 _handleTag.sizeDelta = HandleTagSize * unit;
             }
 
-            var center = wrist + new Vector2(TabletSize.x * 0.5f * scale + HingeGap, 0f);
+            var center = wrist + new Vector2(HalfWidth * scale + HingeGap, 0f);
             _tablet.sizeDelta = TabletSize * unit;
             _tablet.anchoredPosition = new Vector2(center.x, -center.y) * unit;
-            _tablet.localScale = Vector3.one * scale;
+            _tablet.localScale = Vector3.one * (scale * _frameScale);
 
             // 뇌 내용은 펼쳐질수록 또렷하고(접힌 작은 판넬 위에선 읽을 수 없다), 손잡이 안내는 접혔을 때만 보인다.
             var openness = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.3f, 0.9f, Mathf.Max(_fold, _dragBlend)));
@@ -423,9 +449,9 @@ namespace BlueComplex.UI.Layout
         }
 
         /// <summary>끄는 판넬이 화면 왼쪽/위 밖으로 나가지 않게 가둔다(컨테이너가 화면 왼쪽 가장자리에 붙어 있어 왼쪽 여유가 없다).</summary>
-        private static Vector2 ClampToScreen(Vector2 center) => new(
-            Mathf.Max(center.x, TabletSize.x * 0.5f * DragScale + HingeGap + 10f),
-            Mathf.Max(center.y, TabletSize.y * 0.5f * DragScale - 60f));
+        private Vector2 ClampToScreen(Vector2 center) => new(
+            Mathf.Max(center.x, HalfWidth * DragScale + HingeGap + 10f),
+            Mathf.Max(center.y, TabletSize.y * 0.5f * _frameScale * DragScale - 60f));
 
         /// <summary>포인터 위치를 컨테이너 참조 픽셀 좌표(왼쪽 위 원점, y 아래로 +)로 바꾼다. CRT 배럴 왜곡 보정을 적용한다.</summary>
         private bool TryGetContainerPoint(PointerEventData eventData, out Vector2 point)
