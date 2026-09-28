@@ -1,5 +1,6 @@
 using System.Collections;
 using BlueComplex.Core.Stage;
+using BlueComplex.UI.Layout;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -46,7 +47,7 @@ namespace BlueComplex.UI.Presentation
         public IEnumerator Play()
         {
             ResetNow();
-            var font = _canvasRoot.GetComponentInChildren<TMP_Text>(true)?.font;
+            var font = RuntimeUi.GameFont;
             var backdrop = BuildOverlay(font, out var text, out var credits);
 
             // 컷신 9: 게임 화면이 검게 덮이고, 그 위에서 글이 타이핑된다.

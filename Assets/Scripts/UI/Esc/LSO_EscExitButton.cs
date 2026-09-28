@@ -43,6 +43,11 @@ namespace UI.Esc
             }
             if (settingsLayout.Find(RowName) != null) return;
 
+            // "Elements"(SettingsLayout의 부모)는 라벨-왼쪽/슬라이더-오른쪽인 다른 설정 줄들의 시각적 균형을 위해
+            // x로 조금 밀려 있다(anchoredPosition.x). 좌우 대칭인 이 버튼은 그 오프셋을 그대로 물려받으면
+            // 화면 중앙이 아니라 오른쪽으로 치우쳐 보이므로, Build에서 그 값만큼 반대로 되돌린다.
+            var elementsOffsetX = (settingsLayout.parent as RectTransform)?.anchoredPosition.x ?? 0f;
+
             var row = new GameObject(RowName, typeof(RectTransform)) { layer = panel.gameObject.layer };
             var rect = (RectTransform)row.transform;
             rect.SetParent(settingsLayout, false);
@@ -51,7 +56,7 @@ namespace UI.Esc
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.sizeDelta = new Vector2(RowWidth, RowHeight);
 
-            row.AddComponent<LSO_EscExitButton>().Build(panel, rect);
+            row.AddComponent<LSO_EscExitButton>().Build(panel, rect, elementsOffsetX);
         }
 
         /// <summary>줄(row)은 다른 설정 줄과 같은 폭(320)으로 VerticalLayoutGroup 자리만 차지하고,
@@ -60,10 +65,10 @@ namespace UI.Esc
         private const float ButtonWidth = 220f;
         private const float ButtonHeight = 40f;
 
-        private void Build(LSO_EscPanel panel, RectTransform row)
+        private void Build(LSO_EscPanel panel, RectTransform row, float elementsOffsetX)
         {
             _panel = panel;
-            _font = RuntimeUi.FindFont(panel.transform) ?? panel.GetComponentInChildren<TMP_Text>(true)?.font;
+            _font = RuntimeUi.GameFont;
 
             var layoutElement = row.gameObject.AddComponent<LayoutElement>();
             layoutElement.preferredHeight = RowHeight;
@@ -72,6 +77,7 @@ namespace UI.Esc
             var button = RuntimeUi.CreateRect(row, "Button", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero);
             button.sizeDelta = new Vector2(ButtonWidth, ButtonHeight);
+            button.anchoredPosition = new Vector2(-elementsOffsetX, 0f); // Elements의 x 오프셋을 상쇄해 화면 중앙에 맞춘다.
 
             var background = RuntimeUi.CreateImage(button, "Background", new Color(1f, 1f, 1f, 0.08f),
                 Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, raycastTarget: true);

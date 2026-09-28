@@ -13039,6 +13039,10 @@ PrefabInstance:
       propertyPath: _bootstrapper
       value: 
       objectReference: {fileID: 650770981}
+    - target: {fileID: 6663875876892495705, guid: b75a573cce94ee44489aabd91cafbdd3, type: 3}
+      propertyPath: m_text
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 6789803531021396349, guid: b75a573cce94ee44489aabd91cafbdd3, type: 3}
       propertyPath: m_TextStyleHashCode
       value: -1183493901

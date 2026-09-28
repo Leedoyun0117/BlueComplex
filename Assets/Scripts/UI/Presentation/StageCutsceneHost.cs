@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using BlueComplex.UI.Layout;
 using BlueComplex.UI.Motion;
 using BlueComplex.UI.Rendering;
 using DG.Tweening;
@@ -21,7 +22,8 @@ namespace BlueComplex.UI.Presentation
     ///
     /// 컷신 프리팹은 월드 스페이스 캔버스 + 원근 카메라(fov 63.3, 원점에서 +z를 봄)로 만들어져 있다. 게임 화면의 HUD와 섞이지 않게 전용 카메라를 하나 세워 화면 전체를 덮는다:
     ///  · 프리팹은 재생할 때마다 새로 만든다(<see cref="StageOrigin"/> — 게임 배경 카메라 시야 밖) → 페이드·대사 순번 같은 재생 상태가 매번 처음부터다. 끝나면 지운다.
-    ///  · 카메라는 메인 카메라와 같은 렌더러(CRT 패스가 있는 것)를 써서 게임 화면과 같은 CRT 톤(스캔라인·곡률·비네트 등, 지금 심박수 반응 포함)으로 그려진다.
+    ///  · 카메라는 메인 카메라와 같은 렌더러(CRT 패스가 있는 것)를 써서 게임 화면과 같은 기본 CRT(스캔라인·곡률·비네트)로 그려진다. 심박수에 따른 흥분/침체 톤
+    ///    (DLJ 무드 효과)은 <see cref="Covering"/> 동안 DLJ_HeartbeatMoodEffectController가 스스로 걷는다.
     ///    CRT 패스는 RT_UI(HUD)를 위에 덧그리므로, 컷신이 덮는 동안 UI 카메라는 아무것도 그리지 않는다(컬링 마스크 0 → RT_UI는 투명으로만 지워진다). <see cref="Release"/>가 되돌린다.
     ///  · 컷신이 화면을 덮는 동안 게임 소리(배경음·효과음)는 꺼진다(<see cref="UiSoundHooks.SuppressGameSounds"/>) — 컷신 자체의 소리만 들린다.
     ///  · 컷신이 하나 끝나도 카메라(검은 배경)는 남는다 — 번호가 이어지는 통합 컷신(6+7, 10+11) 사이에 게임 화면이 비치지 않게. 스테이지 종료 연출이 <see cref="Release"/>로 걷는다.
@@ -379,7 +381,7 @@ namespace BlueComplex.UI.Presentation
             rect.offsetMin = rect.offsetMax = Vector2.zero;
 
             _hint = text.AddComponent<TextMeshProUGUI>();
-            var font = FindGameFont();
+            var font = RuntimeUi.GameFont; // 포스트잇 손글씨가 아닌 게임 글꼴(NotoSansKR SDF).
             if (font != null) _hint.font = font;
             _hint.text = "Space  건너뛰기";
             _hint.fontSize = 22f;
@@ -387,15 +389,6 @@ namespace BlueComplex.UI.Presentation
             _hint.alignment = TextAlignmentOptions.MidlineRight;
             _hint.raycastTarget = false;
             _hint.alpha = 0f;
-        }
-
-        /// <summary>한글이 들어 있는 게임 글꼴을 씬의 글자에서 빌린다(컷신 프리팹의 글자는 곧 지워지니 건너뛴다).</summary>
-        private static TMP_FontAsset FindGameFont()
-        {
-            foreach (var text in FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-                if (text.font != null && !IsCutsceneObject(text.gameObject)) return text.font;
-
-            return null;
         }
 
         /// <summary>시네머신 트랙이 있는 컷신(08)은 트랙이 움직일 카메라(브레인)가 프리팹 밖 씬 오브젝트라 프리팹에 저장돼 있지 않다 — 전용 카메라의 브레인을 물려 준다.</summary>

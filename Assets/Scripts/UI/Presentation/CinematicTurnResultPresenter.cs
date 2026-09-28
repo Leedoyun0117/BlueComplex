@@ -392,7 +392,6 @@ namespace BlueComplex.UI.Presentation
             _heartRate.PlayTurnResult(report);
             // 컴플렉스 포스트잇(남은 턴·새로 붙거나 만료된 컴플렉스)은 여기서 안 바뀐다 — 연출이 다 끝나고 포스트잇이 떼어져 있는 사이에 갱신된다.
             _traitStatus?.Refresh();
-            _memoryBubble.SetPersistentSummary(TurnSummaryFormatter.BuildFinalEmotionSummary(report));
 
             yield return tagSequence.WaitForCompletion(true);
         }

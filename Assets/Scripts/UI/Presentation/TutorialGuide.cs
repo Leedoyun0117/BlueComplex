@@ -535,7 +535,7 @@ namespace BlueComplex.UI.Presentation
 
         private void Build()
         {
-            var font = RuntimeUi.FindFont(_canvasRoot);
+            var font = RuntimeUi.GameFont;
 
             // 클릭 막: 화면 전체를 덮는 투명한 그래픽. 강조/허용 사각형 안의 클릭만 뚫어 준다.
             var maskRect = RuntimeUi.CreateStretched(transform, "Click Mask");

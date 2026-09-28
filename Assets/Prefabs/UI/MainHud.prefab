@@ -2518,10 +2518,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 7729867270312956113}
     m_Modifications:
-    - target: {fileID: 398780057499022737, guid: 8fb0e1e333094404db7876c6fd701c13, type: 3}
-      propertyPath: m_TextStyleHashCode
-      value: -1183493901
-      objectReference: {fileID: 0}
     - target: {fileID: 2274023316783074728, guid: 8fb0e1e333094404db7876c6fd701c13, type: 3}
       propertyPath: m_Layer
       value: 5
@@ -2607,10 +2603,6 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5661422878285839522, guid: 8fb0e1e333094404db7876c6fd701c13, type: 3}
-      propertyPath: m_Layer
-      value: 5
-      objectReference: {fileID: 0}
-    - target: {fileID: 6028030491971948981, guid: 8fb0e1e333094404db7876c6fd701c13, type: 3}
       propertyPath: m_Layer
       value: 5
       objectReference: {fileID: 0}

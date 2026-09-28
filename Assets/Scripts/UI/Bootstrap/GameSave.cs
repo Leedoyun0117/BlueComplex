@@ -106,5 +106,16 @@ namespace BlueComplex.UI.Bootstrap
             try { Store.Delete(); }
             catch (Exception e) { Debug.LogWarning($"[GameSave] 삭제 실패: {e.Message}"); }
         }
+
+        /// <summary>플레이어용 "세이브 데이터 초기화": 파일을 지우고 <paramref name="ledger"/>와 캐시된 진행도까지
+        /// 처음 하는 사람의 상태로 되돌린다. <see cref="Delete"/>만으로는 메모리에 이미 불러온 진행도가 다음 저장에서
+        /// 파일에 그대로 되살아나 버린다 — 그래서 메모리도 함께 비운다.</summary>
+        public static void ResetAll(ClueKnowledgeLedger ledger)
+        {
+            Delete();
+            TutorialCleared = false;
+            HighestStageCleared = 0;
+            ledger?.Clear();
+        }
     }
 }
