@@ -4,16 +4,6 @@ using System.Linq;
 
 namespace BlueComplex.Core.Stability
 {
-    public enum HeartbeatState
-    {
-        Fatal,
-        VeryDepressed,
-        Depressed,
-        Stable,
-        Excited,
-        VeryExcited
-    }
-
     /// <summary>
     /// 심박수 구간 정의와 판정을 담당한다. 경계값·컴플렉스 발현 확률은 전부
     /// 생성자로 주입 가능하며, 기본값은 기획표를 그대로 옮긴 것이다.
