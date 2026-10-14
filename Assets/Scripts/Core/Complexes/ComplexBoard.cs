@@ -5,52 +5,6 @@ using BlueComplex.Core.Tags;
 
 namespace BlueComplex.Core.Complexes
 {
-    /// <summary>한 컴플렉스가 단서를 해석한 결과 한 줄. UI 연출(순차 발광)에 그대로 쓴다.</summary>
-    public readonly struct InterpretationStep
-    {
-        public ComplexInstance Complex { get; }
-        public bool Triggered { get; }
-        public TagSet Snapshot { get; }
-        public IReadOnlyList<EmotionTag> ObservedEmotions { get; }
-        public TimeTag ObservedTime { get; }
-        public IReadOnlyList<PersonTag> ObservedPersons { get; }
-
-        public InterpretationStep(ComplexInstance complex,
-                                  bool triggered,
-                                  TagSet snapshot,
-                                  TimeTag observedTime,
-                                  IReadOnlyList<PersonTag> observedPersons,
-                                  IReadOnlyList<EmotionTag> observedEmotions)
-        {
-            Complex = complex;
-            Triggered = triggered;
-            Snapshot = snapshot;
-            ObservedTime = observedTime;
-            ObservedPersons = observedPersons;
-            ObservedEmotions = observedEmotions;
-        }
-    }
-
-    public sealed class InterpretationResult
-    {
-        public TagSet Original { get; }
-        public TagSet Final { get; }
-        /// <summary>해석한 순서(평가 순서)의 단계들.</summary>
-        public IReadOnlyList<InterpretationStep> Steps { get; }
-
-        /// <summary>해석 당시 보드의 컴플렉스를 화면에 보이는 순서(<see cref="ComplexBoard.InPriorityOrder"/>)로 늘어놓은 것. 뇌 영역 배치처럼 "어느 컴플렉스가 어느 칸인가"는 이 순서를 따라야
-        /// 평가 순서가 달라져도 칸이 뒤바뀌지 않는다.</summary>
-        public IReadOnlyList<ComplexInstance> DisplayOrder { get; }
-
-        public InterpretationResult(TagSet original, TagSet final, IReadOnlyList<InterpretationStep> steps, IReadOnlyList<ComplexInstance> displayOrder = null)
-        {
-            Original = original;
-            Final = final;
-            Steps = steps;
-            DisplayOrder = displayOrder ?? steps.Select(step => step.Complex).ToList();
-        }
-    }
-
     /// <summary>
     /// 현재 상대에게 붙어 있는 컴플렉스 집합.
     /// 보유와 우선순위 정렬만 책임지고, 해석 실행은 ComplexResolver가 맡는다.
@@ -135,48 +89,5 @@ namespace BlueComplex.Core.Complexes
         }
 
         public void Clear() => _slots.Clear();
-    }
-
-    /// <summary>단서를 우선순위대로 통과시켜 최종 의미를 만든다.</summary>
-    public sealed class ComplexResolver
-    {
-        private readonly ComplexBoard _board;
-
-        public ComplexResolver(ComplexBoard board) => _board = board;
-
-        public InterpretationResult Resolve(TagSet originalTags, IComplexFilter filter = null)
-        {
-            var original = originalTags.Clone();
-            var working = originalTags.Clone();
-            var context = new ComplexContext(working);
-            var steps = new List<InterpretationStep>();
-
-            foreach (var complex in _board.InEvaluationOrder())
-            {
-                if (filter != null && filter.ShouldIgnore(complex))
-                {
-                    steps.Add(new InterpretationStep(complex, false, working.Clone(),
-                        TimeTag.None, Array.Empty<PersonTag>(), Array.Empty<EmotionTag>()));
-                    continue;
-                }
-
-                var triggered = complex.Definition.TryInterpret(context);
-                steps.Add(new InterpretationStep(
-                    complex,
-                    triggered,
-                    working.Clone(),
-                    context.MatchedTime,
-                    context.MatchedPersons.ToList(),
-                    context.MatchedEmotions.ToList()));
-            }
-
-            return new InterpretationResult(original, working, steps, _board.InPriorityOrder().ToList());
-        }
-    }
-
-    /// <summary>아이템 등이 특정 컴플렉스를 일시적으로 무시시킬 때 사용.</summary>
-    public interface IComplexFilter
-    {
-        bool ShouldIgnore(ComplexInstance complex);
     }
 }
