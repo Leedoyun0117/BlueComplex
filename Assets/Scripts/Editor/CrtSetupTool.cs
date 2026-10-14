@@ -31,7 +31,7 @@ namespace BlueComplex.EditorTools
         };
 
         /// <summary>
-        /// PC_Renderer.asset의 CRT passMaterial이 빈 채로 커밋되면(사고 기록: 2026-09-23) 패스가 조용히
+        /// PC_Renderer.asset의 CRT passMaterial이 빈 채로 커밋되면 패스가 조용히
         /// 아무 일도 안 해서 CRT 연출이 통째로 빠진 걸 한동안 아무도 못 알아챌 수 있다. 에디터를 열 때와
         /// Play에 들어갈 때마다 검사해서 콘솔에 경고를 남긴다 — 빌드나 Play 자체를 막지는 않는다.
         /// </summary>

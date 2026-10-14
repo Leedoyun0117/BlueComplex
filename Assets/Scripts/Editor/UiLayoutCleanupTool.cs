@@ -328,9 +328,8 @@ namespace BlueComplex.EditorTools
         // 컴플렉스
         // ---------------------------------------------------------------
 
-        // 엑스레이 판넬의 금속 틀과 유리, 뇌 영역 글자색. 사용자가 참고 이미지(크림색 베젤 + 관절 팔 의료 모니터)를 보여주고
-        // "이런 느낌이면 좋겠다"고 해서 예전 회청색 금속 대신 크림/탄색 팔레트로 바꿨다 — 화면(Glass) 안은 여전히 투명(직전 지시 유지),
-        // 진짜 픽셀아트 베벨 음영까지는 흉내 못 내고 크림 톤 + 두꺼운 테두리 + 테두리선(AddPaperEdge)으로 "덩어리진 계기판" 느낌만 근접시켰다.
+        // 엑스레이 판넬의 금속 틀과 유리, 뇌 영역 글자색 — 크림/탄색 팔레트. 화면(Glass) 안은 투명하게 둔다.
+        // 픽셀아트 베벨 음영까지는 흉내 못 내고 크림 톤 + 두꺼운 테두리 + 테두리선(AddPaperEdge)으로 "덩어리진 계기판" 느낌만 낸다.
         private static readonly Color XrayMetal = new Color32(228, 210, 168, 255);
         private static readonly Color XrayMetalDark = new Color32(158, 128, 82, 255);
         // 유리(Glass) 색 — 완전 투명(Color.clear)이면 밋밋해서, 사용자 지시로 "엑스레이 보듯" 옅은 파란 색조를 얹었다. 알파를 낮게
@@ -407,25 +406,21 @@ namespace BlueComplex.EditorTools
                 Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, FontStyles.Bold);
             handleText.textWrappingMode = TextWrappingModes.NoWrap;
 
-            // 판넬 = 관절 팔에 매달린 모니터(사용자 지시: 손그린 원으로 바꿨던 건 되돌린다 — 테두리는 원래 UI 예시대로
-            // 모니터 형태여야 한다). 유리는 완전히 투명해서 그 안으로 캐릭터·뇌가 그대로 비쳐야 하므로(사용자 지시: "테두리만 남기고
-            // 안은 뚫기"), 틀을 판 전체를 덮는 사각형 하나가 아니라 네 개의 막대(상하좌우)로 짜서 가운데(유리 자리)는 아예 그래픽이
-            // 없게 한다 — 꽉 찬 Image였을 때는 유리가 투명해도 그 밑의 틀 자체가 불투명해서 뒤의 초상화를 가렸다.
-            // 참고 이미지(크림색 의료 모니터)처럼 두꺼운 테두리 느낌을 내려고 막대 두께를 3~3.5%에서 6%로 키우고 AddPaperEdge(테두리선+그림자)를
-            // 얹었다 — 머리(원 지름의 72%)보다는 여전히 훨씬 안쪽에서 시작해서 얼굴을 가리지 않는다.
+            // 판넬 = 관절 팔에 매달린 모니터. 유리는 완전히 투명해서 그 안으로 캐릭터·뇌가 그대로 비쳐야 하므로, 틀(Frame)은 판 전체를 덮는
+            // 꽉 찬 Image가 아니라 가운데가 뚫린 한 장이어야 한다 — 틀이 불투명하게 덮으면 유리가 투명해도 뒤의 초상화를 가린다.
             var tablet = Ensure(root.transform, "Tablet");
             TopLeft(tablet, new Vector2(0.5f, 0.5f));
             tablet.sizeDelta = new Vector2(500.6f, 500.6f);
-            // 바깥 테두리는 사용자가 준 도트 프레임(어두운 회색 틀, 안쪽은 뚫림) 한 장이다 — 예전의 막대 네 개(FrameTop/Bottom/Left/Right)와
-            // 손그림 원 잔재는 걷어낸다. 정사각 판에 맞추려고 9분할(Sliced)로 늘려서 모서리 두께는 원본 그대로 두고 가운데(뚫린 부분)만 늘어난다.
+            // 바깥 테두리는 도트 프레임(어두운 회색 틀, 안쪽은 뚫림) 한 장이다 — 막대 네 개(FrameTop/Bottom/Left/Right)나
+            // 손그림 원 잔재가 남아 있으면 걷어낸다. 정사각 판에 맞추려고 9분할(Sliced)로 늘려서 모서리 두께는 원본 그대로 두고 가운데(뚫린 부분)만 늘어난다.
             // 안쪽은 알파가 0이라 예전과 똑같이 유리 너머로 유키 초상화·뇌가 비친다.
             foreach (var stale in new[] { "Frame", "FrameTop", "FrameBottom", "FrameLeft", "FrameRight" }) Remove(tablet, stale);
             var frame = EnsureImage(tablet, "Frame", Color.white, Vector2.zero, Vector2.one, raycast: true);
             frame.sprite = LoadArtSprite(XrayFrameFolder, XrayFrameFile);
             frame.type = Image.Type.Sliced;
             frame.transform.SetAsFirstSibling(); // 유리·뇌보다 뒤에 그린다.
-            // Glass 자체는 다시 투명(드래그 판정 전용) — 파란 색조는 GlassTint로 뺐다. Glass가 Content보다 먼저 그려져서 그 파란기가
-            // 뇌(Content 자식)는 안 물들이고 캐릭터만 물들였었는데, "뇌도 파랗게" 요청으로 뇌 위에 한 번 더 덮는 레이어가 필요해졌다.
+            // Glass 자체는 투명(드래그 판정 전용) — 파란 색조는 GlassTint가 맡는다. Glass가 Content보다 먼저 그려지면 그 파란기가 뇌(Content 자식)에
+            // 닿지 않으므로, 뇌 위에 한 번 더 덮는 레이어가 필요하다.
             var glass = EnsureImage(tablet, "Glass", Color.clear, new Vector2(0.06f, 0.06f), new Vector2(0.94f, 0.94f), raycast: true);
 
             var content = Ensure(tablet, "Content");
@@ -909,7 +904,7 @@ namespace BlueComplex.EditorTools
 
         /// <summary>MainHud의 "Turn Result Presenter"에 3단계 연출 Presenter가 붙어 있는지 보장한다 — 컴플렉스 발광·이벤트 대사·태그 상승·심박수 이동·아이템 카드
         /// 끼우기가 전부 이 Presenter가 잡는 순서로 돈다. 필드 참조는 Presenter가 같은 HUD 아래에서 스스로 찾는다(CinematicTurnResultPresenter.ResolveReferences).
-        /// 이미 붙어 있으면 아무것도 안 한다(멱등). (예전엔 즉시 반영하던 2단계 Presenter를 여기서 갈아끼웠는데, 그 구현체는 삭제됐다.)</summary>
+        /// 이미 붙어 있으면 아무것도 안 한다(멱등).</summary>
         private static void UseCinematicPresenter(Transform hud)
         {
             var holder = hud.Find("Turn Result Presenter");

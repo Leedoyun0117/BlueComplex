@@ -9,7 +9,7 @@ using BlueComplex.Core.Tags;
 namespace BlueComplex.Core.Stage
 {
     /// <summary>
-    /// 기획서 '게임 시작 연출 / 튜토리얼' 표를 옮긴 데이터와 스크립트(2026-09-28 노션 개정 — 애정 공허 → 자아 부정 교체, 아이템 2개). 일반 스테이지와 완전히 분리된 스테이지(<see cref="StageId"/>)다 —
+    /// 기획서 '게임 시작 연출 / 튜토리얼' 표를 옮긴 데이터와 스크립트. 일반 스테이지와 완전히 분리된 스테이지(<see cref="StageId"/>)다 —
     /// 스테이지 번호 흐름(1→2→3)에 들어 있지 않고, 단서 id는 전부 "tutorial_" 접두어, 해금 장부(<see cref="ClueKnowledgeLedger"/>)도 본편과 따로 쓴다(<see cref="CreateSession"/>).
     ///
     /// 구조: 2쿼터 × 2턴(총 4턴, 키 2개). 균일한 <see cref="QuarterSchedule"/>을 그대로 쓰려고 원문의 3단계를 이렇게 재배치했다.
@@ -21,7 +21,7 @@ namespace BlueComplex.Core.Stage
     ///    턴 4의 오답은 내기 전에 막지 않고 결과를 끝까지 보여 준 뒤 되돌린다(<see cref="TutorialStep.ShowMissThenRollBack"/>).
     ///
     /// 키 구역은 좌/우 끝이 아니라 정확한 심박수 범위다: 1쿼터 90~100, 2쿼터 70~80. 이 좁은 범위에 4턴 경로가 들어가도록 태그 하나의 영향력을 6으로 줄였다(스테이지 기본 10).
-    /// 2026-09-28 개정에서도 영향력 6·시작 89가 그대로 맞는다: 89 → 95(턴 1) → 95(턴 2) → 89(턴 3) → 77(턴 4, 두 아이템). 아이템을 하나만 쓰면 83(기억 공감만)·101(자아비대만) 또는 89(상쇄 카드)라 키를 못 얻는다.
+    /// 영향력 6·시작 89에서의 경로: 89 → 95(턴 1) → 95(턴 2) → 89(턴 3) → 77(턴 4, 두 아이템). 아이템을 하나만 쓰면 83(기억 공감만)·101(자아비대만) 또는 89(상쇄 카드)라 키를 못 얻는다.
     /// 경로 계산의 근거는 TutorialContentTests에 검증으로 남아 있다.
     /// </summary>
     public static class TutorialContent
@@ -82,7 +82,7 @@ namespace BlueComplex.Core.Stage
         /// <summary>턴 1의 손패(표 1): 침체 셋과 흥분 하나.</summary>
         public static IReadOnlyList<ClueDefinition> Quarter1Hand() => new[] { StaleDonut, HorrorPoster, Calendar, EmptyFishbowl };
 
-        /// <summary>턴 3·4의 손패(표 2): 감정이 행복/사랑/행복/행복 — 2026-09-27 노션 개정으로 서류(분노)가 기념품(행복)으로 바뀌었다.</summary>
+        /// <summary>턴 3·4의 손패(표 2): 감정이 행복/사랑/행복/행복.</summary>
         public static IReadOnlyList<ClueDefinition> Quarter2Hand() => new[] { Souvenir, PhoneRing, FishingRod, DaughterPhoto };
 
         public static IReadOnlyList<ClueDefinition> AllClues() => Quarter1Hand().Concat(Quarter2Hand()).ToArray();
@@ -92,7 +92,7 @@ namespace BlueComplex.Core.Stage
         /// <summary>반 과거는 스테이지 1의 것과 조건·효과·설명이 표와 같아 그대로 쓴다(<see cref="PrototypeContent.AntiPast"/>).</summary>
         public static ComplexDefinition AntiPast(IEmotionPolarityTable polarityTable) => PrototypeContent.AntiPast(polarityTable);
 
-        /// <summary>침체 감정이 있으면 행복 +1(침체 감정이 여러 개여도 한 번만). 2026-09-28 노션 개정으로 애정 공허(<c>tutorial_love_void</c>)를 대체한다.
+        /// <summary>침체 감정이 있으면 행복 +1(침체 감정이 여러 개여도 한 번만).
         /// 스테이지 3의 자아 부정(<see cref="Stage3Content.SelfDenial"/>, 우세한 쪽의 반대 감정 +1, 5턴)과 이름만 같고 규칙이 달라 id를 따로 쓴다.
         /// 지속 턴(2)은 노션 표에 값이 없어 반 과거와 같게 임의로 정한 값이다.</summary>
         public static ComplexDefinition SelfDenial(IEmotionPolarityTable polarityTable) => new(

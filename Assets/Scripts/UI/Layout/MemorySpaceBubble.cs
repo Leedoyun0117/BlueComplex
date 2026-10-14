@@ -39,8 +39,7 @@ namespace BlueComplex.UI.Layout
             BuildStroke();
             SubscribeToClueDrag();
 
-            // BuildMemorySpaceBubble(UiLayoutSetupTool.cs)은 폰트를 직렬화해서 넘기지 않는다 — 게임 글꼴을 쓴다
-            // (예전엔 MainHud 아래 아무 글자에서 빌렸는데, 포스트잇이 먼저 걸리면 손글씨체가 옮았다).
+            // BuildMemorySpaceBubble(UiLayoutSetupTool.cs)은 폰트를 직렬화해서 넘기지 않는다 — 게임 글꼴을 쓴다.
             if (_font == null) _font = RuntimeUi.GameFont;
         }
 

@@ -10,8 +10,8 @@ namespace BlueComplex.UI.Layout
 {
     /// <summary>
     /// 컴플렉스 인터페이스의 엑스레이 판넬 — 화면 왼쪽 위 구석에 관절 팔에 매달려 작게 <b>접혀</b> 있다가, 작동하면 팔이 펴지며 유키의 실제 화면
-    /// 위치(머리 쪽)까지 뻗어 금속 틀 모니터가 커지며 뇌(<see cref="BrainView"/>)를 드러낸다 — 테두리는 UI 예시 그대로 모니터 형태다
-    /// (손그림 원으로 바꿨던 적이 있었지만 되돌렸다). 틀은 꽉 찬 사각형이 아니라 얇은 막대 네 개(상하좌우)라 가운데(유리 자리)는 아예
+    /// 위치(머리 쪽)까지 뻗어 금속 틀 모니터가 커지며 뇌(<see cref="BrainView"/>)를 드러낸다 — 테두리는 UI 예시 그대로 모니터 형태다.
+    /// 틀은 꽉 찬 사각형이 아니라 얇은 막대 네 개(상하좌우)라 가운데(유리 자리)는 아예
     /// 그래픽이 없어서, 그 안으로 유키의 실제 초상화·뇌가 그대로 비친다. 컴플렉스 반응이 끝나면 다시 접혀 들어간다.
     ///
     /// 작동 조건 두 가지(UI 디자인 가이드):
@@ -32,8 +32,7 @@ namespace BlueComplex.UI.Layout
         /// 컨테이너 자체(Anchors.Xray, UiLayoutCleanupTool.cs)는 화면 왼쪽을 덮는 투명 영역이라 이 값과 항상 같이 맞춘다.</summary>
         private static readonly Vector2 ReferenceSize = new(960f, 918f);
 
-        /// <summary>펼친 원의 지름(=내용물이 들어갈 정사각 판의 한 변). 사용자가 에디터에서 지정한 500.6이 "상자가 너무 크다"는 지적을
-        /// 받아 425로 15% 줄였다(중심 좌표는 그대로 유지, 지름만 축소) — 뇌 채움 비율도 72%→78%로 같이 키워서 상자 안 여백이 준다.</summary>
+        /// <summary>펼친 원의 지름(=내용물이 들어갈 정사각 판의 한 변). 중심 좌표와는 독립이라 지름만 바꿔도 위치는 그대로다.</summary>
         private static readonly Vector2 TabletSize = new(425f, 425f);
         /// <summary>접힌 위치는 왼쪽 위 "STAGE 01" 표기보다 확실히 아래에 둔다(렌더로 확인).</summary>
         private static readonly Vector2 ShoulderPoint = new(118f, 156f);
@@ -58,7 +57,7 @@ namespace BlueComplex.UI.Layout
             return unit > 0f ? (mid.x - rect.xMin) / unit : OpenCenter.x;
         }
 
-        /// <summary>접힌 상태 안내표("엑스레이 · 끌어서 열기")의 중심 y(참조 픽셀, 세로 오프셋 적용 전). 2026-09-28 사용자 지정.</summary>
+        /// <summary>접힌 상태 안내표("엑스레이 · 끌어서 열기")의 중심 y(참조 픽셀, 세로 오프셋 적용 전).</summary>
         private const float HandleTagY = 200f;
 
         private const float FoldedScale = 0.26f;
@@ -75,7 +74,7 @@ namespace BlueComplex.UI.Layout
         private const float OpenDragDistance = 80f;
 
         /// <summary>판넬 전체(어깨 받침대·팔·접힌/펼친 판·안내표)를 아래로 내리는 양(참조 픽셀, 아래가 +). 위 좌표 상수는 그대로 두고 여기서 한꺼번에 민다 —
-        /// Play 중에 인스펙터에서 바꾸면 바로 반영된다(OnValidate). 2026-09-28 사용자 요청으로 도입.
+        /// Play 중에 인스펙터에서 바꾸면 바로 반영된다(OnValidate).
         /// 프리팹 인스펙터에서 바꾼 값이 이 기본값보다 우선한다.</summary>
         [SerializeField, Tooltip("엑스레이 판넬 전체를 아래로 내리는 양(참조 1080p 픽셀, 아래가 +). Play 중 바로 반영된다.")]
         private float _verticalOffset = DefaultVerticalOffset;
@@ -324,7 +323,7 @@ namespace BlueComplex.UI.Layout
             if (_handleTag != null)
             {
                 // 안내표는 화면 왼쪽 가장자리에 잘리지 않게 폭의 절반 + 여백 이상으로 놓는다.
-                // 세로는 사용자가 인스펙터에서 정한 자리(Pos Y -280 = 200 + 세로 오프셋 80)로 고정한다 — 판 크기를 바꿔도 안 움직인다.
+                // 세로는 고정 자리(Pos Y -280 = 200 + 세로 오프셋 80)다 — 판 크기를 바꿔도 안 움직인다.
                 var folded = new Vector2(FoldedWrist.x + HalfWidth * FoldedScale + HingeGap, HandleTagY) + Down;
                 folded.x = Mathf.Max(folded.x, HandleTagSize.x * 0.5f + 8f);
                 _handleTag.anchoredPosition = new Vector2(folded.x, -folded.y) * unit;

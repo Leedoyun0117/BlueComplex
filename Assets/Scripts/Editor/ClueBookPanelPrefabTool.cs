@@ -31,7 +31,7 @@ namespace BlueComplex.EditorTools
         private static readonly Color InkLight = Color.white;
         private static readonly Color InkDark = new Color32(30, 30, 32, 255);
 
-        // 파일 철 느낌의 짙은 청록 — 테두리 선, 바인더 링, "시간" 쪽지 색으로 같이 쓴다(사용자가 준 목업에서 잰 색).
+        // 파일 철 느낌의 짙은 청록 — 테두리 선, 바인더 링, "시간" 쪽지 색으로 같이 쓴다.
         private static readonly Color FileAccent = new Color32(8, 40, 58, 255);
         private static readonly Color TimeCard = new Color32(21, 96, 130, 255);
         private static readonly Color PersonCard = new Color32(78, 149, 217, 255);
@@ -246,8 +246,8 @@ namespace BlueComplex.EditorTools
         {
             // 탭은 오른쪽이 페이지(Spread, 왼쪽 끝 x=0.10) 안으로 0.04만큼 파고들어야 한다 — 그 겹치는 띠가
             // ClueBookPanel.BringTabToFront의 순서 교체가 눈에 보이는 유일한 곳이다. 가로 앵커를 바꿀 땐 겹침을 유지할 것.
-            // 세로 값이 딱 떨어지지 않는 건 예전에 오프셋(anchoredPosition 42,226)으로 밀어 두었던 위치를 앵커로 옮겨 적었기 때문이다 —
-            // 오프셋은 픽셀 고정이라 화면 비율이 바뀌면(ScreenMatchMode 0.5) 페이지 대비 위치가 틀어져서 비율로 바꿨다.
+            // 세로 값이 딱 떨어지지 않는 건 픽셀 오프셋(anchoredPosition 42,226)으로 잡은 위치를 앵커 비율로 옮겨 적었기 때문이다 —
+            // 픽셀 오프셋은 화면 비율이 바뀌면(ScreenMatchMode 0.5) 페이지 대비 위치가 틀어진다.
             var clueTab = CreateImage(parent, "Tab Clue", TabActive, new Vector2(0.041875f, 0.8092593f), new Vector2(0.14f, 0.8892593f),
                 Vector2.zero, Vector2.zero);
             clueTab.raycastTarget = true;
