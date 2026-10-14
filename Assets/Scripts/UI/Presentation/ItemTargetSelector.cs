@@ -13,12 +13,6 @@ using UnityEngine.UI;
 
 namespace BlueComplex.UI.Presentation
 {
-    /// <summary>대상 선택 모드에서 강조되는 뷰(컴플렉스 행·뇌 영역·단서 카드). 강조를 켜고 끄기만 한다 — 클릭은 뷰가 <see cref="ItemTargetSelector.TryPick(ComplexInstance)"/>로 넘긴다.</summary>
-    public interface ITargetHighlight
-    {
-        void SetTargetable(bool on);
-    }
-
     /// <summary>
     /// 아이템 대상 선택 모드: 아이템 클릭 → 고를 수 있는 대상이 강조됨 → 대상 클릭 → 사용. 취소는 우클릭 / Esc / 같은 아이템 다시 클릭.
     /// 코어의 <c>TurnRunner.GetItemTargets</c>가 돌려준 대상만 강조되고 클릭으로 고를 수 있다 — 무엇이 유효한 대상인지는 UI가 아니라 코어(아이템 행동)가 정한다.

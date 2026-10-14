@@ -4,13 +4,6 @@ using UnityEngine.UI;
 
 namespace BlueComplex.UI.Layout
 {
-    /// <summary>어느 종이 머티리얼을 쓸지. 패널은 큰 종이, 카드는 패널 위에 얹힌 작은 종이(지금은 같은 값의 별도 머티리얼 — 나중에 따로 조정할 수 있게).</summary>
-    public enum PaperKind
-    {
-        Panel,
-        Card,
-    }
-
     /// <summary>
     /// 종이 배경 Image를 "손으로 그은 흔들리는 테두리만 있는 백지"로 그리는 메시 효과. 짝이 되는 셰이더는 BlueComplex/UI/PaperPanel.
     /// 셰이더가 px 단위로 선을 그리려면 "이 사각형이 몇 px인지"를 알아야 해서 정점 UV0에 실어 준다:

@@ -4,14 +4,6 @@ using UnityEngine.UI;
 
 namespace BlueComplex.Audio
 {
-    public enum AudioChannel
-    {
-        Master,
-        Sfx,
-        Bgm,
-        Ambient,
-    }
-
     /// <summary>
     /// 옵션 UI 슬라이더(0~1) ↔ 믹서 채널 볼륨 ↔ PlayerPrefs. <see cref="SoundManager"/>와 분리돼 있다 — SoundManager는 소스를 믹서 그룹에
     /// 물리기만 하고, 채널 볼륨은 여기서 믹서의 exposed 파라미터(MasterVolume/SFXVolume/BGMVolume/AmbientVolume)로만 만진다.

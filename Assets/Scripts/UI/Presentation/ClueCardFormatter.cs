@@ -3,26 +3,6 @@ using BlueComplex.Core.Clues;
 
 namespace BlueComplex.UI.Presentation
 {
-    /// <summary>카드 한 장을 화면에 그리기 위해 필요한 텍스트를 전부 구조화해서 담는다.</summary>
-    public readonly struct ClueCardViewModel
-    {
-        public readonly string Title;
-        public readonly string TimeText;
-        public readonly IReadOnlyList<string> PersonTexts;
-        public readonly IReadOnlyList<string> EmotionTexts;
-        public readonly string StoryText;
-
-        public ClueCardViewModel(string title, string timeText, IReadOnlyList<string> personTexts,
-            IReadOnlyList<string> emotionTexts, string storyText)
-        {
-            Title = title;
-            TimeText = timeText;
-            PersonTexts = personTexts;
-            EmotionTexts = emotionTexts;
-            StoryText = storyText;
-        }
-    }
-
     /// <summary>
     /// 해금 상태(ClueKnowledgeLedger)를 반영해 단서 카드 뷰모델을 만든다. 심박수 구간과 무관하게 스토리는 항상 보인다.
     /// Assets/Scripts/UI/Debug/ClueCardFormatter.cs와 같은 판정 로직이지만,
